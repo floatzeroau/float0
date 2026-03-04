@@ -1,0 +1,16 @@
+{
+  "name": "@float0/portal",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo 'build: @float0/portal (stub)'",
+    "dev": "echo 'dev: @float0/portal'",
+    "lint": "echo 'lint: @float0/portal'",
+    "test": "echo 'test: @float0/portal'"
+  },
+  "dependencies": {
+    "@float0/shared": "workspace:*",
+    "@float0/ui": "workspace:*",
+    "@float0/events": "workspace:*"
+  }
+}

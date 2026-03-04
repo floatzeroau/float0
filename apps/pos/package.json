@@ -1,0 +1,16 @@
+{
+  "name": "@float0/pos",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo 'build: @float0/pos (stub)'",
+    "dev": "echo 'dev: @float0/pos'",
+    "lint": "echo 'lint: @float0/pos'",
+    "test": "echo 'test: @float0/pos'"
+  },
+  "dependencies": {
+    "@float0/shared": "workspace:*",
+    "@float0/ui": "workspace:*",
+    "@float0/events": "workspace:*"
+  }
+}

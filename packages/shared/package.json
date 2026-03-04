@@ -1,0 +1,12 @@
+{
+  "name": "@float0/shared",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "echo 'build: @float0/shared (stub)'",
+    "lint": "echo 'lint: @float0/shared'",
+    "test": "echo 'test: @float0/shared'"
+  }
+}
