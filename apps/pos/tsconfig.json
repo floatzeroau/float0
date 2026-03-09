@@ -1,9 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "jsx": "react-native",
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "lib": ["ES2022"],
+    "moduleResolution": "bundler"
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["index.ts", "src", "app.config.ts", "metro.config.js", "babel.config.js"],
+  "exclude": ["node_modules"]
 }

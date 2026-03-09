@@ -1,0 +1,143 @@
+import { appSchema, tableSchema } from "@nozbe/watermelondb";
+
+export const schema = appSchema({
+  version: 1,
+  tables: [
+    tableSchema({
+      name: "products",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "name", type: "string" },
+        { name: "price_cents", type: "number" },
+        { name: "category_id", type: "string" },
+        { name: "sku", type: "string", isOptional: true },
+        { name: "image_url", type: "string", isOptional: true },
+        { name: "is_active", type: "boolean" },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "modifier_groups",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "name", type: "string" },
+        { name: "min_selections", type: "number" },
+        { name: "max_selections", type: "number" },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "modifiers",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "name", type: "string" },
+        { name: "price_cents", type: "number" },
+        { name: "modifier_group_id", type: "string" },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "product_modifier_groups",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "product_id", type: "string" },
+        { name: "modifier_group_id", type: "string" },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "categories",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "name", type: "string" },
+        { name: "sort_order", type: "number" },
+        { name: "color", type: "string", isOptional: true },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "customers",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "first_name", type: "string" },
+        { name: "last_name", type: "string" },
+        { name: "email", type: "string", isOptional: true },
+        { name: "phone", type: "string", isOptional: true },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "orders",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "status", type: "string" },
+        { name: "order_type", type: "string" },
+        { name: "customer_id", type: "string", isOptional: true },
+        { name: "staff_id", type: "string" },
+        { name: "subtotal_cents", type: "number" },
+        { name: "tax_cents", type: "number" },
+        { name: "total_cents", type: "number" },
+        { name: "notes", type: "string", isOptional: true },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "order_items",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "order_id", type: "string" },
+        { name: "product_id", type: "string" },
+        { name: "quantity", type: "number" },
+        { name: "unit_price_cents", type: "number" },
+        { name: "modifiers_json", type: "string", isOptional: true },
+        { name: "notes", type: "string", isOptional: true },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "payments",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "order_id", type: "string" },
+        { name: "method", type: "string" },
+        { name: "amount_cents", type: "number" },
+        { name: "reference", type: "string", isOptional: true },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "shifts",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "staff_id", type: "string" },
+        { name: "started_at", type: "number" },
+        { name: "ended_at", type: "number", isOptional: true },
+        { name: "opening_cash_cents", type: "number" },
+        { name: "closing_cash_cents", type: "number", isOptional: true },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+    tableSchema({
+      name: "staff",
+      columns: [
+        { name: "server_id", type: "string" },
+        { name: "name", type: "string" },
+        { name: "pin_hash", type: "string" },
+        { name: "role", type: "string" },
+        { name: "is_active", type: "boolean" },
+        { name: "created_at", type: "number" },
+        { name: "updated_at", type: "number" },
+      ],
+    }),
+  ],
+});
