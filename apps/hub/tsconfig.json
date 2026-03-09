@@ -1,9 +1,52 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "jsx": "preserve",
+    "noEmit": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@float0/shared": [
+        "../../packages/shared/src"
+      ],
+      "@float0/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@float0/ui": [
+        "../../packages/ui/src"
+      ],
+      "@float0/ui/*": [
+        "../../packages/ui/src/*"
+      ],
+      "@float0/events": [
+        "../../packages/events/src"
+      ],
+      "@float0/events/*": [
+        "../../packages/events/src/*"
+      ]
+    },
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "resolveJsonModule": true
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
