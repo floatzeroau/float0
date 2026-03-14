@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-    "lint": "echo 'lint: @float0/events'",
+    "lint": "eslint src/",
     "test": "echo 'test: @float0/events'"
   }
 }

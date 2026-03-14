@@ -5,11 +5,36 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@eslint/compat": "^1",
+    "@eslint/js": "^9",
+    "@next/eslint-plugin-next": "^14.2.23",
+    "eslint": "^9",
+    "eslint-config-prettier": "^10",
+    "eslint-plugin-react": "^7",
+    "eslint-plugin-react-hooks": "^5",
+    "eslint-plugin-react-native": "^4",
+    "globals": "^15",
+    "husky": "^9",
+    "lint-staged": "^15",
+    "prettier": "^3",
     "turbo": "^2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,md,css,mjs,cjs}": [
+      "prettier --write"
+    ]
   },
   "packageManager": "pnpm@10.30.3",
   "pnpm": {

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "dev": "expo start --dev-client",
-    "lint": "echo 'lint: @float0/pos'",
+    "lint": "eslint index.ts src/",
     "test": "echo 'test: @float0/pos'"
   },
   "dependencies": {

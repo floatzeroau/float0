@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "dev": "tsx watch src/index.ts",
-    "lint": "echo 'lint: @float0/engine'",
+    "lint": "eslint src/",
     "test": "echo 'test: @float0/engine'",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

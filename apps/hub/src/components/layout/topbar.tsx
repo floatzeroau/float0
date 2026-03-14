@@ -4,9 +4,7 @@ import { Button } from '@/components/ui/button';
 export function Topbar() {
   return (
     <header className="flex h-14 items-center justify-between border-b bg-card px-6">
-      <span className="text-sm font-medium text-muted-foreground">
-        My Organisation
-      </span>
+      <span className="text-sm font-medium text-muted-foreground">My Organisation</span>
 
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="relative">

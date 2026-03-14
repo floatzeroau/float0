@@ -12,12 +12,7 @@ interface SidebarNavItemProps {
   collapsed: boolean;
 }
 
-export function SidebarNavItem({
-  href,
-  label,
-  icon: Icon,
-  collapsed,
-}: SidebarNavItemProps) {
+export function SidebarNavItem({ href, label, icon: Icon, collapsed }: SidebarNavItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href;
 

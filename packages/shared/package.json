@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-    "lint": "echo 'lint: @float0/shared'",
+    "lint": "eslint src/",
     "test": "vitest run"
   },
   "devDependencies": {

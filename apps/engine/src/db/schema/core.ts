@@ -21,11 +21,7 @@ export const orgMembershipRoleEnum = pgEnum('org_membership_role', [
   'staff',
 ]);
 
-export const eventStatusEnum = pgEnum('event_status', [
-  'pending',
-  'processed',
-  'failed',
-]);
+export const eventStatusEnum = pgEnum('event_status', ['pending', 'processed', 'failed']);
 
 // ── Organizations ──────────────────────────────────────
 
@@ -127,7 +123,5 @@ export const eventLog = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     processedAt: timestamp({ withTimezone: true }),
   },
-  (t) => [
-    index('event_log_organization_id_idx').on(t.organizationId),
-  ],
+  (t) => [index('event_log_organization_id_idx').on(t.organizationId)],
 );

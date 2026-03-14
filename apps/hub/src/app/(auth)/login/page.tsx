@@ -1,11 +1,5 @@
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -14,9 +8,7 @@ export default function LoginPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold">Sign in to Float0</CardTitle>
-        <CardDescription>
-          Enter your credentials to access the dashboard
-        </CardDescription>
+        <CardDescription>Enter your credentials to access the dashboard</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4">
@@ -37,10 +29,7 @@ export default function LoginPage() {
           </Button>
         </form>
         <div className="mt-4 text-center text-sm">
-          <Link
-            href="/forgot-password"
-            className="text-primary hover:underline"
-          >
+          <Link href="/forgot-password" className="text-primary hover:underline">
             Forgot your password?
           </Link>
         </div>

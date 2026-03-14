@@ -11,17 +11,17 @@ describe('calculateGST', () => {
   });
 
   it('calculates GST for $100', () => {
-    expect(calculateGST(100)).toBeCloseTo(9.0909090, 5);
+    expect(calculateGST(100)).toBeCloseTo(9.090909, 5);
   });
 });
 
 describe('roundToFiveCents', () => {
   it('rounds $4.51 down to $4.50', () => {
-    expect(roundToFiveCents(4.51)).toBe(4.50);
+    expect(roundToFiveCents(4.51)).toBe(4.5);
   });
 
   it('rounds $4.52 down to $4.50', () => {
-    expect(roundToFiveCents(4.52)).toBe(4.50);
+    expect(roundToFiveCents(4.52)).toBe(4.5);
   });
 
   it('rounds $4.53 up to $4.55', () => {
@@ -41,17 +41,17 @@ describe('roundToFiveCents', () => {
   });
 
   it('rounds $4.58 up to $4.60', () => {
-    expect(roundToFiveCents(4.58)).toBe(4.60);
+    expect(roundToFiveCents(4.58)).toBe(4.6);
   });
 
   it('rounds $4.59 up to $4.60', () => {
-    expect(roundToFiveCents(4.59)).toBe(4.60);
+    expect(roundToFiveCents(4.59)).toBe(4.6);
   });
 });
 
 describe('toMinorUnits / toDisplayAmount round-trip', () => {
   it('round-trips $4.50', () => {
-    const cents = toMinorUnits(4.50);
+    const cents = toMinorUnits(4.5);
     expect(cents).toBe(450);
     expect(toDisplayAmount(cents)).toBe('$4.50');
   });

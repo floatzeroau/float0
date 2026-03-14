@@ -1,10 +1,10 @@
-import React from "react";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import LoginScreen from "../screens/LoginScreen";
-import POSScreen from "../screens/POSScreen";
-import SettingsScreen from "../screens/SettingsScreen";
+import LoginScreen from '../screens/LoginScreen';
+import POSScreen from '../screens/POSScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 // ---------------------------------------------------------------------------
 // Type declarations
@@ -43,16 +43,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   return (
-    <Stack.Navigator
-      screenOptions={{ headerShown: false }}
-      initialRouteName="Login"
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen
-        name="Main"
-        component={MainTabs}
-        options={{ gestureEnabled: false }}
-      />
+      <Stack.Screen name="Main" component={MainTabs} options={{ gestureEnabled: false }} />
     </Stack.Navigator>
   );
 }

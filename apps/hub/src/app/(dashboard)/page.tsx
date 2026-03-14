@@ -1,10 +1,5 @@
 import { CURRENCY, TIMEZONE } from '@float0/shared';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 const stats = [
@@ -31,9 +26,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <Badge
-                variant={stat.change.startsWith('+') ? 'default' : 'secondary'}
-              >
+              <Badge variant={stat.change.startsWith('+') ? 'default' : 'secondary'}>
                 {stat.change}
               </Badge>
             </CardHeader>

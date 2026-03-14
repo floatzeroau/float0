@@ -15,12 +15,7 @@ export function TopBar() {
     <header className="sticky top-0 z-40 flex h-14 items-center border-b bg-card px-4">
       <div className="flex flex-1 items-center">
         {!isRoot && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="mr-2"
-          >
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
             <ChevronLeft className="h-5 w-5" />
           </Button>
         )}

@@ -1,11 +1,5 @@
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -14,9 +8,7 @@ export default function SignupPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-        <CardDescription>
-          Join Float0 to start ordering
-        </CardDescription>
+        <CardDescription>Join Float0 to start ordering</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4">
