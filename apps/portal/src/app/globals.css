@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Portal: warmer, friendlier variant of Float0 brand */
+    /* Background: warm off-white */
+    --background: 30 33% 99%;
+    /* Foreground: softer navy */
+    --foreground: 210 25% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 25% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 25% 20%;
+
+    /* Primary: slightly softer indigo */
+    --primary: 243 80% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 20% 96%;
+    --secondary-foreground: 210 25% 20%;
+
+    --muted: 30 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 30 20% 96%;
+    --accent-foreground: 210 25% 20%;
+
+    /* Destructive: #FF453A */
+    --destructive: 3 100% 61%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 25% 92%;
+    --input: 214 25% 92%;
+    --ring: 243 80% 65%;
+
+    --radius: 0.75rem;
+
+    /* Tab bar tokens (replaces sidebar in portal) */
+    --tab-bar-background: 0 0% 100%;
+    --tab-bar-foreground: 215 16% 47%;
+    --tab-bar-active: 243 80% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
