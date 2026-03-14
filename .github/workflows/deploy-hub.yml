@@ -1,0 +1,21 @@
+name: Deploy Hub
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/hub/**'
+      - 'packages/shared/**'
+      - 'packages/ui/**'
+
+jobs:
+  deploy:
+    name: Deploy Hub Dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TODO: Deploy to Vercel
+      - name: Placeholder
+        run: echo "Hub deployment not yet configured"

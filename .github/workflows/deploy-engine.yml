@@ -1,0 +1,21 @@
+name: Deploy Engine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/engine/**'
+      - 'packages/shared/**'
+      - 'packages/events/**'
+
+jobs:
+  deploy:
+    name: Deploy Engine API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TODO: Deploy to Railway
+      - name: Placeholder
+        run: echo "Engine deployment not yet configured"
