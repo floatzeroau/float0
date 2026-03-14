@@ -311,6 +311,9 @@ importers:
 
   packages/shared:
     devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.15
       vitest:
         specifier: ^3
         version: 3.2.4(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.27.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
