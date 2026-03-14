@@ -1,16 +1,16 @@
-name: Deploy Hub
+name: Deploy Portal
 
 on:
   push:
     branches: [main]
     paths:
-      - 'apps/hub/**'
+      - 'apps/portal/**'
       - 'packages/shared/**'
       - 'packages/ui/**'
 
 jobs:
   deploy:
-    name: Deploy Hub Dashboard
+    name: Deploy Customer Portal
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,4 +19,4 @@ jobs:
       # TODO: Deploy to Cloudflare Pages
       # Use wrangler pages deploy or Cloudflare Pages GitHub integration
       - name: Placeholder
-        run: echo "Hub deployment not yet configured"
+        run: echo "Portal deployment not yet configured"
