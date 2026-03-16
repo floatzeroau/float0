@@ -11,6 +11,7 @@ import {
   orderItems,
   payments,
   shifts,
+  syncConflicts,
 } from '../db/schema/pos.js';
 import { orgMemberships, users } from '../db/schema/core.js';
 
@@ -34,6 +35,12 @@ interface SyncChanges {
   order_items: SyncTableChanges;
   payments: SyncTableChanges;
   shifts: SyncTableChanges;
+}
+
+export interface RejectedRecord {
+  table: string;
+  id: string;
+  reason: 'conflict_server_wins';
 }
 
 const emptyChanges: SyncTableChanges = { created: [], updated: [], deleted: [] };
@@ -229,56 +236,118 @@ const pushTableMap = {
   shifts: shifts,
 } as const;
 
+// Tables where server data is authoritative (catalog data)
+const SERVER_WINS_TABLES = new Set([
+  'categories',
+  'products',
+  'modifier_groups',
+  'modifiers',
+  'product_modifier_groups',
+  'customers',
+]);
+
 // ── Push ───────────────────────────────────────────────
 
 export async function pushAllChanges(
   orgId: string,
+  userId: string,
   changes: Partial<Record<string, SyncTableChanges>>,
-  _lastPulledAt: number,
-): Promise<void> {
+  lastPulledAt: number,
+): Promise<{ rejected: RejectedRecord[] }> {
+  const rejected: RejectedRecord[] = [];
+  const since = fromMs(lastPulledAt);
+
   await db.transaction(async (tx) => {
     for (const [tableName, tableRef] of Object.entries(pushTableMap)) {
       const tableChanges = changes[tableName];
       if (!tableChanges) continue;
 
+      const isServerWins = SERVER_WINS_TABLES.has(tableName);
+
       // Handle created records
       if (tableChanges.created.length > 0) {
         for (const raw of tableChanges.created) {
           const record = wmRawToServer(raw as Record<string, unknown>, orgId);
-
           await tx
             .insert(tableRef)
-            .values(record as any)
+            .values({ ...record, _version: 1 } as any)
             .onConflictDoNothing();
         }
       }
 
-      // Handle updated records
+      // Handle updated records — with conflict detection
       if (tableChanges.updated.length > 0) {
         for (const raw of tableChanges.updated) {
           const record = wmRawToServer(raw as Record<string, unknown>, orgId);
           const id = record.id as string;
           delete record.id;
+
+          // Fetch current server state
+          const [existing] = await tx
+            .select()
+            .from(tableRef)
+            .where(and(eq(tableRef.id, id), eq(tableRef.organizationId, orgId)));
+
+          if (!existing) continue;
+
+          const serverRow = existing as Record<string, unknown>;
+          const serverUpdatedAt = serverRow.updatedAt as Date;
+          const serverVersion = (serverRow._version as number) ?? 1;
+          const hasConflict = serverUpdatedAt > since;
+
+          if (hasConflict) {
+            // Log the conflict
+            await tx.insert(syncConflicts).values({
+              organizationId: orgId,
+              entityType: tableName,
+              entityId: id,
+              localVersion: serverVersion,
+              serverVersion: serverVersion,
+              resolution: isServerWins ? 'server_wins' : 'device_wins',
+              localData: record,
+              serverData: serverRow,
+              terminalId: (record.terminalId as string) ?? null,
+            });
+
+            if (isServerWins) {
+              // Reject the push — server data is authoritative
+              rejected.push({ table: tableName, id, reason: 'conflict_server_wins' });
+              continue;
+            }
+            // Device wins — fall through to apply the update
+          }
+
           await tx
             .update(tableRef)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .set({ ...record, updatedAt: new Date() } as any)
+            .set({
+              ...record,
+              updatedAt: new Date(),
+              _version: serverVersion + 1,
+            } as any)
             .where(and(eq(tableRef.id, id), eq(tableRef.organizationId, orgId)));
         }
       }
 
-      // Handle deleted records
+      // Handle deleted records — increment version
       if (tableChanges.deleted.length > 0) {
         for (const id of tableChanges.deleted) {
+          const [existing] = await tx
+            .select({ _version: tableRef._version })
+            .from(tableRef)
+            .where(and(eq(tableRef.id, id as string), eq(tableRef.organizationId, orgId)));
+
+          const currentVersion = (existing?._version as number) ?? 1;
+
           await tx
             .update(tableRef)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .set({ deletedAt: new Date() } as any)
+            .set({ deletedAt: new Date(), _version: currentVersion + 1 } as any)
             .where(and(eq(tableRef.id, id as string), eq(tableRef.organizationId, orgId)));
         }
       }
     }
   });
+
+  return { rejected };
 }
 
 // Convert WatermelonDB snake_case raw to server camelCase record

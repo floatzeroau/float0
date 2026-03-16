@@ -22,6 +22,7 @@ export interface SyncState {
   lastSyncTime: number | null;
   pendingCount: number;
   priorityQueueCount: number;
+  conflictCount: number;
   hasError: boolean;
 }
 
@@ -37,6 +38,7 @@ export class SyncManager {
   private _pendingCount = 0;
   private _consecutiveFailures = 0;
   private _hasError = false;
+  private _conflictCount = 0;
   private _priorityQueue: PriorityItem[] = [];
   private _priorityRetryCount = 0;
 
@@ -114,10 +116,11 @@ export class SyncManager {
 
     let success = false;
     try {
-      await performSync(this.database);
+      const result = await performSync(this.database);
       this._lastSyncTime = Date.now();
       this._consecutiveFailures = 0;
       this._hasError = false;
+      this._conflictCount = result.conflictCount;
       success = true;
     } catch (err) {
       console.warn('Sync failed:', err);
@@ -243,6 +246,7 @@ export class SyncManager {
       lastSyncTime: this._lastSyncTime,
       pendingCount: this._pendingCount,
       priorityQueueCount: this._priorityQueue.length,
+      conflictCount: this._conflictCount,
       hasError: this._hasError,
     });
   }

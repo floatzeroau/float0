@@ -44,6 +44,34 @@ export const shiftStatusEnum = pgEnum('shift_status', ['open', 'closed', 'reconc
 
 export const selectionTypeEnum = pgEnum('selection_type', ['single', 'multiple']);
 
+export const conflictResolutionEnum = pgEnum('conflict_resolution', ['server_wins', 'device_wins']);
+
+// ── Sync Conflicts ────────────────────────────────────
+
+export const syncConflicts = pgTable(
+  'sync_conflicts',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    entityType: varchar({ length: 100 }).notNull(),
+    entityId: uuid().notNull(),
+    localVersion: integer().notNull(),
+    serverVersion: integer().notNull(),
+    resolution: conflictResolutionEnum().notNull(),
+    localData: jsonb().notNull(),
+    serverData: jsonb().notNull(),
+    terminalId: varchar({ length: 255 }),
+    resolvedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('sync_conflicts_organization_id_idx').on(t.organizationId),
+    index('sync_conflicts_entity_type_entity_id_idx').on(t.entityType, t.entityId),
+  ],
+);
+
 // ── Categories ─────────────────────────────────────────
 
 export const categories = pgTable(

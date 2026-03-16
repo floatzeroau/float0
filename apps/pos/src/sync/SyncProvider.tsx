@@ -14,6 +14,7 @@ const defaultValue: SyncContextValue = {
   lastSyncTime: null,
   pendingCount: 0,
   priorityQueueCount: 0,
+  conflictCount: 0,
   hasError: false,
   syncNow: () => {},
 };
@@ -27,6 +28,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     lastSyncTime: null,
     pendingCount: 0,
     priorityQueueCount: 0,
+    conflictCount: 0,
     hasError: false,
   });
   const managerRef = useRef<SyncManager | null>(null);

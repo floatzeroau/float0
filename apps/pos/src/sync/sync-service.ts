@@ -7,11 +7,17 @@ async function getAuthToken(): Promise<string | null> {
   return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 }
 
-export async function performSync(database: Database): Promise<void> {
+export interface SyncResult {
+  conflictCount: number;
+}
+
+export async function performSync(database: Database): Promise<SyncResult> {
   const token = await getAuthToken();
   if (!token) {
     throw new Error('No auth token found. Please log in first.');
   }
+
+  let conflictCount = 0;
 
   await synchronize({
     database,
@@ -45,6 +51,14 @@ export async function performSync(database: Database): Promise<void> {
       if (!response.ok) {
         throw new Error(`Push failed: ${response.status}`);
       }
+
+      const body = await response.json();
+      if (body.rejected?.length > 0) {
+        conflictCount = body.rejected.length;
+        console.warn('Sync conflicts (server wins):', body.rejected);
+      }
     },
   });
+
+  return { conflictCount };
 }

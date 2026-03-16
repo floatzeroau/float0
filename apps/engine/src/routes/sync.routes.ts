@@ -46,8 +46,13 @@ export async function syncRoutes(app: FastifyInstance) {
     }
 
     const { changes, lastPulledAt } = parsed.data;
-    await pushAllChanges(request.user.orgId, changes, lastPulledAt);
-    return reply.send({ ok: true });
+    const { rejected } = await pushAllChanges(
+      request.user.orgId,
+      request.user.userId,
+      changes,
+      lastPulledAt,
+    );
+    return reply.send({ ok: true, rejected });
   });
 
   app.get('/sync/status', { preHandler: [requireAuth] }, async (request, reply) => {
