@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/require-auth.js';
-import { pullAllChanges, pushAllChanges } from './sync.helpers.js';
+import { pullAllChanges, pushAllChanges, getSyncStatus } from './sync.helpers.js';
 
 const pullSchema = z.object({
   lastPulledAt: z.number().nullable(),
@@ -48,5 +48,10 @@ export async function syncRoutes(app: FastifyInstance) {
     const { changes, lastPulledAt } = parsed.data;
     await pushAllChanges(request.user.orgId, changes, lastPulledAt);
     return reply.send({ ok: true });
+  });
+
+  app.get('/sync/status', { preHandler: [requireAuth] }, async (request, reply) => {
+    const result = await getSyncStatus(request.user.orgId);
+    return reply.send(result);
   });
 }

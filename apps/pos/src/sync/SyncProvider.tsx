@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { SyncManager, type SyncState } from './sync-manager';
+import { setSyncManager } from './payment-sync-hook';
 import { database } from '../db/database';
 
 interface SyncContextValue extends SyncState {
@@ -12,6 +13,7 @@ const defaultValue: SyncContextValue = {
   isSyncing: false,
   lastSyncTime: null,
   pendingCount: 0,
+  priorityQueueCount: 0,
   hasError: false,
   syncNow: () => {},
 };
@@ -24,6 +26,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     isSyncing: false,
     lastSyncTime: null,
     pendingCount: 0,
+    priorityQueueCount: 0,
     hasError: false,
   });
   const managerRef = useRef<SyncManager | null>(null);
@@ -31,11 +34,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const manager = new SyncManager(database, setState);
     managerRef.current = manager;
+    setSyncManager(manager);
     manager.start();
 
     return () => {
       manager.stop();
       managerRef.current = null;
+      setSyncManager(null);
     };
   }, []);
 

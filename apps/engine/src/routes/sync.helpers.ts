@@ -1,4 +1,4 @@
-import { eq, and, gt, lte, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, gt, lte, isNull, isNotNull, desc } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import {
   categories,
@@ -245,7 +245,7 @@ export async function pushAllChanges(
       if (tableChanges.created.length > 0) {
         for (const raw of tableChanges.created) {
           const record = wmRawToServer(raw as Record<string, unknown>, orgId);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           await tx
             .insert(tableRef)
             .values(record as any)
@@ -304,4 +304,34 @@ function wmRawToServer(raw: Record<string, unknown>, orgId: string): Record<stri
   }
 
   return record;
+}
+
+// ── Sync Status ────────────────────────────────────────
+
+export async function getSyncStatus(
+  orgId: string,
+): Promise<{ lastSyncAt: number | null; pendingPushCount: number }> {
+  // Approximate lastSyncAt: most recent updatedAt across push tables
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pushTables: any[] = [orders, orderItems, payments, shifts];
+  let lastSyncAt: number | null = null;
+
+  for (const table of pushTables) {
+    const [row] = await db
+      .select({ updatedAt: table.updatedAt })
+      .from(table)
+      .where(eq(table.organizationId, orgId))
+      .orderBy(desc(table.updatedAt))
+      .limit(1);
+
+    if (row?.updatedAt) {
+      const ts = (row.updatedAt as Date).getTime();
+      if (lastSyncAt === null || ts > lastSyncAt) {
+        lastSyncAt = ts;
+      }
+    }
+  }
+
+  // pendingPushCount is a client-side concept; server returns 0 as placeholder
+  return { lastSyncAt, pendingPushCount: 0 };
 }
