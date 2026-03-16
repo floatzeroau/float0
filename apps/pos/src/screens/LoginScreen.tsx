@@ -1,42 +1,148 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  ActivityIndicator,
+} from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { API_URL } from '../config';
 
-const PIN_LENGTH = 6;
+const PIN_LENGTH = 4;
+const ORG_ID_KEY = 'float0_org_id';
+const TOKEN_KEY = 'float0_access_token';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const handleDigit = useCallback((digit: string) => {
-    setPin((prev) => (prev.length < PIN_LENGTH ? prev + digit : prev));
+  useEffect(() => {
+    return () => {
+      if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+    };
   }, []);
+
+  const shake = useCallback(() => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  }, [shakeAnim]);
+
+  const startLockout = useCallback((seconds: number) => {
+    setLockoutSeconds(seconds);
+    if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+    lockoutTimer.current = setInterval(() => {
+      setLockoutSeconds((prev) => {
+        if (prev <= 1) {
+          if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const handleDigit = useCallback(
+    (digit: string) => {
+      if (lockoutSeconds > 0) return;
+      setPin((prev) => (prev.length < PIN_LENGTH ? prev + digit : prev));
+      setError('');
+    },
+    [lockoutSeconds],
+  );
 
   const handleBackspace = useCallback(() => {
     setPin((prev) => prev.slice(0, -1));
+    setError('');
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    if (pin.length === PIN_LENGTH) {
-      // TODO: validate PIN against staff record
-      navigation.replace('Main');
+  const handleConfirm = useCallback(async () => {
+    if (pin.length < PIN_LENGTH || loading || lockoutSeconds > 0) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Use stored orgId or fall back to a default for development
+      const orgId = await SecureStore.getItemAsync(ORG_ID_KEY);
+      if (!orgId) {
+        setError('No organization configured');
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/auth/pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId, pin }),
+      });
+
+      const body = await res.json();
+
+      if (res.ok) {
+        await SecureStore.setItemAsync(TOKEN_KEY, body.accessToken);
+        setPin('');
+        navigation.replace('Main');
+      } else if (res.status === 429) {
+        const retryAfter = body.retryAfter ?? 300;
+        startLockout(retryAfter);
+        setPin('');
+        shake();
+        setError('Too many attempts');
+      } else {
+        setPin('');
+        shake();
+        setError(body.error ?? 'Invalid PIN');
+      }
+    } catch {
+      setPin('');
+      setError('Network error');
+    } finally {
+      setLoading(false);
     }
-  }, [pin, navigation]);
+  }, [pin, loading, lockoutSeconds, navigation, shake, startLockout]);
 
   const renderDots = () =>
     Array.from({ length: PIN_LENGTH }, (_, i) => (
-      <View key={i} style={[styles.dot, i < pin.length && styles.dotFilled]} />
+      <View
+        key={i}
+        style={[styles.dot, i < pin.length && styles.dotFilled, error ? styles.dotError : null]}
+      />
     ));
 
-  const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+  const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '\u232B'];
+  const locked = lockoutSeconds > 0;
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Enter PIN</Text>
 
-      <View style={styles.dotsRow}>{renderDots()}</View>
+      <Animated.View style={[styles.dotsRow, { transform: [{ translateX: shakeAnim }] }]}>
+        {renderDots()}
+      </Animated.View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {locked ? (
+        <Text style={styles.lockoutText}>
+          Try again in {Math.floor(lockoutSeconds / 60)}:
+          {String(lockoutSeconds % 60).padStart(2, '0')}
+        </Text>
+      ) : null}
 
       <View style={styles.grid}>
         {digits.map((d, i) => {
@@ -44,10 +150,15 @@ export default function LoginScreen({ navigation }: Props) {
             return <View key={i} style={styles.key} />;
           }
 
-          const onPress = d === '⌫' ? handleBackspace : () => handleDigit(d);
+          const onPress = d === '\u232B' ? handleBackspace : () => handleDigit(d);
 
           return (
-            <TouchableOpacity key={i} style={styles.key} onPress={onPress}>
+            <TouchableOpacity
+              key={i}
+              style={[styles.key, locked && styles.keyDisabled]}
+              onPress={onPress}
+              disabled={locked}
+            >
               <Text style={styles.keyText}>{d}</Text>
             </TouchableOpacity>
           );
@@ -55,11 +166,18 @@ export default function LoginScreen({ navigation }: Props) {
       </View>
 
       <TouchableOpacity
-        style={[styles.confirm, pin.length < PIN_LENGTH && styles.confirmDisabled]}
+        style={[
+          styles.confirm,
+          (pin.length < PIN_LENGTH || loading || locked) && styles.confirmDisabled,
+        ]}
         onPress={handleConfirm}
-        disabled={pin.length < PIN_LENGTH}
+        disabled={pin.length < PIN_LENGTH || loading || locked}
       >
-        <Text style={styles.confirmText}>Confirm</Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.confirmText}>Confirm</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -81,7 +199,7 @@ const styles = StyleSheet.create({
   dotsRow: {
     flexDirection: 'row',
     gap: 16,
-    marginBottom: 40,
+    marginBottom: 16,
   },
   dot: {
     width: 16,
@@ -95,11 +213,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderColor: '#1a1a1a',
   },
+  dotError: {
+    borderColor: '#dc2626',
+    backgroundColor: '#dc2626',
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  lockoutText: {
+    color: '#dc2626',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     width: 270,
     justifyContent: 'center',
+    marginTop: 16,
   },
   key: {
     width: 80,
@@ -109,6 +243,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  keyDisabled: {
+    opacity: 0.3,
   },
   keyText: {
     fontSize: 28,

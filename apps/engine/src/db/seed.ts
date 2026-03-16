@@ -27,6 +27,7 @@ async function seed() {
   console.log(`Created organization: ${org.name} (${org.id})`);
 
   const passwordHash = await hash('admin123', SALT_ROUNDS);
+  const pinHash = await hash('1234', SALT_ROUNDS);
 
   const [user] = await db
     .insert(users)
@@ -48,6 +49,7 @@ async function seed() {
       userId: user.id,
       organizationId: org.id,
       role: 'owner',
+      pinHash,
       permissions: [],
     })
     .returning();

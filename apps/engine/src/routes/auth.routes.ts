@@ -1,6 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { loginUser, registerUser, refreshAccessToken, logoutUser } from './auth.service.js';
+import {
+  loginUser,
+  registerUser,
+  refreshAccessToken,
+  logoutUser,
+  pinLogin,
+  setPin,
+} from './auth.service.js';
 import { requireAuth } from '../middleware/require-auth.js';
 
 const passwordSchema = z
@@ -27,6 +34,16 @@ const refreshSchema = z.object({
 
 const logoutSchema = z.object({
   refreshToken: z.string().optional(),
+});
+
+const pinLoginSchema = z.object({
+  orgId: z.string().uuid(),
+  pin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits'),
+});
+
+const pinSetSchema = z.object({
+  userId: z.string().uuid(),
+  pin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits'),
 });
 
 export async function authRoutes(app: FastifyInstance) {
@@ -89,5 +106,56 @@ export async function authRoutes(app: FastifyInstance) {
     await logoutUser(request.user.userId, parsed.data.refreshToken);
 
     return reply.send({ message: 'Logged out' });
+  });
+
+  app.post('/auth/pin', async (request, reply) => {
+    const parsed = pinLoginSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'Validation failed',
+        statusCode: 400,
+        details: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    try {
+      const result = await pinLogin(app, parsed.data.orgId, parsed.data.pin, request.ip);
+      return reply.send(result);
+    } catch (err) {
+      const error = err as Error & { statusCode?: number; retryAfter?: number };
+      const status = error.statusCode ?? 500;
+      const body: Record<string, unknown> = { error: error.message, statusCode: status };
+      if (error.retryAfter) {
+        body.retryAfter = error.retryAfter;
+      }
+      return reply.status(status).send(body);
+    }
+  });
+
+  app.post('/auth/pin/set', { preHandler: [requireAuth] }, async (request, reply) => {
+    const parsed = pinSetSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'Validation failed',
+        statusCode: 400,
+        details: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const { userId: targetUserId, pin } = parsed.data;
+    const caller = request.user;
+
+    // Authorization: owner/admin/manager can set for anyone, staff can only set own
+    const isManager = ['owner', 'admin', 'manager'].includes(caller.role);
+    if (!isManager && caller.userId !== targetUserId) {
+      return reply.status(403).send({
+        error: 'Forbidden: can only set your own PIN',
+        statusCode: 403,
+      });
+    }
+
+    await setPin(caller.orgId, targetUserId, pin);
+
+    return reply.send({ message: 'PIN set successfully' });
   });
 }

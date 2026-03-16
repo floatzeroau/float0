@@ -69,6 +69,8 @@ export const orgMemberships = pgTable(
       .references(() => organizations.id),
     role: orgMembershipRoleEnum().notNull(),
     pinHash: varchar({ length: 255 }),
+    pinFailedAttempts: integer().notNull().default(0),
+    pinLockedUntil: timestamp({ withTimezone: true }),
     permissions: jsonb().notNull().default([]),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

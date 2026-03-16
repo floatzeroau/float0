@@ -7,7 +7,10 @@ import { users, orgMemberships, refreshTokens, auditLog } from '../db/schema/cor
 
 const SALT_ROUNDS = 10;
 const ACCESS_TOKEN_EXPIRY = '1h';
+const PIN_ACCESS_TOKEN_EXPIRY = '12h';
 const REFRESH_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const PIN_MAX_ATTEMPTS = 5;
+const PIN_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -213,6 +216,152 @@ export async function logoutUser(userId: string, token?: string): Promise<void> 
       .set({ revokedAt: new Date() })
       .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
   }
+}
+
+export async function pinLogin(
+  app: FastifyInstance,
+  orgId: string,
+  pin: string,
+  ipAddress?: string,
+): Promise<{ accessToken: string }> {
+  // Get all memberships for org that have a PIN set
+  const memberships = await db
+    .select()
+    .from(orgMemberships)
+    .where(eq(orgMemberships.organizationId, orgId));
+
+  const withPin = memberships.filter((m) => m.pinHash);
+
+  if (withPin.length === 0) {
+    throw Object.assign(new Error('Invalid PIN'), { statusCode: 401 });
+  }
+
+  for (const membership of withPin) {
+    // Check lockout
+    if (membership.pinLockedUntil && membership.pinLockedUntil > new Date()) {
+      const retryAfter = Math.ceil((membership.pinLockedUntil.getTime() - Date.now()) / 1000);
+      throw Object.assign(new Error('Too many attempts'), {
+        statusCode: 429,
+        retryAfter,
+      });
+    }
+
+    const valid = await compare(pin, membership.pinHash!);
+    if (!valid) continue;
+
+    // Matched — look up user
+    const [user] = await db.select().from(users).where(eq(users.id, membership.userId)).limit(1);
+
+    if (!user || !user.isActive) continue;
+
+    // Reset failed attempts on success
+    if (membership.pinFailedAttempts > 0) {
+      await db
+        .update(orgMemberships)
+        .set({ pinFailedAttempts: 0, pinLockedUntil: null })
+        .where(eq(orgMemberships.id, membership.id));
+    }
+
+    const permissions = Array.isArray(membership.permissions)
+      ? (membership.permissions as string[])
+      : [];
+
+    const accessToken = app.jwt.sign(
+      {
+        userId: user.id,
+        orgId: membership.organizationId,
+        role: membership.role,
+        permissions,
+      },
+      { expiresIn: PIN_ACCESS_TOKEN_EXPIRY },
+    );
+
+    // Audit log success
+    await db.insert(auditLog).values({
+      organizationId: membership.organizationId,
+      userId: user.id,
+      action: 'auth.pin_login_success',
+      entityType: 'user',
+      entityId: user.id,
+      ipAddress: ipAddress ?? null,
+    });
+
+    return { accessToken };
+  }
+
+  // No match found — increment failed attempts for all PIN-enabled memberships in this org
+  for (const membership of withPin) {
+    const newAttempts = membership.pinFailedAttempts + 1;
+    const lockedUntil =
+      newAttempts >= PIN_MAX_ATTEMPTS ? new Date(Date.now() + PIN_LOCKOUT_MS) : null;
+
+    await db
+      .update(orgMemberships)
+      .set({ pinFailedAttempts: newAttempts, pinLockedUntil: lockedUntil })
+      .where(eq(orgMemberships.id, membership.id));
+
+    // Audit log failure
+    const [user] = await db.select().from(users).where(eq(users.id, membership.userId)).limit(1);
+
+    if (user) {
+      await db.insert(auditLog).values({
+        organizationId: membership.organizationId,
+        userId: user.id,
+        action: 'auth.pin_login_failed',
+        entityType: 'user',
+        entityId: user.id,
+        changes: { failedAttempts: newAttempts, locked: !!lockedUntil },
+        ipAddress: ipAddress ?? null,
+      });
+    }
+  }
+
+  // Check if now locked out
+  const anyLocked = withPin.some((m) => m.pinFailedAttempts + 1 >= PIN_MAX_ATTEMPTS);
+  if (anyLocked) {
+    throw Object.assign(new Error('Too many attempts'), {
+      statusCode: 429,
+      retryAfter: Math.ceil(PIN_LOCKOUT_MS / 1000),
+    });
+  }
+
+  throw Object.assign(new Error('Invalid PIN'), { statusCode: 401 });
+}
+
+export async function setPin(orgId: string, targetUserId: string, pin: string): Promise<void> {
+  // Hash the new PIN
+  const pinHash = await hash(pin, SALT_ROUNDS);
+
+  // Check uniqueness within the org — no two memberships should share the same PIN
+  const orgMembers = await db
+    .select()
+    .from(orgMemberships)
+    .where(eq(orgMemberships.organizationId, orgId));
+
+  for (const member of orgMembers) {
+    if (member.userId === targetUserId || !member.pinHash) continue;
+    const duplicate = await compare(pin, member.pinHash);
+    if (duplicate) {
+      throw Object.assign(new Error('PIN already in use by another staff member'), {
+        statusCode: 409,
+      });
+    }
+  }
+
+  const [membership] = await db
+    .select()
+    .from(orgMemberships)
+    .where(and(eq(orgMemberships.userId, targetUserId), eq(orgMemberships.organizationId, orgId)))
+    .limit(1);
+
+  if (!membership) {
+    throw Object.assign(new Error('Membership not found'), { statusCode: 404 });
+  }
+
+  await db
+    .update(orgMemberships)
+    .set({ pinHash, pinFailedAttempts: 0, pinLockedUntil: null })
+    .where(eq(orgMemberships.id, membership.id));
 }
 
 async function generateTokens(
