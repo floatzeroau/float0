@@ -2,6 +2,14 @@ import 'dotenv/config';
 import { hash } from 'bcrypt';
 import { db } from './connection.js';
 import { organizations, users, orgMemberships } from './schema/core.js';
+import {
+  categories,
+  products,
+  modifierGroups,
+  modifiers,
+  productModifierGroups,
+  customers,
+} from './schema/pos.js';
 
 const SALT_ROUNDS = 10;
 
@@ -55,6 +63,162 @@ async function seed() {
     .returning();
 
   console.log(`Created membership: ${membership.id} (role: ${membership.role})`);
+
+  // ── POS Seed Data ────────────────────────────────────
+
+  const [catCoffee, catFood] = await db
+    .insert(categories)
+    .values([
+      { organizationId: org.id, name: 'Coffee', colour: '#6F4E37', icon: 'coffee', sortOrder: 0 },
+      { organizationId: org.id, name: 'Food', colour: '#E8A317', icon: 'utensils', sortOrder: 1 },
+    ])
+    .returning();
+
+  console.log(`Created categories: ${catCoffee.name}, ${catFood.name}`);
+
+  const [pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread] = await db
+    .insert(products)
+    .values([
+      {
+        organizationId: org.id,
+        name: 'Flat White',
+        categoryId: catCoffee.id,
+        basePrice: 4.5,
+        isAvailable: true,
+        sortOrder: 0,
+      },
+      {
+        organizationId: org.id,
+        name: 'Latte',
+        categoryId: catCoffee.id,
+        basePrice: 4.5,
+        isAvailable: true,
+        sortOrder: 1,
+      },
+      {
+        organizationId: org.id,
+        name: 'Cappuccino',
+        categoryId: catCoffee.id,
+        basePrice: 4.5,
+        isAvailable: true,
+        sortOrder: 2,
+      },
+      {
+        organizationId: org.id,
+        name: 'Croissant',
+        description: 'Freshly baked butter croissant',
+        categoryId: catFood.id,
+        basePrice: 5.0,
+        isAvailable: true,
+        sortOrder: 0,
+      },
+      {
+        organizationId: org.id,
+        name: 'Banana Bread',
+        description: 'Warm banana bread with butter',
+        categoryId: catFood.id,
+        basePrice: 6.0,
+        isAvailable: true,
+        sortOrder: 1,
+      },
+    ])
+    .returning();
+
+  console.log(
+    `Created products: ${[pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread].map((p) => p.name).join(', ')}`,
+  );
+
+  const [mgMilk] = await db
+    .insert(modifierGroups)
+    .values({
+      organizationId: org.id,
+      name: 'Milk Type',
+      displayName: 'Choose your milk',
+      selectionType: 'single',
+      minSelections: 1,
+      maxSelections: 1,
+      sortOrder: 0,
+    })
+    .returning();
+
+  console.log(`Created modifier group: ${mgMilk.name}`);
+
+  await db.insert(modifiers).values([
+    {
+      organizationId: org.id,
+      name: 'Full Cream',
+      modifierGroupId: mgMilk.id,
+      priceAdjustment: 0,
+      isDefault: true,
+      isAvailable: true,
+      sortOrder: 0,
+    },
+    {
+      organizationId: org.id,
+      name: 'Oat',
+      modifierGroupId: mgMilk.id,
+      priceAdjustment: 0.5,
+      isDefault: false,
+      isAvailable: true,
+      sortOrder: 1,
+    },
+    {
+      organizationId: org.id,
+      name: 'Soy',
+      modifierGroupId: mgMilk.id,
+      priceAdjustment: 0.5,
+      isDefault: false,
+      isAvailable: true,
+      sortOrder: 2,
+    },
+  ]);
+
+  console.log('Created modifiers: Full Cream, Oat, Soy');
+
+  // Link milk type modifier group to all coffee products
+  await db.insert(productModifierGroups).values([
+    {
+      organizationId: org.id,
+      productId: pFlatWhite.id,
+      modifierGroupId: mgMilk.id,
+      sortOrder: 0,
+    },
+    {
+      organizationId: org.id,
+      productId: pLatte.id,
+      modifierGroupId: mgMilk.id,
+      sortOrder: 0,
+    },
+    {
+      organizationId: org.id,
+      productId: pCappuccino.id,
+      modifierGroupId: mgMilk.id,
+      sortOrder: 0,
+    },
+  ]);
+
+  console.log('Linked Milk Type to coffee products');
+
+  await db.insert(customers).values([
+    {
+      organizationId: org.id,
+      firstName: 'Jane',
+      lastName: 'Smith',
+      email: 'jane@example.com',
+      phone: '+61 400 111 111',
+      loyaltyBalance: 25.0,
+    },
+    {
+      organizationId: org.id,
+      firstName: 'Bob',
+      lastName: 'Jones',
+      email: 'bob@example.com',
+      phone: '+61 400 222 222',
+      loyaltyBalance: 10.0,
+    },
+  ]);
+
+  console.log('Created customers: Jane Smith, Bob Jones');
 
   console.log('Seed complete.');
   process.exit(0);

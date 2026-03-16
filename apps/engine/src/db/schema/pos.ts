@@ -1,0 +1,329 @@
+import {
+  boolean,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
+import { organizations } from './core';
+
+// ── Enums ──────────────────────────────────────────────
+
+export const orderStatusEnum = pgEnum('order_status', [
+  'draft',
+  'open',
+  'completed',
+  'voided',
+  'refunded',
+]);
+
+export const orderTypeEnum = pgEnum('order_type', ['dine_in', 'takeaway', 'delivery']);
+
+export const paymentMethodEnum = pgEnum('payment_method', [
+  'cash',
+  'card',
+  'mobile',
+  'voucher',
+  'split',
+]);
+
+export const paymentStatusEnum = pgEnum('payment_status', [
+  'pending',
+  'completed',
+  'failed',
+  'refunded',
+]);
+
+export const shiftStatusEnum = pgEnum('shift_status', ['open', 'closed', 'reconciled']);
+
+export const selectionTypeEnum = pgEnum('selection_type', ['single', 'multiple']);
+
+// ── Categories ─────────────────────────────────────────
+
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    name: varchar({ length: 255 }).notNull(),
+    colour: varchar({ length: 50 }),
+    icon: varchar({ length: 100 }),
+    sortOrder: integer().notNull().default(0),
+    parentId: uuid(),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('categories_organization_id_idx').on(t.organizationId),
+    index('categories_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Products ───────────────────────────────────────────
+
+export const products = pgTable(
+  'products',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    name: varchar({ length: 255 }).notNull(),
+    description: text(),
+    categoryId: uuid()
+      .notNull()
+      .references(() => categories.id),
+    basePrice: doublePrecision().notNull(),
+    sku: varchar({ length: 100 }),
+    barcode: varchar({ length: 255 }),
+    imageUrl: text(),
+    isAvailable: boolean().notNull().default(true),
+    sortOrder: integer().notNull().default(0),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('products_organization_id_idx').on(t.organizationId),
+    index('products_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Modifier Groups ───────────────────────────────────
+
+export const modifierGroups = pgTable(
+  'modifier_groups',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    name: varchar({ length: 255 }).notNull(),
+    displayName: varchar({ length: 255 }),
+    selectionType: selectionTypeEnum().notNull().default('single'),
+    minSelections: integer().notNull().default(0),
+    maxSelections: integer().notNull().default(1),
+    sortOrder: integer().notNull().default(0),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('modifier_groups_organization_id_idx').on(t.organizationId),
+    index('modifier_groups_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Modifiers ──────────────────────────────────────────
+
+export const modifiers = pgTable(
+  'modifiers',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    name: varchar({ length: 255 }).notNull(),
+    modifierGroupId: uuid()
+      .notNull()
+      .references(() => modifierGroups.id),
+    priceAdjustment: doublePrecision().notNull().default(0),
+    isDefault: boolean().notNull().default(false),
+    isAvailable: boolean().notNull().default(true),
+    sortOrder: integer().notNull().default(0),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('modifiers_organization_id_idx').on(t.organizationId),
+    index('modifiers_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Product ↔ Modifier Group (join table) ──────────────
+
+export const productModifierGroups = pgTable(
+  'product_modifier_groups',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id),
+    modifierGroupId: uuid()
+      .notNull()
+      .references(() => modifierGroups.id),
+    sortOrder: integer().notNull().default(0),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('product_modifier_groups_organization_id_idx').on(t.organizationId),
+    index('product_modifier_groups_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Customers ──────────────────────────────────────────
+
+export const customers = pgTable(
+  'customers',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    firstName: varchar({ length: 100 }).notNull(),
+    lastName: varchar({ length: 100 }).notNull(),
+    email: varchar({ length: 255 }),
+    phone: varchar({ length: 50 }),
+    loyaltyTier: varchar({ length: 50 }),
+    loyaltyBalance: doublePrecision().notNull().default(0),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('customers_organization_id_idx').on(t.organizationId),
+    index('customers_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Orders ─────────────────────────────────────────────
+
+export const orders = pgTable(
+  'orders',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    orderNumber: varchar({ length: 50 }).notNull(),
+    orderType: orderTypeEnum().notNull(),
+    status: orderStatusEnum().notNull().default('draft'),
+    tableNumber: varchar({ length: 20 }),
+    customerId: uuid().references(() => customers.id),
+    staffId: uuid().notNull(),
+    terminalId: varchar({ length: 255 }).notNull(),
+    subtotal: doublePrecision().notNull().default(0),
+    gst: doublePrecision().notNull().default(0),
+    total: doublePrecision().notNull().default(0),
+    discountAmount: doublePrecision().notNull().default(0),
+    notes: text(),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('orders_organization_id_idx').on(t.organizationId),
+    index('orders_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Order Items ────────────────────────────────────────
+
+export const orderItems = pgTable(
+  'order_items',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    orderId: uuid()
+      .notNull()
+      .references(() => orders.id),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id),
+    quantity: integer().notNull().default(1),
+    unitPrice: doublePrecision().notNull(),
+    modifiersJson: jsonb(),
+    lineTotal: doublePrecision().notNull(),
+    notes: text(),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('order_items_organization_id_idx').on(t.organizationId),
+    index('order_items_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Payments ───────────────────────────────────────────
+
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    orderId: uuid()
+      .notNull()
+      .references(() => orders.id),
+    method: paymentMethodEnum().notNull(),
+    amount: doublePrecision().notNull(),
+    tipAmount: doublePrecision().notNull().default(0),
+    reference: varchar({ length: 255 }),
+    status: paymentStatusEnum().notNull().default('pending'),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('payments_organization_id_idx').on(t.organizationId),
+    index('payments_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Shifts ─────────────────────────────────────────────
+
+export const shifts = pgTable(
+  'shifts',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    staffId: uuid().notNull(),
+    terminalId: varchar({ length: 255 }).notNull(),
+    openedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp({ withTimezone: true }),
+    openingFloat: doublePrecision().notNull().default(0),
+    closingFloat: doublePrecision(),
+    expectedCash: doublePrecision(),
+    actualCash: doublePrecision(),
+    variance: doublePrecision(),
+    status: shiftStatusEnum().notNull().default('open'),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('shifts_organization_id_idx').on(t.organizationId),
+    index('shifts_updated_at_idx').on(t.updatedAt),
+  ],
+);
