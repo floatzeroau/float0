@@ -1,11 +1,14 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import LoginScreen from '../screens/LoginScreen';
 import POSScreen from '../screens/POSScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { SyncProvider } from '../sync/SyncProvider';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 
 // ---------------------------------------------------------------------------
 // Type declarations
@@ -30,10 +33,13 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabs() {
   return (
     <SyncProvider>
-      <Tab.Navigator screenOptions={{ headerShown: false }}>
-        <Tab.Screen name="POS" component={POSScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
-      </Tab.Navigator>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <SyncStatusBar />
+        <Tab.Navigator screenOptions={{ headerShown: false }}>
+          <Tab.Screen name="POS" component={POSScreen} />
+          <Tab.Screen name="Settings" component={SettingsScreen} />
+        </Tab.Navigator>
+      </SafeAreaView>
     </SyncProvider>
   );
 }
@@ -43,6 +49,12 @@ function MainTabs() {
 // ---------------------------------------------------------------------------
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 export default function RootNavigator() {
   return (
