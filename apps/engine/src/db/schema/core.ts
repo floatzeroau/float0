@@ -69,7 +69,7 @@ export const orgMemberships = pgTable(
       .references(() => organizations.id),
     role: orgMembershipRoleEnum().notNull(),
     pinHash: varchar({ length: 255 }),
-    permissions: jsonb().notNull().default({}),
+    permissions: jsonb().notNull().default([]),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -103,6 +103,23 @@ export const auditLog = pgTable(
     index('audit_log_organization_id_idx').on(t.organizationId),
     index('audit_log_user_id_idx').on(t.userId),
   ],
+);
+
+// ── Refresh Tokens ───────────────────────────────────────
+
+export const refreshTokens = pgTable(
+  'refresh_tokens',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id),
+    tokenHash: varchar({ length: 255 }).notNull(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index('refresh_tokens_user_id_idx').on(t.userId)],
 );
 
 // ── Event Log ──────────────────────────────────────────

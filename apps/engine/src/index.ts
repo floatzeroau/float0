@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import { errorHandler } from './middleware/error-handler.js';
 import { authPlugin } from './middleware/auth.js';
 import { orgContextPlugin } from './middleware/org-context.js';
+import { authRoutes } from './routes/auth.routes.js';
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST ?? '0.0.0.0';
@@ -23,6 +24,7 @@ app.setErrorHandler(errorHandler);
 await app.register(cors, { origin: corsOrigins });
 await app.register(authPlugin);
 await app.register(orgContextPlugin);
+await app.register(authRoutes);
 
 app.get('/health', async () => ({
   status: 'ok',

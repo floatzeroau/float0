@@ -48,7 +48,7 @@ async function seed() {
       userId: user.id,
       organizationId: org.id,
       role: 'owner',
-      permissions: {},
+      permissions: [],
     })
     .returning();
 
