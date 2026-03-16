@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import LoginScreen from '../screens/LoginScreen';
 import POSScreen from '../screens/POSScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import { SyncProvider } from '../sync/SyncProvider';
 
 // ---------------------------------------------------------------------------
 // Type declarations
@@ -28,10 +29,12 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="POS" component={POSScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
-    </Tab.Navigator>
+    <SyncProvider>
+      <Tab.Navigator screenOptions={{ headerShown: false }}>
+        <Tab.Screen name="POS" component={POSScreen} />
+        <Tab.Screen name="Settings" component={SettingsScreen} />
+      </Tab.Navigator>
+    </SyncProvider>
   );
 }
 

@@ -1,9 +1,7 @@
 import { synchronize } from '@nozbe/watermelondb/sync';
 import type { Database } from '@nozbe/watermelondb';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../config';
-
-const AUTH_TOKEN_KEY = 'auth_token';
+import { API_URL, AUTH_TOKEN_KEY } from '../config';
 
 async function getAuthToken(): Promise<string | null> {
   return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
