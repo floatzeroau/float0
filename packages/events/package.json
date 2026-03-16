@@ -13,6 +13,9 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "lint": "eslint src/",
-    "test": "echo 'test: @float0/events'"
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3"
   }
 }

@@ -7,6 +7,7 @@ import { orgContextPlugin } from './middleware/org-context.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requireRole } from './middleware/rbac.js';
+import { registerEventLogger } from './services/event-logger.js';
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST ?? '0.0.0.0';
@@ -27,6 +28,8 @@ await app.register(cors, { origin: corsOrigins });
 await app.register(authPlugin);
 await app.register(orgContextPlugin);
 await app.register(authRoutes);
+
+registerEventLogger();
 
 app.get('/health', async () => ({
   status: 'ok',
