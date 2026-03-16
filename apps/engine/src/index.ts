@@ -5,6 +5,8 @@ import { errorHandler } from './middleware/error-handler.js';
 import { authPlugin } from './middleware/auth.js';
 import { orgContextPlugin } from './middleware/org-context.js';
 import { authRoutes } from './routes/auth.routes.js';
+import { requireAuth } from './middleware/require-auth.js';
+import { requireRole } from './middleware/rbac.js';
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST ?? '0.0.0.0';
@@ -29,6 +31,12 @@ await app.register(authRoutes);
 app.get('/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
+}));
+
+app.get('/admin/users', { preHandler: [requireAuth, requireRole('admin')] }, async (request) => ({
+  message: 'Admin access granted',
+  userId: request.user.userId,
+  role: request.user.role,
 }));
 
 try {

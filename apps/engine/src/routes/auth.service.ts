@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { compare, hash } from 'bcrypt';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
+import { getEffectivePermissions } from '@float0/shared';
 import { db } from '../db/connection.js';
 import { users, orgMemberships, refreshTokens, auditLog } from '../db/schema/core.js';
 
@@ -68,9 +69,10 @@ export async function loginUser(
     throw Object.assign(new Error('No organization membership found'), { statusCode: 403 });
   }
 
-  const permissions = Array.isArray(membership.permissions)
+  const overrides = Array.isArray(membership.permissions)
     ? (membership.permissions as string[])
     : [];
+  const permissions = getEffectivePermissions(membership.role, overrides);
 
   const tokens = await generateTokens(app, {
     userId: user.id,
@@ -130,9 +132,10 @@ export async function registerUser(
     });
   }
 
-  const permissions = Array.isArray(membership.permissions)
+  const overrides = Array.isArray(membership.permissions)
     ? (membership.permissions as string[])
     : [];
+  const permissions = getEffectivePermissions(membership.role, overrides);
 
   const tokens = await generateTokens(app, {
     userId: user.id,
@@ -189,9 +192,10 @@ export async function refreshAccessToken(app: FastifyInstance, token: string): P
     throw Object.assign(new Error('No organization membership found'), { statusCode: 403 });
   }
 
-  const permissions = Array.isArray(membership.permissions)
+  const overrides = Array.isArray(membership.permissions)
     ? (membership.permissions as string[])
     : [];
+  const permissions = getEffectivePermissions(membership.role, overrides);
 
   return generateTokens(app, {
     userId: user.id,
@@ -262,9 +266,10 @@ export async function pinLogin(
         .where(eq(orgMemberships.id, membership.id));
     }
 
-    const permissions = Array.isArray(membership.permissions)
+    const overrides = Array.isArray(membership.permissions)
       ? (membership.permissions as string[])
       : [];
+    const permissions = getEffectivePermissions(membership.role, overrides);
 
     const accessToken = app.jwt.sign(
       {

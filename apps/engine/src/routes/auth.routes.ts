@@ -9,6 +9,7 @@ import {
   setPin,
 } from './auth.service.js';
 import { requireAuth } from '../middleware/require-auth.js';
+import { requireRole } from '../middleware/rbac.js';
 
 const passwordSchema = z
   .string()
@@ -132,30 +133,23 @@ export async function authRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/auth/pin/set', { preHandler: [requireAuth] }, async (request, reply) => {
-    const parsed = pinSetSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({
-        error: 'Validation failed',
-        statusCode: 400,
-        details: parsed.error.flatten().fieldErrors,
-      });
-    }
+  app.post(
+    '/auth/pin/set',
+    { preHandler: [requireAuth, requireRole('manager')] },
+    async (request, reply) => {
+      const parsed = pinSetSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: 'Validation failed',
+          statusCode: 400,
+          details: parsed.error.flatten().fieldErrors,
+        });
+      }
 
-    const { userId: targetUserId, pin } = parsed.data;
-    const caller = request.user;
+      const { userId: targetUserId, pin } = parsed.data;
+      await setPin(request.user.orgId, targetUserId, pin);
 
-    // Authorization: owner/admin/manager can set for anyone, staff can only set own
-    const isManager = ['owner', 'admin', 'manager'].includes(caller.role);
-    if (!isManager && caller.userId !== targetUserId) {
-      return reply.status(403).send({
-        error: 'Forbidden: can only set your own PIN',
-        statusCode: 403,
-      });
-    }
-
-    await setPin(caller.orgId, targetUserId, pin);
-
-    return reply.send({ message: 'PIN set successfully' });
-  });
+      return reply.send({ message: 'PIN set successfully' });
+    },
+  );
 }

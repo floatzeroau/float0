@@ -8,7 +8,7 @@
     "build": "tsc --project tsconfig.build.json",
     "dev": "tsx watch src/index.ts",
     "lint": "eslint src/",
-    "test": "echo 'test: @float0/engine'",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -34,6 +34,7 @@
     "@types/node": "^22",
     "@types/pg": "^8",
     "drizzle-kit": "^0.31",
-    "tsx": "^4"
+    "tsx": "^4",
+    "vitest": "^3"
   }
 }

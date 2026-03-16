@@ -1,5 +1,5 @@
 {
   "permissions": {
-    "allow": ["Bash(node:*)"]
+    "allow": ["Bash(node:*)", "Bash(pnpm turbo:*)"]
   }
 }

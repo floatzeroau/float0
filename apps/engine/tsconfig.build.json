@@ -2,7 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "paths": {
+      "@float0/shared": ["../../packages/shared/dist"],
+      "@float0/shared/*": ["../../packages/shared/dist/*"],
+      "@float0/events": ["../../packages/events/dist"],
+      "@float0/events/*": ["../../packages/events/dist/*"]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]

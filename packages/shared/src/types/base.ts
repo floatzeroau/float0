@@ -15,7 +15,7 @@ export interface User {
   isActive: boolean;
 }
 
-export type OrgMembershipRole = 'owner' | 'admin' | 'manager' | 'staff';
+export type OrgMembershipRole = 'owner' | 'admin' | 'manager' | 'staff' | 'customer';
 
 export interface OrgMembership {
   id: string;
