@@ -26,11 +26,14 @@ export class Product extends Model {
 
   @text('server_id') serverId!: string;
   @text('name') name!: string;
-  @field('price_cents') priceCents!: number;
+  @text('description') description?: string;
   @text('category_id') categoryId!: string;
+  @field('base_price') basePrice!: number;
   @text('sku') sku?: string;
+  @text('barcode') barcode?: string;
   @text('image_url') imageUrl?: string;
-  @field('is_active') isActive!: boolean;
+  @field('is_available') isAvailable!: boolean;
+  @field('sort_order') sortOrder!: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -52,8 +55,11 @@ export class ModifierGroup extends Model {
 
   @text('server_id') serverId!: string;
   @text('name') name!: string;
+  @text('display_name') displayName?: string;
+  @text('selection_type') selectionType!: string;
   @field('min_selections') minSelections!: number;
   @field('max_selections') maxSelections!: number;
+  @field('sort_order') sortOrder!: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -73,8 +79,11 @@ export class Modifier extends Model {
 
   @text('server_id') serverId!: string;
   @text('name') name!: string;
-  @field('price_cents') priceCents!: number;
   @text('modifier_group_id') modifierGroupId!: string;
+  @field('price_adjustment') priceAdjustment!: number;
+  @field('is_default') isDefault!: boolean;
+  @field('is_available') isAvailable!: boolean;
+  @field('sort_order') sortOrder!: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -96,6 +105,7 @@ export class ProductModifierGroup extends Model {
   @text('server_id') serverId!: string;
   @text('product_id') productId!: string;
   @text('modifier_group_id') modifierGroupId!: string;
+  @field('sort_order') sortOrder!: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -117,8 +127,10 @@ export class Category extends Model {
 
   @text('server_id') serverId!: string;
   @text('name') name!: string;
+  @text('colour') colour?: string;
+  @text('icon') icon?: string;
   @field('sort_order') sortOrder!: number;
-  @text('color') color?: string;
+  @text('parent_id') parentId?: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -141,6 +153,8 @@ export class Customer extends Model {
   @text('last_name') lastName!: string;
   @text('email') email?: string;
   @text('phone') phone?: string;
+  @text('loyalty_tier') loyaltyTier?: string;
+  @field('loyalty_balance') loyaltyBalance!: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -162,13 +176,17 @@ export class Order extends Model {
   };
 
   @text('server_id') serverId!: string;
-  @text('status') status!: string;
+  @text('order_number') orderNumber!: string;
   @text('order_type') orderType!: string;
+  @text('status') status!: string;
+  @text('table_number') tableNumber?: string;
   @text('customer_id') customerId?: string;
   @text('staff_id') staffId!: string;
-  @field('subtotal_cents') subtotalCents!: number;
-  @field('tax_cents') taxCents!: number;
-  @field('total_cents') totalCents!: number;
+  @text('terminal_id') terminalId!: string;
+  @field('subtotal') subtotal!: number;
+  @field('gst') gst!: number;
+  @field('total') total!: number;
+  @field('discount_amount') discountAmount!: number;
   @text('notes') notes?: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
@@ -191,8 +209,9 @@ export class OrderItem extends Model {
   @text('order_id') orderId!: string;
   @text('product_id') productId!: string;
   @field('quantity') quantity!: number;
-  @field('unit_price_cents') unitPriceCents!: number;
+  @field('unit_price') unitPrice!: number;
   @json('modifiers_json', (raw: any) => raw ?? []) modifiersJson!: any[];
+  @field('line_total') lineTotal!: number;
   @text('notes') notes?: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
@@ -211,8 +230,10 @@ export class Payment extends Model {
   @text('server_id') serverId!: string;
   @text('order_id') orderId!: string;
   @text('method') method!: string;
-  @field('amount_cents') amountCents!: number;
+  @field('amount') amount!: number;
+  @field('tip_amount') tipAmount!: number;
   @text('reference') reference?: string;
+  @text('status') status!: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -232,10 +253,15 @@ export class Shift extends Model {
 
   @text('server_id') serverId!: string;
   @text('staff_id') staffId!: string;
-  @date('started_at') startedAt!: Date;
-  @date('ended_at') endedAt?: Date;
-  @field('opening_cash_cents') openingCashCents!: number;
-  @field('closing_cash_cents') closingCashCents?: number;
+  @text('terminal_id') terminalId!: string;
+  @date('opened_at') openedAt!: Date;
+  @date('closed_at') closedAt?: Date;
+  @field('opening_float') openingFloat!: number;
+  @field('closing_float') closingFloat?: number;
+  @field('expected_cash') expectedCash?: number;
+  @field('actual_cash') actualCash?: number;
+  @field('variance') variance?: number;
+  @text('status') status!: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
@@ -251,10 +277,12 @@ export class Staff extends Model {
   };
 
   @text('server_id') serverId!: string;
-  @text('name') name!: string;
-  @text('pin_hash') pinHash!: string;
+  @text('first_name') firstName!: string;
+  @text('last_name') lastName!: string;
   @text('role') role!: string;
+  @text('pin_hash') pinHash!: string;
   @field('is_active') isActive!: boolean;
+  @json('permissions_json', (raw: any) => raw ?? []) permissionsJson!: string[];
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

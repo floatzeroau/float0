@@ -1,0 +1,127 @@
+import { schemaMigrations, addColumns, createTable } from '@nozbe/watermelondb/Schema/migrations';
+
+export const migrations = schemaMigrations({
+  migrations: [
+    {
+      toVersion: 2,
+      steps: [
+        // products: add description, barcode, sort_order; rename price_cents→base_price, is_active→is_available
+        addColumns({
+          table: 'products',
+          columns: [
+            { name: 'description', type: 'string', isOptional: true },
+            { name: 'base_price', type: 'number' },
+            { name: 'barcode', type: 'string', isOptional: true },
+            { name: 'is_available', type: 'boolean' },
+            { name: 'sort_order', type: 'number' },
+          ],
+        }),
+
+        // modifier_groups: add display_name, selection_type, sort_order
+        addColumns({
+          table: 'modifier_groups',
+          columns: [
+            { name: 'display_name', type: 'string', isOptional: true },
+            { name: 'selection_type', type: 'string' },
+            { name: 'sort_order', type: 'number' },
+          ],
+        }),
+
+        // modifiers: add price_adjustment, is_default, is_available, sort_order
+        addColumns({
+          table: 'modifiers',
+          columns: [
+            { name: 'price_adjustment', type: 'number' },
+            { name: 'is_default', type: 'boolean' },
+            { name: 'is_available', type: 'boolean' },
+            { name: 'sort_order', type: 'number' },
+          ],
+        }),
+
+        // product_modifier_groups: add sort_order
+        addColumns({
+          table: 'product_modifier_groups',
+          columns: [{ name: 'sort_order', type: 'number' }],
+        }),
+
+        // categories: add colour, icon, parent_id (rename color→colour)
+        addColumns({
+          table: 'categories',
+          columns: [
+            { name: 'colour', type: 'string', isOptional: true },
+            { name: 'icon', type: 'string', isOptional: true },
+            { name: 'parent_id', type: 'string', isOptional: true },
+          ],
+        }),
+
+        // customers: add loyalty_tier, loyalty_balance
+        addColumns({
+          table: 'customers',
+          columns: [
+            { name: 'loyalty_tier', type: 'string', isOptional: true },
+            { name: 'loyalty_balance', type: 'number' },
+          ],
+        }),
+
+        // orders: add order_number, table_number, terminal_id, subtotal, gst, total, discount_amount
+        addColumns({
+          table: 'orders',
+          columns: [
+            { name: 'order_number', type: 'string' },
+            { name: 'table_number', type: 'string', isOptional: true },
+            { name: 'terminal_id', type: 'string' },
+            { name: 'subtotal', type: 'number' },
+            { name: 'gst', type: 'number' },
+            { name: 'total', type: 'number' },
+            { name: 'discount_amount', type: 'number' },
+          ],
+        }),
+
+        // order_items: add unit_price, line_total
+        addColumns({
+          table: 'order_items',
+          columns: [
+            { name: 'unit_price', type: 'number' },
+            { name: 'line_total', type: 'number' },
+          ],
+        }),
+
+        // payments: add amount, tip_amount, status
+        addColumns({
+          table: 'payments',
+          columns: [
+            { name: 'amount', type: 'number' },
+            { name: 'tip_amount', type: 'number' },
+            { name: 'status', type: 'string' },
+          ],
+        }),
+
+        // shifts: add terminal_id, opened_at, closed_at, opening_float, closing_float, expected_cash, actual_cash, variance, status
+        addColumns({
+          table: 'shifts',
+          columns: [
+            { name: 'terminal_id', type: 'string' },
+            { name: 'opened_at', type: 'number' },
+            { name: 'closed_at', type: 'number', isOptional: true },
+            { name: 'opening_float', type: 'number' },
+            { name: 'closing_float', type: 'number', isOptional: true },
+            { name: 'expected_cash', type: 'number', isOptional: true },
+            { name: 'actual_cash', type: 'number', isOptional: true },
+            { name: 'variance', type: 'number', isOptional: true },
+            { name: 'status', type: 'string' },
+          ],
+        }),
+
+        // staff: add first_name, last_name, permissions_json
+        addColumns({
+          table: 'staff',
+          columns: [
+            { name: 'first_name', type: 'string' },
+            { name: 'last_name', type: 'string' },
+            { name: 'permissions_json', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
+  ],
+});
