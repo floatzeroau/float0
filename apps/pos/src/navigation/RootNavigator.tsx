@@ -1,20 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import InitialSyncScreen from '../screens/InitialSyncScreen';
 import LoginScreen from '../screens/LoginScreen';
 import POSScreen from '../screens/POSScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { SyncProvider } from '../sync/SyncProvider';
 import { SyncStatusBar } from '../components/SyncStatusBar';
+import { isInitialSyncComplete } from '../sync/initial-sync';
 
 // ---------------------------------------------------------------------------
 // Type declarations
 // ---------------------------------------------------------------------------
 
 export type RootStackParamList = {
+  InitialSync: undefined;
   Login: undefined;
   Main: undefined;
 };
@@ -57,8 +60,20 @@ const styles = StyleSheet.create({
 });
 
 export default function RootNavigator() {
+  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
+
+  useEffect(() => {
+    isInitialSyncComplete().then((complete) => {
+      setInitialRoute(complete ? 'Login' : 'InitialSync');
+    });
+  }, []);
+
+  // Wait until we know whether initial sync has run
+  if (!initialRoute) return null;
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
+      <Stack.Screen name="InitialSync" component={InitialSyncScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Main" component={MainTabs} options={{ gestureEnabled: false }} />
     </Stack.Navigator>
