@@ -1,5 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import { useOrder } from '../state/order-store';
 import type { CartItemData } from '../state/order-store';
 import { CustomerSearchModal } from './CustomerSearchModal';
@@ -124,9 +132,11 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     addItemNote,
     setCustomer,
     submitOrder,
+    cancelOrder,
     holdOrder,
   } = useOrder();
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const handleQuantityChange = useCallback(
     (itemId: string, newQty: number) => {
@@ -168,6 +178,30 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     setCustomer(null);
   }, [setCustomer]);
 
+  const handleCancelOrder = useCallback(() => {
+    setShowMenu(false);
+    Alert.alert('Cancel Order', 'Are you sure? This cannot be undone.', [
+      { text: 'Keep Order', style: 'cancel' },
+      {
+        text: 'Cancel Order',
+        style: 'destructive',
+        onPress: () => {
+          if (Alert.prompt) {
+            Alert.prompt('Reason', 'Why is this order being cancelled?', [
+              { text: 'Skip', onPress: () => cancelOrder('No reason given') },
+              {
+                text: 'Confirm',
+                onPress: (reason) => cancelOrder(reason || 'No reason given'),
+              },
+            ]);
+          } else {
+            cancelOrder('Cancelled by staff');
+          }
+        },
+      },
+    ]);
+  }, [cancelOrder]);
+
   const hasItems = items.length > 0;
 
   // Order type badge text
@@ -183,12 +217,26 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.headerOrder}>{currentOrder?.orderNumber ?? 'No Order'}</Text>
-          {currentOrder && (
-            <View style={styles.orderTypeBadge}>
-              <Text style={styles.orderTypeBadgeText}>{orderTypeBadge}</Text>
-            </View>
-          )}
+          <View style={styles.headerRight}>
+            {currentOrder && (
+              <View style={styles.orderTypeBadge}>
+                <Text style={styles.orderTypeBadgeText}>{orderTypeBadge}</Text>
+              </View>
+            )}
+            {currentOrder && hasItems && (
+              <TouchableOpacity style={styles.menuButton} onPress={() => setShowMenu(!showMenu)}>
+                <Text style={styles.menuButtonText}>...</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
+        {showMenu && (
+          <View style={styles.menuDropdown}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleCancelOrder}>
+              <Text style={styles.menuItemTextDanger}>Cancel Order</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {currentOrder && (
           <View style={styles.customerRow}>
             {currentOrder.customerName ? (
@@ -304,6 +352,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  menuButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#666',
+    marginTop: -4,
+  },
+  menuDropdown: {
+    marginTop: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  menuItemTextDanger: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#dc2626',
   },
   headerOrder: {
     fontSize: 16,

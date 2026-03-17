@@ -8,6 +8,14 @@ export interface PosOrderCompleted {
   timestamp: Date;
 }
 
+export interface PosOrderSubmitted {
+  orderId: string;
+  organizationId: string;
+  total: number;
+  itemCount: number;
+  timestamp: Date;
+}
+
 export interface PosOrderRefunded {
   orderId: string;
   organizationId: string;
@@ -39,6 +47,7 @@ export interface ProductsAvailabilityChanged {
 // ── Event map (event name → payload type) ───────────────
 
 export interface EventMap {
+  'pos.order.submitted': PosOrderSubmitted;
   'pos.order.completed': PosOrderCompleted;
   'pos.order.refunded': PosOrderRefunded;
   'inventory.stock.low': InventoryStockLow;

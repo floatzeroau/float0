@@ -4,6 +4,9 @@ import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { Order, OrderItem, Product, Customer } from '../db/models';
 import { calculateLineTotal, calculateCartTotals } from '@float0/shared';
+import { eventBus } from '@float0/events';
+import { transitionOrder } from './order-lifecycle';
+import type { OrderStatusDB } from './order-lifecycle';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,7 +22,7 @@ export interface CurrentOrder {
   itemCount: number;
   customerId: string | null;
   customerName: string | null;
-  status: 'draft' | 'open' | 'submitted';
+  status: OrderStatusDB;
 }
 
 export interface CartItemData {
@@ -68,6 +71,7 @@ interface OrderStoreValue {
   addItemNote: (itemId: string, note: string) => Promise<void>;
   setCustomer: (customerId: string | null) => Promise<void>;
   submitOrder: () => Promise<void>;
+  cancelOrder: (reason: string) => Promise<void>;
   holdOrder: () => Promise<void>;
 }
 
@@ -127,6 +131,7 @@ const OrderContext = createContext<OrderStoreValue>({
   addItemNote: async () => {},
   setCustomer: async () => {},
   submitOrder: async () => {},
+  cancelOrder: async () => {},
   holdOrder: async () => {},
 });
 
@@ -491,18 +496,55 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const orderId = orderRecordIdRef.current;
     if (!orderId) return;
 
-    await database.write(async () => {
-      const record = await database.get<Order>('orders').find(orderId);
-      await record.update((o) => {
-        setRaw(o, 'status', 'submitted');
-      });
+    if (items.length === 0) {
+      Alert.alert('Cannot submit', 'Add at least one item before submitting.');
+      return;
+    }
+
+    await transitionOrder(orderId, 'submitted');
+
+    eventBus.emit('pos.order.submitted', {
+      orderId,
+      organizationId: 'org-1',
+      total: cartTotals.total,
+      itemCount: items.length,
+      timestamp: new Date(),
     });
 
     setCurrentOrder((prev) => {
       if (!prev) return prev;
       return { ...prev, status: 'submitted' };
     });
-  }, []);
+
+    // Auto-start a new order after brief delay
+    setTimeout(() => {
+      doCreateOrder();
+    }, 300);
+  }, [items, cartTotals, doCreateOrder]);
+
+  // -------------------------------------------------------------------------
+  // cancelOrder
+  // -------------------------------------------------------------------------
+  const cancelOrder = useCallback(
+    async (reason: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      await transitionOrder(orderId, 'cancelled');
+
+      // Store cancellation reason in notes
+      await database.write(async () => {
+        const record = await database.get<Order>('orders').find(orderId);
+        await record.update((o) => {
+          setRaw(o, 'notes', `Cancelled: ${reason}`);
+        });
+      });
+
+      // Start fresh order
+      await doCreateOrder();
+    },
+    [doCreateOrder],
+  );
 
   // -------------------------------------------------------------------------
   // holdOrder
@@ -511,18 +553,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const orderId = orderRecordIdRef.current;
     if (!orderId) return;
 
-    await database.write(async () => {
-      const record = await database.get<Order>('orders').find(orderId);
-      await record.update((o) => {
-        setRaw(o, 'status', 'open');
-      });
-    });
-
-    setCurrentOrder((prev) => {
-      if (!prev) return prev;
-      return { ...prev, status: 'open' };
-    });
-  }, []);
+    // For hold, we keep the order in draft but start a new one
+    await doCreateOrder();
+  }, [doCreateOrder]);
 
   // -------------------------------------------------------------------------
   // Provider value
@@ -541,6 +574,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     addItemNote,
     setCustomer,
     submitOrder,
+    cancelOrder,
     holdOrder,
   };
 

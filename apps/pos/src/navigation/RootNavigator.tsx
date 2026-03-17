@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import InitialSyncScreen from '../screens/InitialSyncScreen';
 import LoginScreen from '../screens/LoginScreen';
 import POSScreen from '../screens/POSScreen';
+import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { SyncProvider } from '../sync/SyncProvider';
 import { SyncStatusBar } from '../components/SyncStatusBar';
@@ -25,6 +26,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   POS: undefined;
+  Orders: undefined;
   Settings: undefined;
 };
 
@@ -42,6 +44,7 @@ function MainTabs() {
           <SyncStatusBar />
           <Tab.Navigator screenOptions={{ headerShown: false }}>
             <Tab.Screen name="POS" component={POSScreen} />
+            <Tab.Screen name="Orders" component={OrderHistoryScreen} />
             <Tab.Screen name="Settings" component={SettingsScreen} />
           </Tab.Navigator>
         </SafeAreaView>
