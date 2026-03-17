@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useOrder } from '../state/order-store';
 import type { CartItemData } from '../state/order-store';
 import { CustomerSearchModal } from './CustomerSearchModal';
 import type { CustomerResult } from './CustomerSearchModal';
+import { HeldOrdersDrawer } from './HeldOrdersDrawer';
 
 // ---------------------------------------------------------------------------
 // CartItem Row
@@ -134,9 +135,16 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     submitOrder,
     cancelOrder,
     holdOrder,
+    heldOrders,
+    refreshHeldOrders,
   } = useOrder();
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showHeldOrders, setShowHeldOrders] = useState(false);
+
+  useEffect(() => {
+    refreshHeldOrders();
+  }, [refreshHeldOrders]);
 
   const handleQuantityChange = useCallback(
     (itemId: string, newQty: number) => {
@@ -218,6 +226,14 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
         <View style={styles.headerTop}>
           <Text style={styles.headerOrder}>{currentOrder?.orderNumber ?? 'No Order'}</Text>
           <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.heldButton} onPress={() => setShowHeldOrders(true)}>
+              <Text style={styles.heldButtonText}>Held</Text>
+              {heldOrders.length > 0 && (
+                <View style={styles.heldBadge}>
+                  <Text style={styles.heldBadgeText}>{heldOrders.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
             {currentOrder && (
               <View style={styles.orderTypeBadge}>
                 <Text style={styles.orderTypeBadgeText}>{orderTypeBadge}</Text>
@@ -327,6 +343,8 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
         onSelect={handleCustomerSelect}
         onCancel={() => setShowCustomerSearch(false)}
       />
+
+      <HeldOrdersDrawer visible={showHeldOrders} onClose={() => setShowHeldOrders(false)} />
     </View>
   );
 }
@@ -357,6 +375,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  heldButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+    gap: 4,
+  },
+  heldButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  heldBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#f59e0b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  heldBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
   },
   menuButton: {
     width: 28,

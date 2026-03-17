@@ -189,6 +189,7 @@ export class Order extends Model {
   @field('total') total!: number;
   @field('discount_amount') discountAmount!: number;
   @text('notes') notes?: string;
+  @field('held_at') heldAt?: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

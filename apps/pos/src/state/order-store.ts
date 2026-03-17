@@ -53,6 +53,20 @@ interface AddItemParams {
   lineTotal: number;
 }
 
+export interface HeldOrderSummary {
+  id: string;
+  orderNumber: string;
+  orderType: OrderType;
+  tableNumber: string | null;
+  customerName: string | null;
+  itemCount: number;
+  total: number;
+  heldAt: number; // timestamp ms
+}
+
+const MAX_HELD_ORDERS = 20;
+const HELD_ORDER_WARNING_THRESHOLD = 15;
+
 interface OrderStoreValue {
   currentOrder: CurrentOrder | null;
   createNewOrder: () => Promise<void>;
@@ -73,6 +87,9 @@ interface OrderStoreValue {
   submitOrder: () => Promise<void>;
   cancelOrder: (reason: string) => Promise<void>;
   holdOrder: () => Promise<void>;
+  recallOrder: (orderId: string) => Promise<void>;
+  heldOrders: HeldOrderSummary[];
+  refreshHeldOrders: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,12 +150,16 @@ const OrderContext = createContext<OrderStoreValue>({
   submitOrder: async () => {},
   cancelOrder: async () => {},
   holdOrder: async () => {},
+  recallOrder: async () => {},
+  heldOrders: [],
+  refreshHeldOrders: async () => {},
 });
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [currentOrder, setCurrentOrder] = useState<CurrentOrder | null>(null);
   const [items, setItems] = useState<CartItemData[]>([]);
   const [cartTotals, setCartTotals] = useState<CartTotalsData>(ZERO_TOTALS);
+  const [heldOrders, setHeldOrders] = useState<HeldOrderSummary[]>([]);
   const orderRecordIdRef = useRef<string | null>(null);
 
   // -------------------------------------------------------------------------
@@ -211,6 +232,53 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (!prev || prev.id !== orderId) return prev;
       return { ...prev, itemCount: loaded.length };
     });
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // refreshHeldOrders — load all draft orders with held_at set
+  // -------------------------------------------------------------------------
+  const refreshHeldOrders = useCallback(async () => {
+    const held = await database
+      .get<Order>('orders')
+      .query(
+        Q.where('status', 'draft'),
+        Q.where('held_at', Q.notEq(null)),
+        Q.sortBy('held_at', Q.desc),
+      )
+      .fetch();
+
+    const summaries: HeldOrderSummary[] = await Promise.all(
+      held.map(async (order) => {
+        const orderItems = await database
+          .get<OrderItem>('order_items')
+          .query(Q.where('order_id', order.id))
+          .fetch();
+
+        let customerName: string | null = null;
+        if (order.customerId) {
+          try {
+            const customer = await database.get<Customer>('customers').find(order.customerId);
+            const parts = [customer.firstName, customer.lastName].filter(Boolean);
+            customerName = parts.join(' ') || null;
+          } catch {
+            // Customer not found
+          }
+        }
+
+        return {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          orderType: (order.orderType as OrderType) || 'takeaway',
+          tableNumber: order.tableNumber || null,
+          customerName,
+          itemCount: orderItems.length,
+          total: order.total,
+          heldAt: (order as any)._raw.held_at as number,
+        };
+      }),
+    );
+
+    setHeldOrders(summaries);
   }, []);
 
   // -------------------------------------------------------------------------
@@ -553,9 +621,108 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const orderId = orderRecordIdRef.current;
     if (!orderId) return;
 
-    // For hold, we keep the order in draft but start a new one
+    if (items.length === 0) {
+      Alert.alert('Cannot hold', 'Add at least one item before holding.');
+      return;
+    }
+
+    // Check held order limit
+    if (heldOrders.length >= MAX_HELD_ORDERS) {
+      Alert.alert(
+        'Limit reached',
+        `You can hold a maximum of ${MAX_HELD_ORDERS} orders. Please recall or cancel a held order first.`,
+      );
+      return;
+    }
+
+    // Set held_at timestamp on the order
+    await database.write(async () => {
+      const record = await database.get<Order>('orders').find(orderId);
+      await record.update((o) => {
+        setRaw(o, 'held_at', Date.now());
+      });
+    });
+
+    // Show warning if approaching limit
+    if (heldOrders.length + 1 >= HELD_ORDER_WARNING_THRESHOLD) {
+      Alert.alert(
+        'Held orders',
+        `You have ${heldOrders.length + 1} held orders (max ${MAX_HELD_ORDERS}).`,
+      );
+    }
+
     await doCreateOrder();
-  }, [doCreateOrder]);
+    await refreshHeldOrders();
+  }, [doCreateOrder, items.length, heldOrders.length, refreshHeldOrders]);
+
+  // -------------------------------------------------------------------------
+  // recallOrder
+  // -------------------------------------------------------------------------
+  const recallOrder = useCallback(
+    async (heldOrderId: string) => {
+      const currentId = orderRecordIdRef.current;
+
+      // If current order has items, hold it first
+      if (currentId && items.length > 0) {
+        await database.write(async () => {
+          const record = await database.get<Order>('orders').find(currentId);
+          await record.update((o) => {
+            setRaw(o, 'held_at', Date.now());
+          });
+        });
+      } else if (currentId && items.length === 0) {
+        // Delete the empty draft order
+        try {
+          await database.write(async () => {
+            const record = await database.get<Order>('orders').find(currentId);
+            await record.destroyPermanently();
+          });
+        } catch {
+          // Already deleted
+        }
+      }
+
+      // Load the held order
+      const heldRecord = await database.get<Order>('orders').find(heldOrderId);
+
+      // Clear held_at
+      await database.write(async () => {
+        const fresh = await database.get<Order>('orders').find(heldOrderId);
+        await fresh.update((o) => {
+          setRaw(o, 'held_at', 0);
+        });
+      });
+
+      orderRecordIdRef.current = heldOrderId;
+
+      // Resolve customer name
+      let customerName: string | null = null;
+      if (heldRecord.customerId) {
+        try {
+          const customer = await database.get<Customer>('customers').find(heldRecord.customerId);
+          const parts = [customer.firstName, customer.lastName].filter(Boolean);
+          customerName = parts.join(' ') || null;
+        } catch {
+          // Customer not found
+        }
+      }
+
+      setCurrentOrder({
+        id: heldOrderId,
+        orderNumber: heldRecord.orderNumber,
+        orderType: (heldRecord.orderType as OrderType) || 'takeaway',
+        tableNumber: heldRecord.tableNumber || null,
+        itemCount: 0, // will be updated by refreshItems
+        customerId: heldRecord.customerId || null,
+        customerName,
+        status: 'draft',
+      });
+
+      await refreshItems(heldOrderId);
+      await refreshHeldOrders();
+    },
+    [items.length, refreshItems, refreshHeldOrders],
+  );
 
   // -------------------------------------------------------------------------
   // Provider value
@@ -576,6 +743,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     submitOrder,
     cancelOrder,
     holdOrder,
+    recallOrder,
+    heldOrders,
+    refreshHeldOrders,
   };
 
   return React.createElement(OrderContext.Provider, { value }, children);

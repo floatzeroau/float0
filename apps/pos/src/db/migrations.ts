@@ -132,5 +132,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 4,
+      steps: [
+        addColumns({
+          table: 'orders',
+          columns: [{ name: 'held_at', type: 'number', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });
