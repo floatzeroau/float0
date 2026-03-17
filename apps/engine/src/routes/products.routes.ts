@@ -42,6 +42,7 @@ const createSchema = z.object({
   barcode: z.string().max(255).nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
   isAvailable: z.boolean().optional(),
+  isGstFree: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
 });
 
@@ -54,6 +55,7 @@ const updateSchema = z.object({
   barcode: z.string().max(255).nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
   isAvailable: z.boolean().optional(),
+  isGstFree: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
 });
 

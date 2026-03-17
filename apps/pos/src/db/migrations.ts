@@ -123,5 +123,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 3,
+      steps: [
+        addColumns({
+          table: 'products',
+          columns: [{ name: 'is_gst_free', type: 'boolean' }],
+        }),
+      ],
+    },
   ],
 });

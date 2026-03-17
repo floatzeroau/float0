@@ -116,6 +116,7 @@ export const products = pgTable(
     barcode: varchar({ length: 255 }),
     imageUrl: text(),
     isAvailable: boolean().notNull().default(true),
+    isGstFree: boolean().notNull().default(false),
     sortOrder: integer().notNull().default(0),
     _version: integer().notNull().default(1),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

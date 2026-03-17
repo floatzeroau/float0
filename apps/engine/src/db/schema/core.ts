@@ -1,5 +1,6 @@
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -36,6 +37,7 @@ export const organizations = pgTable('organizations', {
   currency: varchar({ length: 10 }).notNull().default('AUD'),
   enabledModules: jsonb().notNull().default([]),
   subscriptionTier: varchar({ length: 50 }),
+  gstRate: doublePrecision().notNull().default(10),
   settings: jsonb().notNull().default({}),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

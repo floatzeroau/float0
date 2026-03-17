@@ -33,6 +33,7 @@ export class Product extends Model {
   @text('barcode') barcode?: string;
   @text('image_url') imageUrl?: string;
   @field('is_available') isAvailable!: boolean;
+  @field('is_gst_free') isGstFree!: boolean;
   @field('sort_order') sortOrder!: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

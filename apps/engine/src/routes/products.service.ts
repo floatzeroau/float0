@@ -25,6 +25,7 @@ interface CreateProductInput {
   barcode?: string | null;
   imageUrl?: string | null;
   isAvailable?: boolean;
+  isGstFree?: boolean;
   sortOrder?: number;
 }
 
@@ -37,6 +38,7 @@ interface UpdateProductInput {
   barcode?: string | null;
   imageUrl?: string | null;
   isAvailable?: boolean;
+  isGstFree?: boolean;
   sortOrder?: number;
 }
 
@@ -108,6 +110,7 @@ export async function listProducts(orgId: string, options: ListProductsOptions =
       barcode: products.barcode,
       imageUrl: products.imageUrl,
       isAvailable: products.isAvailable,
+      isGstFree: products.isGstFree,
       sortOrder: products.sortOrder,
       _version: products._version,
       createdAt: products.createdAt,
@@ -142,6 +145,7 @@ export async function getProduct(orgId: string, id: string) {
       barcode: products.barcode,
       imageUrl: products.imageUrl,
       isAvailable: products.isAvailable,
+      isGstFree: products.isGstFree,
       sortOrder: products.sortOrder,
       _version: products._version,
       createdAt: products.createdAt,
@@ -257,6 +261,7 @@ export async function createProduct(orgId: string, input: CreateProductInput, ct
       barcode: input.barcode,
       imageUrl: input.imageUrl,
       isAvailable: input.isAvailable ?? true,
+      isGstFree: input.isGstFree ?? false,
       sortOrder: input.sortOrder ?? 0,
     })
     .returning();
@@ -432,6 +437,7 @@ export async function duplicateProduct(orgId: string, id: string, ctx: AuditCont
       barcode: null,
       imageUrl: source.imageUrl,
       isAvailable: source.isAvailable,
+      isGstFree: source.isGstFree,
       sortOrder: source.sortOrder,
     })
     .returning();

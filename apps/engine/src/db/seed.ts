@@ -103,6 +103,8 @@ async function seed() {
     pEnglishBreakfast,
     pIcedLatte,
     pSourdough,
+    pPlainMilk,
+    pBottledWater,
   ] = await db
     .insert(products)
     .values([
@@ -191,11 +193,35 @@ async function seed() {
         isAvailable: true,
         sortOrder: 2,
       },
+      {
+        organizationId: org.id,
+        name: 'Plain Milk',
+        description: 'Fresh full cream milk 250ml',
+        categoryId: catColdDrinks.id,
+        basePrice: 2.0,
+        sku: 'PM-001',
+        barcode: '9300001000097',
+        isAvailable: true,
+        isGstFree: true,
+        sortOrder: 1,
+      },
+      {
+        organizationId: org.id,
+        name: 'Bottled Water',
+        description: 'Still spring water 600ml',
+        categoryId: catColdDrinks.id,
+        basePrice: 3.5,
+        sku: 'BW-001',
+        barcode: '9300001000103',
+        isAvailable: true,
+        isGstFree: true,
+        sortOrder: 2,
+      },
     ])
     .returning();
 
   console.log(
-    `Created products: ${[pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread, pEnglishBreakfast, pIcedLatte, pSourdough].map((p) => p.name).join(', ')}`,
+    `Created products: ${[pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread, pEnglishBreakfast, pIcedLatte, pSourdough, pPlainMilk, pBottledWater].map((p) => p.name).join(', ')}`,
   );
 
   const [mgSize, mgMilk, mgExtras] = await db
