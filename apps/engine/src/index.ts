@@ -8,6 +8,7 @@ import { authRoutes } from './routes/auth.routes.js';
 import { syncRoutes } from './routes/sync.routes.js';
 import { categoryRoutes } from './routes/categories.routes.js';
 import { modifierGroupRoutes } from './routes/modifier-groups.routes.js';
+import { modifierRoutes } from './routes/modifiers.routes.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requireRole } from './middleware/rbac.js';
 import { registerEventLogger } from './services/event-logger.js';
@@ -34,6 +35,7 @@ await app.register(authRoutes);
 await app.register(syncRoutes);
 await app.register(categoryRoutes);
 await app.register(modifierGroupRoutes);
+await app.register(modifierRoutes);
 
 registerEventLogger();
 

@@ -189,7 +189,7 @@ async function seed() {
       organizationId: org.id,
       name: 'Small',
       modifierGroupId: mgSize.id,
-      priceAdjustment: -0.5,
+      priceAdjustment: 0,
       isDefault: false,
       isAvailable: true,
       sortOrder: 0,
@@ -198,7 +198,7 @@ async function seed() {
       organizationId: org.id,
       name: 'Regular',
       modifierGroupId: mgSize.id,
-      priceAdjustment: 0,
+      priceAdjustment: 0.5,
       isDefault: true,
       isAvailable: true,
       sortOrder: 1,
@@ -207,7 +207,7 @@ async function seed() {
       organizationId: org.id,
       name: 'Large',
       modifierGroupId: mgSize.id,
-      priceAdjustment: 0.5,
+      priceAdjustment: 1.0,
       isDefault: false,
       isAvailable: true,
       sortOrder: 2,
@@ -224,9 +224,9 @@ async function seed() {
     },
     {
       organizationId: org.id,
-      name: 'Oat',
+      name: 'Oat Milk',
       modifierGroupId: mgMilk.id,
-      priceAdjustment: 0.5,
+      priceAdjustment: 0.7,
       isDefault: false,
       isAvailable: true,
       sortOrder: 1,
@@ -252,25 +252,25 @@ async function seed() {
     },
     {
       organizationId: org.id,
-      name: 'Vanilla Syrup',
+      name: 'Keep Cup',
       modifierGroupId: mgExtras.id,
-      priceAdjustment: 0.5,
+      priceAdjustment: -0.3,
       isDefault: false,
       isAvailable: true,
       sortOrder: 1,
     },
     {
       organizationId: org.id,
-      name: 'Whipped Cream',
+      name: 'Vanilla Syrup',
       modifierGroupId: mgExtras.id,
-      priceAdjustment: 1.0,
+      priceAdjustment: 0.5,
       isDefault: false,
       isAvailable: true,
       sortOrder: 2,
     },
   ]);
 
-  console.log('Created modifiers for Size, Milk, Extras');
+  console.log('Created modifiers for Size, Milk, Extras (with Keep Cup)');
 
   // Link modifier groups to coffee products
   const coffeeProducts = [pFlatWhite, pLatte, pCappuccino];
