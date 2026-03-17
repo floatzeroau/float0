@@ -6,6 +6,7 @@ import { authPlugin } from './middleware/auth.js';
 import { orgContextPlugin } from './middleware/org-context.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { syncRoutes } from './routes/sync.routes.js';
+import { categoryRoutes } from './routes/categories.routes.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requireRole } from './middleware/rbac.js';
 import { registerEventLogger } from './services/event-logger.js';
@@ -30,6 +31,7 @@ await app.register(authPlugin);
 await app.register(orgContextPlugin);
 await app.register(authRoutes);
 await app.register(syncRoutes);
+await app.register(categoryRoutes);
 
 registerEventLogger();
 

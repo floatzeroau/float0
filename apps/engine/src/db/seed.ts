@@ -66,15 +66,33 @@ async function seed() {
 
   // ── POS Seed Data ────────────────────────────────────
 
-  const [catCoffee, catFood] = await db
+  const [catCoffee, catTea, catColdDrinks, catSpecialty, catFood, catPastry] = await db
     .insert(categories)
     .values([
       { organizationId: org.id, name: 'Coffee', colour: '#6F4E37', icon: 'coffee', sortOrder: 0 },
-      { organizationId: org.id, name: 'Food', colour: '#E8A317', icon: 'utensils', sortOrder: 1 },
+      { organizationId: org.id, name: 'Tea', colour: '#2E8B57', icon: 'leaf', sortOrder: 1 },
+      {
+        organizationId: org.id,
+        name: 'Cold Drinks',
+        colour: '#4682B4',
+        icon: 'glass-water',
+        sortOrder: 2,
+      },
+      { organizationId: org.id, name: 'Specialty', colour: '#9B59B6', icon: 'star', sortOrder: 3 },
+      { organizationId: org.id, name: 'Food', colour: '#D97706', icon: 'utensils', sortOrder: 4 },
+      {
+        organizationId: org.id,
+        name: 'Pastry',
+        colour: '#DC2626',
+        icon: 'cake-slice',
+        sortOrder: 5,
+      },
     ])
     .returning();
 
-  console.log(`Created categories: ${catCoffee.name}, ${catFood.name}`);
+  console.log(
+    `Created categories: ${[catCoffee, catTea, catColdDrinks, catSpecialty, catFood, catPastry].map((c) => c.name).join(', ')}`,
+  );
 
   const [pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread] = await db
     .insert(products)
