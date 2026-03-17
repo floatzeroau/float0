@@ -6,6 +6,8 @@ import { CategoryTabs } from '../components/CategoryTabs';
 import { ProductSearch } from '../components/ProductSearch';
 import { ProductGrid } from '../components/ProductGrid';
 import type { ProductItem } from '../components/ProductGrid';
+import { ModifierModal } from '../components/ModifierModal';
+import type { ModifierModalResult } from '../components/ModifierModal';
 
 // ---------------------------------------------------------------------------
 // Top Bar
@@ -116,6 +118,7 @@ export default function POSScreen() {
   const [initialized, setInitialized] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [modifierProduct, setModifierProduct] = useState<ProductItem | null>(null);
 
   useEffect(() => {
     if (!initialized && !currentOrder) {
@@ -138,9 +141,22 @@ export default function POSScreen() {
   }, []);
 
   const handleProductSelect = useCallback((product: ProductItem) => {
-    // TODO: if product.hasModifierGroups → open modifier modal (FLO-49)
-    // TODO: else → add directly to cart
-    console.log('Product selected:', product.name, product.id);
+    if (product.hasModifierGroups) {
+      setModifierProduct(product);
+    } else {
+      // TODO: add directly to cart (FLO-49)
+      console.log('Product added:', product.name, product.id);
+    }
+  }, []);
+
+  const handleModifierCancel = useCallback(() => {
+    setModifierProduct(null);
+  }, []);
+
+  const handleModifierAdd = useCallback((result: ModifierModalResult) => {
+    setModifierProduct(null);
+    // TODO: add to cart with modifiers (FLO-49)
+    console.log('Product with modifiers:', result);
   }, []);
 
   return (
@@ -170,6 +186,15 @@ export default function POSScreen() {
           )}
         </View>
       </View>
+
+      <ModifierModal
+        visible={modifierProduct !== null}
+        productId={modifierProduct?.id ?? null}
+        productName={modifierProduct?.name ?? ''}
+        basePrice={modifierProduct?.basePrice ?? 0}
+        onCancel={handleModifierCancel}
+        onAdd={handleModifierAdd}
+      />
     </View>
   );
 }
