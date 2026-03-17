@@ -3,7 +3,8 @@ import { Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { Order, OrderItem, Product, Customer } from '../db/models';
-import { calculateLineTotal, calculateCartTotals } from '@float0/shared';
+import { calculateLineTotal, calculateCartTotals, calculateItemDiscount } from '@float0/shared';
+import type { DiscountType, OrderDiscount } from '@float0/shared';
 import { eventBus } from '@float0/events';
 import { transitionOrder } from './order-lifecycle';
 import type { OrderStatusDB } from './order-lifecycle';
@@ -35,12 +36,25 @@ export interface CartItemData {
   lineTotal: number;
   notes: string;
   isGstFree: boolean;
+  discountAmount: number;
+  discountType: DiscountType | null;
+  discountValue: number;
+  discountReason: string;
 }
 
 export interface CartTotalsData {
   subtotal: number;
   gstAmount: number;
   total: number;
+  itemDiscountTotal: number;
+  orderDiscountAmount: number;
+  totalDiscount: number;
+}
+
+export interface OrderDiscountData {
+  type: DiscountType;
+  value: number;
+  reason: string;
 }
 
 interface AddItemParams {
@@ -90,6 +104,16 @@ interface OrderStoreValue {
   recallOrder: (orderId: string) => Promise<void>;
   heldOrders: HeldOrderSummary[];
   refreshHeldOrders: () => Promise<void>;
+  orderDiscount: OrderDiscountData | null;
+  applyOrderDiscount: (type: DiscountType, value: number, reason: string) => Promise<void>;
+  applyItemDiscount: (
+    itemId: string,
+    type: DiscountType,
+    value: number,
+    reason: string,
+  ) => Promise<void>;
+  removeOrderDiscount: () => Promise<void>;
+  removeItemDiscount: (itemId: string) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +152,14 @@ async function getNextOrderNumber(): Promise<string> {
   return `#${String(next).padStart(3, '0')}`;
 }
 
-const ZERO_TOTALS: CartTotalsData = { subtotal: 0, gstAmount: 0, total: 0 };
+const ZERO_TOTALS: CartTotalsData = {
+  subtotal: 0,
+  gstAmount: 0,
+  total: 0,
+  itemDiscountTotal: 0,
+  orderDiscountAmount: 0,
+  totalDiscount: 0,
+};
 
 // ---------------------------------------------------------------------------
 // Context
@@ -153,6 +184,11 @@ const OrderContext = createContext<OrderStoreValue>({
   recallOrder: async () => {},
   heldOrders: [],
   refreshHeldOrders: async () => {},
+  orderDiscount: null,
+  applyOrderDiscount: async () => {},
+  applyItemDiscount: async () => {},
+  removeOrderDiscount: async () => {},
+  removeItemDiscount: async () => {},
 });
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
@@ -160,79 +196,108 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItemData[]>([]);
   const [cartTotals, setCartTotals] = useState<CartTotalsData>(ZERO_TOTALS);
   const [heldOrders, setHeldOrders] = useState<HeldOrderSummary[]>([]);
+  const [orderDiscount, setOrderDiscount] = useState<OrderDiscountData | null>(null);
   const orderRecordIdRef = useRef<string | null>(null);
 
   // -------------------------------------------------------------------------
   // refreshItems — reload items from DB & recalculate totals
   // -------------------------------------------------------------------------
-  const refreshItems = useCallback(async (orderId: string) => {
-    const orderItems = await database
-      .get<OrderItem>('order_items')
-      .query(Q.where('order_id', orderId))
-      .fetch();
+  const refreshItems = useCallback(
+    async (orderId: string, currentOrderDiscount?: OrderDiscountData | null) => {
+      const orderItems = await database
+        .get<OrderItem>('order_items')
+        .query(Q.where('order_id', orderId))
+        .fetch();
 
-    const loaded: CartItemData[] = await Promise.all(
-      orderItems.map(async (oi) => {
-        let productName = '';
-        let isGstFree = false;
-        try {
-          const product = await database.get<Product>('products').find(oi.productId);
-          productName = product.name;
-          isGstFree = product.isGstFree;
-        } catch {
-          productName = 'Unknown';
-        }
+      const loaded: CartItemData[] = await Promise.all(
+        orderItems.map(async (oi) => {
+          let productName = '';
+          let isGstFree = false;
+          try {
+            const product = await database.get<Product>('products').find(oi.productId);
+            productName = product.name;
+            isGstFree = product.isGstFree;
+          } catch {
+            productName = 'Unknown';
+          }
 
-        const modifiers: CartItemData['modifiers'] = Array.isArray(oi.modifiersJson)
-          ? oi.modifiersJson
-          : [];
+          const modifiers: CartItemData['modifiers'] = Array.isArray(oi.modifiersJson)
+            ? oi.modifiersJson
+            : [];
 
-        return {
-          id: oi.id,
-          productId: oi.productId,
-          productName,
-          unitPrice: oi.unitPrice,
-          quantity: oi.quantity,
-          modifiers,
-          lineTotal: oi.lineTotal,
-          notes: oi.notes ?? '',
-          isGstFree,
-        };
-      }),
-    );
+          // Read discount fields from raw record
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const raw = (oi as any)._raw;
+          const discountType = raw.discount_type || null;
+          const discountValue = raw.discount_value || 0;
+          const discountAmount = raw.discount_amount || 0;
+          const discountReason = raw.discount_reason || '';
 
-    setItems(loaded);
+          return {
+            id: oi.id,
+            productId: oi.productId,
+            productName,
+            unitPrice: oi.unitPrice,
+            quantity: oi.quantity,
+            modifiers,
+            lineTotal: oi.lineTotal,
+            notes: oi.notes ?? '',
+            isGstFree,
+            discountAmount,
+            discountType: discountType as DiscountType | null,
+            discountValue,
+            discountReason,
+          };
+        }),
+      );
 
-    const totals = calculateCartTotals(
-      loaded.map((item) => ({
-        unitPrice: item.unitPrice,
-        quantity: item.quantity,
-        isGstFree: item.isGstFree,
-        modifiers: item.modifiers.map((m) => ({ priceAdjustment: m.priceAdjustment })),
-      })),
-    );
-    setCartTotals(totals);
+      setItems(loaded);
 
-    // Persist totals to order record
-    try {
-      await database.write(async () => {
-        const record = await database.get<Order>('orders').find(orderId);
-        await record.update((o) => {
-          setRaw(o, 'subtotal', totals.subtotal);
-          setRaw(o, 'gst', totals.gstAmount);
-          setRaw(o, 'total', totals.total);
+      // Use passed discount or fall back to state via ref
+      const discountToApply = currentOrderDiscount !== undefined ? currentOrderDiscount : null;
+      const orderDiscountParam: OrderDiscount | undefined =
+        discountToApply && discountToApply.value > 0
+          ? { type: discountToApply.type, value: discountToApply.value }
+          : undefined;
+
+      const totals = calculateCartTotals(
+        loaded.map((item) => ({
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          isGstFree: item.isGstFree,
+          modifiers: item.modifiers.map((m) => ({ priceAdjustment: m.priceAdjustment })),
+          discount:
+            item.discountType && item.discountValue > 0
+              ? { type: item.discountType, value: item.discountValue }
+              : undefined,
+        })),
+        orderDiscountParam,
+      );
+      setCartTotals(totals);
+
+      // Persist totals to order record
+      try {
+        await database.write(async () => {
+          const record = await database.get<Order>('orders').find(orderId);
+          await record.update((o) => {
+            setRaw(o, 'subtotal', totals.subtotal);
+            setRaw(o, 'gst', totals.gstAmount);
+            setRaw(o, 'total', totals.total);
+            setRaw(o, 'discount_amount', totals.totalDiscount);
+          });
         });
-      });
-    } catch {
-      // Order may have been deleted
-    }
+      } catch {
+        // Order may have been deleted
+      }
 
-    // Update item count in state
-    setCurrentOrder((prev) => {
-      if (!prev || prev.id !== orderId) return prev;
-      return { ...prev, itemCount: loaded.length };
-    });
-  }, []);
+      // Update item count in state
+      setCurrentOrder((prev) => {
+        if (!prev || prev.id !== orderId) return prev;
+        return { ...prev, itemCount: loaded.length };
+      });
+    },
+    [],
+  );
 
   // -------------------------------------------------------------------------
   // refreshHeldOrders — load all draft orders with held_at set
@@ -301,6 +366,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         setRaw(o, 'gst', 0);
         setRaw(o, 'total', 0);
         setRaw(o, 'discount_amount', 0);
+        setRaw(o, 'discount_type', '');
+        setRaw(o, 'discount_value', 0);
+        setRaw(o, 'discount_reason', '');
         setRaw(o, 'notes', '');
       });
 
@@ -319,6 +387,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       setItems([]);
       setCartTotals(ZERO_TOTALS);
+      setOrderDiscount(null);
     });
   }, []);
 
@@ -416,13 +485,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(oi, 'unit_price', params.basePrice);
           setRaw(oi, 'modifiers_json', JSON.stringify(params.selectedModifiers));
           setRaw(oi, 'line_total', params.lineTotal);
+          setRaw(oi, 'discount_amount', 0);
+          setRaw(oi, 'discount_type', '');
+          setRaw(oi, 'discount_value', 0);
+          setRaw(oi, 'discount_reason', '');
           setRaw(oi, 'notes', '');
         });
       });
 
-      await refreshItems(orderId);
+      await refreshItems(orderId, orderDiscount);
     },
-    [refreshItems],
+    [refreshItems, orderDiscount],
   );
 
   // -------------------------------------------------------------------------
@@ -458,9 +531,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      await refreshItems(orderId);
+      await refreshItems(orderId, orderDiscount);
     },
-    [items, refreshItems],
+    [items, refreshItems, orderDiscount],
   );
 
   // -------------------------------------------------------------------------
@@ -476,9 +549,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         await record.destroyPermanently();
       });
 
-      await refreshItems(orderId);
+      await refreshItems(orderId, orderDiscount);
     },
-    [refreshItems],
+    [refreshItems, orderDiscount],
   );
 
   // -------------------------------------------------------------------------
@@ -501,9 +574,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         });
       });
 
-      await refreshItems(orderId);
+      await refreshItems(orderId, orderDiscount);
     },
-    [refreshItems],
+    [refreshItems, orderDiscount],
   );
 
   // -------------------------------------------------------------------------
@@ -521,9 +594,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         });
       });
 
-      await refreshItems(orderId);
+      await refreshItems(orderId, orderDiscount);
     },
-    [refreshItems],
+    [refreshItems, orderDiscount],
   );
 
   // -------------------------------------------------------------------------
@@ -556,6 +629,103 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, customerId, customerName };
     });
   }, []);
+
+  // -------------------------------------------------------------------------
+  // applyOrderDiscount
+  // -------------------------------------------------------------------------
+  const applyOrderDiscount = useCallback(
+    async (type: DiscountType, value: number, reason: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      const newDiscount: OrderDiscountData = { type, value, reason };
+      setOrderDiscount(newDiscount);
+
+      await database.write(async () => {
+        const record = await database.get<Order>('orders').find(orderId);
+        await record.update((o) => {
+          setRaw(o, 'discount_type', type);
+          setRaw(o, 'discount_value', value);
+          setRaw(o, 'discount_reason', reason);
+        });
+      });
+
+      await refreshItems(orderId, newDiscount);
+    },
+    [refreshItems],
+  );
+
+  // -------------------------------------------------------------------------
+  // removeOrderDiscount
+  // -------------------------------------------------------------------------
+  const removeOrderDiscount = useCallback(async () => {
+    const orderId = orderRecordIdRef.current;
+    if (!orderId) return;
+
+    setOrderDiscount(null);
+
+    await database.write(async () => {
+      const record = await database.get<Order>('orders').find(orderId);
+      await record.update((o) => {
+        setRaw(o, 'discount_type', '');
+        setRaw(o, 'discount_value', 0);
+        setRaw(o, 'discount_reason', '');
+      });
+    });
+
+    await refreshItems(orderId, null);
+  }, [refreshItems]);
+
+  // -------------------------------------------------------------------------
+  // applyItemDiscount
+  // -------------------------------------------------------------------------
+  const applyItemDiscount = useCallback(
+    async (itemId: string, type: DiscountType, value: number, reason: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return;
+
+      const discountAmount = calculateItemDiscount(item.lineTotal, { type, value });
+
+      await database.write(async () => {
+        const record = await database.get<OrderItem>('order_items').find(itemId);
+        await record.update((oi) => {
+          setRaw(oi, 'discount_amount', discountAmount);
+          setRaw(oi, 'discount_type', type);
+          setRaw(oi, 'discount_value', value);
+          setRaw(oi, 'discount_reason', reason);
+        });
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [items, refreshItems, orderDiscount],
+  );
+
+  // -------------------------------------------------------------------------
+  // removeItemDiscount
+  // -------------------------------------------------------------------------
+  const removeItemDiscount = useCallback(
+    async (itemId: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      await database.write(async () => {
+        const record = await database.get<OrderItem>('order_items').find(itemId);
+        await record.update((oi) => {
+          setRaw(oi, 'discount_amount', 0);
+          setRaw(oi, 'discount_type', '');
+          setRaw(oi, 'discount_value', 0);
+          setRaw(oi, 'discount_reason', '');
+        });
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [refreshItems, orderDiscount],
+  );
 
   // -------------------------------------------------------------------------
   // submitOrder
@@ -707,6 +877,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Restore order discount from DB fields
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = (heldRecord as any)._raw;
+      const restoredDiscount: OrderDiscountData | null =
+        raw.discount_type && raw.discount_value > 0
+          ? {
+              type: raw.discount_type as DiscountType,
+              value: raw.discount_value as number,
+              reason: (raw.discount_reason as string) || '',
+            }
+          : null;
+      setOrderDiscount(restoredDiscount);
+
       setCurrentOrder({
         id: heldOrderId,
         orderNumber: heldRecord.orderNumber,
@@ -718,7 +901,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         status: 'draft',
       });
 
-      await refreshItems(heldOrderId);
+      await refreshItems(heldOrderId, restoredDiscount);
       await refreshHeldOrders();
     },
     [items.length, refreshItems, refreshHeldOrders],
@@ -746,6 +929,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     recallOrder,
     heldOrders,
     refreshHeldOrders,
+    orderDiscount,
+    applyOrderDiscount,
+    applyItemDiscount,
+    removeOrderDiscount,
+    removeItemDiscount,
   };
 
   return React.createElement(OrderContext.Provider, { value }, children);

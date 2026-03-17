@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 4,
+  version: 5,
   tables: [
     tableSchema({
       name: 'products',
@@ -102,6 +102,9 @@ export const schema = appSchema({
         { name: 'gst', type: 'number' },
         { name: 'total', type: 'number' },
         { name: 'discount_amount', type: 'number' },
+        { name: 'discount_type', type: 'string', isOptional: true },
+        { name: 'discount_value', type: 'number' },
+        { name: 'discount_reason', type: 'string', isOptional: true },
         { name: 'notes', type: 'string', isOptional: true },
         { name: 'held_at', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
@@ -118,6 +121,10 @@ export const schema = appSchema({
         { name: 'unit_price', type: 'number' },
         { name: 'modifiers_json', type: 'string', isOptional: true },
         { name: 'line_total', type: 'number' },
+        { name: 'discount_amount', type: 'number' },
+        { name: 'discount_type', type: 'string', isOptional: true },
+        { name: 'discount_value', type: 'number' },
+        { name: 'discount_reason', type: 'string', isOptional: true },
         { name: 'notes', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },

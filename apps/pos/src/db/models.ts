@@ -188,6 +188,9 @@ export class Order extends Model {
   @field('gst') gst!: number;
   @field('total') total!: number;
   @field('discount_amount') discountAmount!: number;
+  @text('discount_type') discountType?: string;
+  @field('discount_value') discountValue!: number;
+  @text('discount_reason') discountReason?: string;
   @text('notes') notes?: string;
   @field('held_at') heldAt?: number;
   @date('created_at') createdAt!: Date;
@@ -214,6 +217,10 @@ export class OrderItem extends Model {
   @field('unit_price') unitPrice!: number;
   @json('modifiers_json', (raw: any) => raw ?? []) modifiersJson!: any[];
   @field('line_total') lineTotal!: number;
+  @field('discount_amount') discountAmount!: number;
+  @text('discount_type') discountType?: string;
+  @field('discount_value') discountValue!: number;
+  @text('discount_reason') discountReason?: string;
   @text('notes') notes?: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

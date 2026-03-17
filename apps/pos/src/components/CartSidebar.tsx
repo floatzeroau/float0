@@ -13,6 +13,8 @@ import type { CartItemData } from '../state/order-store';
 import { CustomerSearchModal } from './CustomerSearchModal';
 import type { CustomerResult } from './CustomerSearchModal';
 import { HeldOrdersDrawer } from './HeldOrdersDrawer';
+import { DiscountModal } from './DiscountModal';
+import type { DiscountType } from '@float0/shared';
 
 // ---------------------------------------------------------------------------
 // CartItem Row
@@ -24,9 +26,17 @@ interface CartItemRowProps {
   onRemove: (itemId: string) => void;
   onEdit: (item: CartItemData) => void;
   onNoteChange: (itemId: string, note: string) => void;
+  onDiscount: (item: CartItemData) => void;
 }
 
-function CartItemRow({ item, onQuantityChange, onRemove, onEdit, onNoteChange }: CartItemRowProps) {
+function CartItemRow({
+  item,
+  onQuantityChange,
+  onRemove,
+  onEdit,
+  onNoteChange,
+  onDiscount,
+}: CartItemRowProps) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState(item.notes);
 
@@ -36,6 +46,8 @@ function CartItemRow({ item, onQuantityChange, onRemove, onEdit, onNoteChange }:
   }, [item.id, noteText, onNoteChange]);
 
   const hasModifiers = item.modifiers.length > 0;
+  const hasDiscount = item.discountType && item.discountValue > 0;
+  const discountedTotal = hasDiscount ? item.lineTotal - item.discountAmount : item.lineTotal;
 
   return (
     <View style={styles.itemRow}>
@@ -45,11 +57,21 @@ function CartItemRow({ item, onQuantityChange, onRemove, onEdit, onNoteChange }:
           {hasModifiers && (
             <Text style={styles.itemModifiers}>{item.modifiers.map((m) => m.name).join(', ')}</Text>
           )}
+          {hasDiscount && <Text style={styles.itemDiscountReason}>{item.discountReason}</Text>}
           {item.notes !== '' && !showNoteInput && (
             <Text style={styles.itemNotes}>{item.notes}</Text>
           )}
         </View>
-        <Text style={styles.itemTotal}>${item.lineTotal.toFixed(2)}</Text>
+        <View style={styles.itemPriceCol}>
+          {hasDiscount ? (
+            <>
+              <Text style={styles.itemTotalStrikethrough}>${item.lineTotal.toFixed(2)}</Text>
+              <Text style={styles.itemTotalDiscounted}>${discountedTotal.toFixed(2)}</Text>
+            </>
+          ) : (
+            <Text style={styles.itemTotal}>${item.lineTotal.toFixed(2)}</Text>
+          )}
+        </View>
       </View>
 
       {/* Quantity controls */}
@@ -79,6 +101,10 @@ function CartItemRow({ item, onQuantityChange, onRemove, onEdit, onNoteChange }:
               <Text style={styles.actionDivider}>|</Text>
             </>
           )}
+          <TouchableOpacity onPress={() => onDiscount(item)}>
+            <Text style={[styles.actionText, hasDiscount && styles.actionTextGreen]}>Discount</Text>
+          </TouchableOpacity>
+          <Text style={styles.actionDivider}>|</Text>
           <TouchableOpacity
             onPress={() => {
               setShowNoteInput(!showNoteInput);
@@ -137,10 +163,25 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     holdOrder,
     heldOrders,
     refreshHeldOrders,
+    orderDiscount,
+    applyOrderDiscount,
+    applyItemDiscount,
+    removeOrderDiscount,
+    removeItemDiscount,
   } = useOrder();
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
+
+  // Discount modal state
+  const [discountModalVisible, setDiscountModalVisible] = useState(false);
+  const [discountTarget, setDiscountTarget] = useState<{
+    mode: 'order' | 'item';
+    itemId?: string;
+    itemName?: string;
+    currentTotal: number;
+    existing: { type: DiscountType; value: number; reason: string } | null;
+  } | null>(null);
 
   useEffect(() => {
     refreshHeldOrders();
@@ -210,6 +251,63 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     ]);
   }, [cancelOrder]);
 
+  // Discount handlers
+  const handleOpenItemDiscount = useCallback((item: CartItemData) => {
+    setDiscountTarget({
+      mode: 'item',
+      itemId: item.id,
+      itemName: item.productName,
+      currentTotal: item.lineTotal,
+      existing:
+        item.discountType && item.discountValue > 0
+          ? { type: item.discountType, value: item.discountValue, reason: item.discountReason }
+          : null,
+    });
+    setDiscountModalVisible(true);
+  }, []);
+
+  const handleOpenOrderDiscount = useCallback(() => {
+    setShowMenu(false);
+    setDiscountTarget({
+      mode: 'order',
+      currentTotal: cartTotals.subtotal,
+      existing: orderDiscount
+        ? { type: orderDiscount.type, value: orderDiscount.value, reason: orderDiscount.reason }
+        : null,
+    });
+    setDiscountModalVisible(true);
+  }, [cartTotals.subtotal, orderDiscount]);
+
+  const handleDiscountApply = useCallback(
+    (type: DiscountType, value: number, reason: string) => {
+      if (!discountTarget) return;
+      if (discountTarget.mode === 'order') {
+        applyOrderDiscount(type, value, reason);
+      } else if (discountTarget.itemId) {
+        applyItemDiscount(discountTarget.itemId, type, value, reason);
+      }
+      setDiscountModalVisible(false);
+      setDiscountTarget(null);
+    },
+    [discountTarget, applyOrderDiscount, applyItemDiscount],
+  );
+
+  const handleDiscountRemove = useCallback(() => {
+    if (!discountTarget) return;
+    if (discountTarget.mode === 'order') {
+      removeOrderDiscount();
+    } else if (discountTarget.itemId) {
+      removeItemDiscount(discountTarget.itemId);
+    }
+    setDiscountModalVisible(false);
+    setDiscountTarget(null);
+  }, [discountTarget, removeOrderDiscount, removeItemDiscount]);
+
+  const handleDiscountCancel = useCallback(() => {
+    setDiscountModalVisible(false);
+    setDiscountTarget(null);
+  }, []);
+
   const hasItems = items.length > 0;
 
   // Order type badge text
@@ -248,6 +346,11 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
         </View>
         {showMenu && (
           <View style={styles.menuDropdown}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleOpenOrderDiscount}>
+              <Text style={styles.menuItemText}>
+                {orderDiscount ? 'Edit Order Discount' : 'Apply Order Discount'}
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={handleCancelOrder}>
               <Text style={styles.menuItemTextDanger}>Cancel Order</Text>
             </TouchableOpacity>
@@ -287,6 +390,7 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
               onRemove={handleRemove}
               onEdit={handleEdit}
               onNoteChange={handleNoteChange}
+              onDiscount={handleOpenItemDiscount}
             />
           ))}
         </ScrollView>
@@ -302,6 +406,22 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
           <Text style={styles.totalLabel}>Subtotal</Text>
           <Text style={styles.totalValue}>${cartTotals.subtotal.toFixed(2)}</Text>
         </View>
+        {cartTotals.itemDiscountTotal > 0 && (
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabelGreen}>Item Discounts</Text>
+            <Text style={styles.totalValueGreen}>-${cartTotals.itemDiscountTotal.toFixed(2)}</Text>
+          </View>
+        )}
+        {cartTotals.orderDiscountAmount > 0 && (
+          <TouchableOpacity style={styles.totalRow} onPress={handleOpenOrderDiscount}>
+            <Text style={styles.totalLabelGreen}>
+              Order Discount{orderDiscount ? ` (${orderDiscount.reason})` : ''}
+            </Text>
+            <Text style={styles.totalValueGreen}>
+              -${cartTotals.orderDiscountAmount.toFixed(2)}
+            </Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>GST (10%)</Text>
           <Text style={styles.totalValue}>${cartTotals.gstAmount.toFixed(2)}</Text>
@@ -315,7 +435,7 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
       {/* Action buttons */}
       <View style={styles.actions}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.holdButton]}
+          style={[styles.actionButton, styles.holdButtonStyle]}
           onPress={holdOrder}
           disabled={!hasItems}
         >
@@ -345,6 +465,19 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
       />
 
       <HeldOrdersDrawer visible={showHeldOrders} onClose={() => setShowHeldOrders(false)} />
+
+      {discountTarget && (
+        <DiscountModal
+          visible={discountModalVisible}
+          mode={discountTarget.mode}
+          itemName={discountTarget.itemName}
+          currentTotal={discountTarget.currentTotal}
+          existingDiscount={discountTarget.existing}
+          onApply={handleDiscountApply}
+          onRemove={handleDiscountRemove}
+          onCancel={handleDiscountCancel}
+        />
+      )}
     </View>
   );
 }
@@ -429,6 +562,11 @@ const styles = StyleSheet.create({
   menuItem: {
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  menuItemText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1a1a1a',
   },
   menuItemTextDanger: {
     fontSize: 13,
@@ -534,16 +672,35 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 2,
   },
+  itemDiscountReason: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#16a34a',
+    marginTop: 2,
+  },
   itemNotes: {
     fontSize: 12,
     fontStyle: 'italic',
     color: '#888',
     marginTop: 2,
   },
+  itemPriceCol: {
+    alignItems: 'flex-end',
+  },
   itemTotal: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  itemTotalStrikethrough: {
+    fontSize: 12,
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  itemTotalDiscounted: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#16a34a',
   },
 
   // Quantity & actions
@@ -586,6 +743,9 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 12,
     color: '#888',
+  },
+  actionTextGreen: {
+    color: '#16a34a',
   },
   actionDivider: {
     fontSize: 12,
@@ -644,6 +804,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
+  totalLabelGreen: {
+    fontSize: 13,
+    color: '#16a34a',
+  },
+  totalValueGreen: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#16a34a',
+  },
   grandTotalRow: {
     marginTop: 4,
     marginBottom: 0,
@@ -677,7 +846,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  holdButton: {
+  holdButtonStyle: {
     backgroundColor: '#f0f0f0',
   },
   holdButtonText: {

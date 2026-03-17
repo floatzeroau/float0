@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { calculateLineTotal, calculateCartTotals } from './cart-calculator.js';
+import {
+  calculateLineTotal,
+  calculateCartTotals,
+  calculateItemDiscount,
+  calculateOrderDiscount,
+  requiresManagerApproval,
+  DISCOUNT_THRESHOLDS,
+} from './cart-calculator.js';
 
 describe('calculateLineTotal', () => {
   it('calculates base price * quantity with no modifiers', () => {
@@ -103,5 +110,222 @@ describe('calculateCartTotals', () => {
     expect(result.total).toBe(14.5);
     // GST on taxable: ($5.50 + $5.00) / 11 = 10.50 / 11 ≈ 0.954545... → rounds to 0.95
     expect(result.gstAmount).toBe(0.95);
+  });
+
+  it('returns zero discount fields when no discounts applied', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [] },
+    ]);
+    expect(result.itemDiscountTotal).toBe(0);
+    expect(result.orderDiscountAmount).toBe(0);
+    expect(result.totalDiscount).toBe(0);
+  });
+});
+
+describe('calculateItemDiscount', () => {
+  it('calculates percentage discount', () => {
+    // 10% of $20 = $2
+    expect(calculateItemDiscount(20, { type: 'percentage', value: 10 })).toBe(2);
+  });
+
+  it('calculates fixed discount', () => {
+    expect(calculateItemDiscount(20, { type: 'fixed', value: 5 })).toBe(5);
+  });
+
+  it('caps percentage at 100%', () => {
+    expect(calculateItemDiscount(20, { type: 'percentage', value: 150 })).toBe(20);
+  });
+
+  it('caps fixed at line total', () => {
+    expect(calculateItemDiscount(10, { type: 'fixed', value: 15 })).toBe(10);
+  });
+
+  it('returns 0 for zero discount value', () => {
+    expect(calculateItemDiscount(20, { type: 'percentage', value: 0 })).toBe(0);
+  });
+
+  it('returns 0 for zero line total', () => {
+    expect(calculateItemDiscount(0, { type: 'percentage', value: 10 })).toBe(0);
+  });
+
+  it('handles fractional percentages correctly', () => {
+    // 15% of $11.00 = $1.65
+    expect(calculateItemDiscount(11, { type: 'percentage', value: 15 })).toBe(1.65);
+  });
+});
+
+describe('calculateOrderDiscount', () => {
+  it('calculates percentage discount on subtotal', () => {
+    // 10% of $50 = $5
+    expect(calculateOrderDiscount(50, { type: 'percentage', value: 10 })).toBe(5);
+  });
+
+  it('calculates fixed discount on subtotal', () => {
+    expect(calculateOrderDiscount(50, { type: 'fixed', value: 5 })).toBe(5);
+  });
+
+  it('caps percentage at 100%', () => {
+    expect(calculateOrderDiscount(50, { type: 'percentage', value: 200 })).toBe(50);
+  });
+
+  it('caps fixed at subtotal', () => {
+    expect(calculateOrderDiscount(30, { type: 'fixed', value: 50 })).toBe(30);
+  });
+
+  it('returns 0 for zero subtotal', () => {
+    expect(calculateOrderDiscount(0, { type: 'fixed', value: 5 })).toBe(0);
+  });
+});
+
+describe('calculateCartTotals with item discounts', () => {
+  it('applies percentage item discount and reduces GST', () => {
+    const result = calculateCartTotals([
+      {
+        unitPrice: 10,
+        quantity: 1,
+        isGstFree: false,
+        modifiers: [],
+        discount: { type: 'percentage', value: 10 },
+      },
+    ]);
+
+    // $10 - 10% = $9
+    expect(result.subtotal).toBe(9);
+    expect(result.total).toBe(9);
+    expect(result.itemDiscountTotal).toBe(1);
+    // GST = 9 / 11 ≈ 0.82
+    expect(result.gstAmount).toBe(0.82);
+  });
+
+  it('applies fixed item discount', () => {
+    const result = calculateCartTotals([
+      {
+        unitPrice: 20,
+        quantity: 1,
+        isGstFree: false,
+        modifiers: [],
+        discount: { type: 'fixed', value: 5 },
+      },
+    ]);
+
+    // $20 - $5 = $15
+    expect(result.subtotal).toBe(15);
+    expect(result.total).toBe(15);
+    expect(result.itemDiscountTotal).toBe(5);
+  });
+
+  it('handles item discount on GST-free item', () => {
+    const result = calculateCartTotals([
+      {
+        unitPrice: 10,
+        quantity: 1,
+        isGstFree: true,
+        modifiers: [],
+        discount: { type: 'fixed', value: 2 },
+      },
+    ]);
+
+    expect(result.subtotal).toBe(8);
+    expect(result.gstAmount).toBe(0);
+    expect(result.itemDiscountTotal).toBe(2);
+  });
+});
+
+describe('calculateCartTotals with order discount', () => {
+  it('applies percentage order discount and proportionally reduces GST', () => {
+    const result = calculateCartTotals(
+      [{ unitPrice: 11, quantity: 1, isGstFree: false, modifiers: [] }],
+      { type: 'percentage', value: 10 },
+    );
+
+    // Subtotal: $11, order discount: $1.10, total: $9.90
+    expect(result.subtotal).toBe(11);
+    expect(result.orderDiscountAmount).toBe(1.1);
+    expect(result.total).toBe(9.9);
+    // GST before discount: 11/11 = 1.00, after 10% reduction: 0.90
+    expect(result.gstAmount).toBe(0.9);
+  });
+
+  it('applies fixed order discount', () => {
+    const result = calculateCartTotals(
+      [{ unitPrice: 20, quantity: 1, isGstFree: false, modifiers: [] }],
+      { type: 'fixed', value: 5 },
+    );
+
+    expect(result.subtotal).toBe(20);
+    expect(result.orderDiscountAmount).toBe(5);
+    expect(result.total).toBe(15);
+    // GST before: 20/11 ≈ 1.818, after 25% reduction: 1.818 * 0.75 ≈ 1.36
+    expect(result.gstAmount).toBe(1.36);
+  });
+
+  it('combines item and order discounts', () => {
+    const result = calculateCartTotals(
+      [
+        {
+          unitPrice: 20,
+          quantity: 1,
+          isGstFree: false,
+          modifiers: [],
+          discount: { type: 'fixed', value: 5 },
+        },
+      ],
+      { type: 'percentage', value: 10 },
+    );
+
+    // Line: $20, item discount: $5, subtotal: $15
+    // Order discount: 10% of $15 = $1.50, total: $13.50
+    expect(result.subtotal).toBe(15);
+    expect(result.itemDiscountTotal).toBe(5);
+    expect(result.orderDiscountAmount).toBe(1.5);
+    expect(result.total).toBe(13.5);
+    expect(result.totalDiscount).toBe(6.5);
+  });
+
+  it('backward compatible: no discount param returns same totals', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 4.5, quantity: 1, isGstFree: false, modifiers: [] },
+    ]);
+
+    expect(result.subtotal).toBe(4.5);
+    expect(result.total).toBe(4.5);
+    expect(result.gstAmount).toBe(0.41);
+    expect(result.itemDiscountTotal).toBe(0);
+    expect(result.orderDiscountAmount).toBe(0);
+    expect(result.totalDiscount).toBe(0);
+  });
+});
+
+describe('requiresManagerApproval', () => {
+  it('returns false for percentage within threshold', () => {
+    expect(requiresManagerApproval('percentage', 20)).toBe(false);
+    expect(requiresManagerApproval('percentage', 10)).toBe(false);
+  });
+
+  it('returns true for percentage exceeding threshold', () => {
+    expect(requiresManagerApproval('percentage', 21)).toBe(true);
+    expect(requiresManagerApproval('percentage', 50)).toBe(true);
+  });
+
+  it('returns false for fixed within threshold', () => {
+    expect(requiresManagerApproval('fixed', 10)).toBe(false);
+    expect(requiresManagerApproval('fixed', 5)).toBe(false);
+  });
+
+  it('returns true for fixed exceeding threshold', () => {
+    expect(requiresManagerApproval('fixed', 11)).toBe(true);
+    expect(requiresManagerApproval('fixed', 50)).toBe(true);
+  });
+
+  it('uses custom thresholds', () => {
+    expect(requiresManagerApproval('percentage', 15, { percentageMax: 10, fixedMax: 5 })).toBe(
+      true,
+    );
+    expect(requiresManagerApproval('fixed', 3, { percentageMax: 10, fixedMax: 5 })).toBe(false);
+  });
+
+  it('exports default thresholds', () => {
+    expect(DISCOUNT_THRESHOLDS.percentageMax).toBe(20);
+    expect(DISCOUNT_THRESHOLDS.fixedMax).toBe(10);
   });
 });

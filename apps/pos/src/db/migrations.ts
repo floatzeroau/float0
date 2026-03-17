@@ -141,5 +141,27 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 5,
+      steps: [
+        addColumns({
+          table: 'orders',
+          columns: [
+            { name: 'discount_type', type: 'string', isOptional: true },
+            { name: 'discount_value', type: 'number' },
+            { name: 'discount_reason', type: 'string', isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: 'order_items',
+          columns: [
+            { name: 'discount_amount', type: 'number' },
+            { name: 'discount_type', type: 'string', isOptional: true },
+            { name: 'discount_value', type: 'number' },
+            { name: 'discount_reason', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });
