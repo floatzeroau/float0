@@ -10,6 +10,7 @@ import POSScreen from '../screens/POSScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { SyncProvider } from '../sync/SyncProvider';
 import { SyncStatusBar } from '../components/SyncStatusBar';
+import { OrderProvider } from '../state/order-store';
 import { isInitialSyncComplete } from '../sync/initial-sync';
 
 // ---------------------------------------------------------------------------
@@ -36,13 +37,15 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabs() {
   return (
     <SyncProvider>
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <SyncStatusBar />
-        <Tab.Navigator screenOptions={{ headerShown: false }}>
-          <Tab.Screen name="POS" component={POSScreen} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
-        </Tab.Navigator>
-      </SafeAreaView>
+      <OrderProvider>
+        <SafeAreaView style={styles.container} edges={['top']}>
+          <SyncStatusBar />
+          <Tab.Navigator screenOptions={{ headerShown: false }}>
+            <Tab.Screen name="POS" component={POSScreen} />
+            <Tab.Screen name="Settings" component={SettingsScreen} />
+          </Tab.Navigator>
+        </SafeAreaView>
+      </OrderProvider>
     </SyncProvider>
   );
 }
