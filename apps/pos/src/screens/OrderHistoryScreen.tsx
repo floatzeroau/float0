@@ -1,10 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
+import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { database } from '../db/database';
 import type { Order, OrderItem, Product, Customer } from '../db/models';
 import { STATUS_LABELS, STATUS_COLOURS } from '../state/order-lifecycle';
 import type { OrderStatusDB } from '../state/order-lifecycle';
+import { useOrder } from '../state/order-store';
+import type { MainTabParamList } from '../navigation/RootNavigator';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,11 +35,14 @@ interface OrderDetailItem {
   lineTotal: number;
   modifiers: { name: string }[];
   notes: string;
+  voidedAt: number;
+  voidReason: string;
 }
 
 type FilterTab = 'all' | 'active' | 'completed' | 'cancelled';
 
 const ACTIVE_STATUSES: OrderStatusDB[] = ['draft', 'submitted', 'in_progress', 'ready'];
+const MANAGEABLE_STATUSES: OrderStatusDB[] = ['submitted', 'in_progress'];
 
 // ---------------------------------------------------------------------------
 // Status Badge
@@ -60,10 +67,12 @@ function OrderDetailModal({
   order,
   visible,
   onClose,
+  onManage,
 }: {
   order: OrderRow | null;
   visible: boolean;
   onClose: () => void;
+  onManage: (orderId: string) => void;
 }) {
   const [items, setItems] = useState<OrderDetailItem[]>([]);
 
@@ -90,6 +99,9 @@ function OrderDetailModal({
             ? oi.modifiersJson.map((m: { name?: string }) => ({ name: m.name ?? '' }))
             : [];
 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const raw = (oi as any)._raw;
+
           return {
             id: oi.id,
             productName,
@@ -98,6 +110,8 @@ function OrderDetailModal({
             lineTotal: oi.lineTotal,
             modifiers: mods,
             notes: oi.notes ?? '',
+            voidedAt: raw.voided_at || 0,
+            voidReason: raw.void_reason || '',
           };
         }),
       );
@@ -115,6 +129,8 @@ function OrderDetailModal({
     order.orderType === 'dine_in'
       ? `Dine-in${order.tableNumber ? ` #${order.tableNumber}` : ''}`
       : 'Takeaway';
+
+  const canManage = MANAGEABLE_STATUSES.includes(order.status);
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -134,22 +150,39 @@ function OrderDetailModal({
 
           {/* Items */}
           <ScrollView style={styles.detailItems} showsVerticalScrollIndicator={false}>
-            {items.map((item) => (
-              <View key={item.id} style={styles.detailItemRow}>
-                <View style={styles.detailItemInfo}>
-                  <Text style={styles.detailItemName}>
-                    {item.quantity}x {item.productName}
-                  </Text>
-                  {item.modifiers.length > 0 && (
-                    <Text style={styles.detailItemMods}>
-                      {item.modifiers.map((m) => m.name).join(', ')}
+            {items.map((item) => {
+              const isVoided = item.voidedAt > 0;
+              return (
+                <View key={item.id} style={styles.detailItemRow}>
+                  <View style={styles.detailItemInfo}>
+                    <Text style={[styles.detailItemName, isVoided && styles.detailItemNameVoided]}>
+                      {item.quantity}x {item.productName}
                     </Text>
-                  )}
-                  {item.notes !== '' && <Text style={styles.detailItemNotes}>{item.notes}</Text>}
+                    {item.modifiers.length > 0 && (
+                      <Text style={styles.detailItemMods}>
+                        {item.modifiers.map((m) => m.name).join(', ')}
+                      </Text>
+                    )}
+                    {isVoided && (
+                      <>
+                        <View style={styles.detailVoidBadge}>
+                          <Text style={styles.detailVoidBadgeText}>VOID</Text>
+                        </View>
+                        {item.voidReason !== '' && (
+                          <Text style={styles.detailVoidReason}>{item.voidReason}</Text>
+                        )}
+                      </>
+                    )}
+                    {!isVoided && item.notes !== '' && (
+                      <Text style={styles.detailItemNotes}>{item.notes}</Text>
+                    )}
+                  </View>
+                  <Text style={[styles.detailItemTotal, isVoided && styles.detailItemTotalVoided]}>
+                    ${item.lineTotal.toFixed(2)}
+                  </Text>
                 </View>
-                <Text style={styles.detailItemTotal}>${item.lineTotal.toFixed(2)}</Text>
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
 
           {/* Notes (cancellation reason) */}
@@ -164,6 +197,13 @@ function OrderDetailModal({
             <Text style={styles.detailTotalLabel}>Total</Text>
             <Text style={styles.detailTotalValue}>${order.total.toFixed(2)}</Text>
           </View>
+
+          {/* Manage Order button */}
+          {canManage && (
+            <TouchableOpacity style={styles.manageButton} onPress={() => onManage(order.id)}>
+              <Text style={styles.manageButtonText}>Manage Order</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Close */}
           <TouchableOpacity style={styles.detailCloseButton} onPress={onClose}>
@@ -183,6 +223,8 @@ export default function OrderHistoryScreen() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const { loadSubmittedOrder } = useOrder();
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   const loadOrders = useCallback(async () => {
     const startOfDay = new Date();
@@ -235,6 +277,15 @@ export default function OrderHistoryScreen() {
     const interval = setInterval(loadOrders, 5000);
     return () => clearInterval(interval);
   }, [loadOrders]);
+
+  const handleManageOrder = useCallback(
+    async (orderId: string) => {
+      setSelectedOrder(null);
+      await loadSubmittedOrder(orderId);
+      navigation.navigate('POS');
+    },
+    [loadSubmittedOrder, navigation],
+  );
 
   const filtered = orders.filter((o) => {
     if (filter === 'all') return true;
@@ -324,6 +375,7 @@ export default function OrderHistoryScreen() {
         order={selectedOrder}
         visible={selectedOrder !== null}
         onClose={() => setSelectedOrder(null)}
+        onManage={handleManageOrder}
       />
     </View>
   );
@@ -515,6 +567,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
   },
+  detailItemNameVoided: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
   detailItemMods: {
     fontSize: 12,
     color: '#888',
@@ -530,6 +586,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  detailItemTotalVoided: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  detailVoidBadge: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  detailVoidBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  detailVoidReason: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#dc2626',
+    marginTop: 2,
   },
   detailNotes: {
     marginHorizontal: 20,
@@ -559,6 +638,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#1a1a1a',
+  },
+  manageButton: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#1a1a1a',
+    alignItems: 'center',
+  },
+  manageButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
   detailCloseButton: {
     marginHorizontal: 20,

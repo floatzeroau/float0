@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 import { Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
-import type { Order, OrderItem, Product, Customer } from '../db/models';
+import type { Order, OrderItem, Product, Customer, AuditLog } from '../db/models';
 import { calculateLineTotal, calculateCartTotals, calculateItemDiscount } from '@float0/shared';
 import type { DiscountType, OrderDiscount } from '@float0/shared';
 import { eventBus } from '@float0/events';
@@ -40,6 +40,8 @@ export interface CartItemData {
   discountType: DiscountType | null;
   discountValue: number;
   discountReason: string;
+  voidedAt: number;
+  voidReason: string;
 }
 
 export interface CartTotalsData {
@@ -80,6 +82,7 @@ export interface HeldOrderSummary {
 
 const MAX_HELD_ORDERS = 20;
 const HELD_ORDER_WARNING_THRESHOLD = 15;
+export const VOID_THRESHOLD_AMOUNT = 10;
 
 interface OrderStoreValue {
   currentOrder: CurrentOrder | null;
@@ -114,6 +117,11 @@ interface OrderStoreValue {
   ) => Promise<void>;
   removeOrderDiscount: () => Promise<void>;
   removeItemDiscount: (itemId: string) => Promise<void>;
+  isManagingSubmittedOrder: boolean;
+  loadSubmittedOrder: (orderId: string) => Promise<void>;
+  addItemToSubmittedOrder: (params: AddItemParams) => Promise<void>;
+  voidItem: (itemId: string, reason: string, managerApprover?: string) => Promise<void>;
+  returnToNewOrder: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,7 +134,7 @@ function getStartOfDay(): Date {
   return d;
 }
 
-function setRaw(record: Order | OrderItem, field: string, value: string | number) {
+function setRaw(record: Order | OrderItem | AuditLog, field: string, value: string | number) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (record._raw as any)[field] = value;
 }
@@ -189,6 +197,11 @@ const OrderContext = createContext<OrderStoreValue>({
   applyItemDiscount: async () => {},
   removeOrderDiscount: async () => {},
   removeItemDiscount: async () => {},
+  isManagingSubmittedOrder: false,
+  loadSubmittedOrder: async () => {},
+  addItemToSubmittedOrder: async () => {},
+  voidItem: async () => {},
+  returnToNewOrder: async () => {},
 });
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
@@ -197,6 +210,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [cartTotals, setCartTotals] = useState<CartTotalsData>(ZERO_TOTALS);
   const [heldOrders, setHeldOrders] = useState<HeldOrderSummary[]>([]);
   const [orderDiscount, setOrderDiscount] = useState<OrderDiscountData | null>(null);
+  const [isManagingSubmittedOrder, setIsManagingSubmittedOrder] = useState(false);
   const orderRecordIdRef = useRef<string | null>(null);
 
   // -------------------------------------------------------------------------
@@ -232,6 +246,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           const discountValue = raw.discount_value || 0;
           const discountAmount = raw.discount_amount || 0;
           const discountReason = raw.discount_reason || '';
+          const voidedAt = raw.voided_at || 0;
+          const voidReason = raw.void_reason || '';
 
           return {
             id: oi.id,
@@ -247,6 +263,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             discountType: discountType as DiscountType | null,
             discountValue,
             discountReason,
+            voidedAt,
+            voidReason,
           };
         }),
       );
@@ -270,6 +288,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             item.discountType && item.discountValue > 0
               ? { type: item.discountType, value: item.discountValue }
               : undefined,
+          voidedAt: item.voidedAt,
         })),
         orderDiscountParam,
       );
@@ -290,10 +309,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         // Order may have been deleted
       }
 
-      // Update item count in state
+      // Update item count in state (exclude voided items)
       setCurrentOrder((prev) => {
         if (!prev || prev.id !== orderId) return prev;
-        return { ...prev, itemCount: loaded.length };
+        return { ...prev, itemCount: loaded.filter((i) => !i.voidedAt).length };
       });
     },
     [],
@@ -388,6 +407,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       setItems([]);
       setCartTotals(ZERO_TOTALS);
       setOrderDiscount(null);
+      setIsManagingSubmittedOrder(false);
     });
   }, []);
 
@@ -490,6 +510,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(oi, 'discount_value', 0);
           setRaw(oi, 'discount_reason', '');
           setRaw(oi, 'notes', '');
+          setRaw(oi, 'voided_at', 0);
+          setRaw(oi, 'void_reason', '');
         });
       });
 
@@ -908,6 +930,194 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   // -------------------------------------------------------------------------
+  // loadSubmittedOrder
+  // -------------------------------------------------------------------------
+  const loadSubmittedOrder = useCallback(
+    async (orderId: string) => {
+      const orderRecord = await database.get<Order>('orders').find(orderId);
+      const status = orderRecord.status as OrderStatusDB;
+
+      if (status !== 'submitted' && status !== 'in_progress') {
+        Alert.alert('Cannot manage', 'Only submitted or in-progress orders can be managed.');
+        return;
+      }
+
+      const currentId = orderRecordIdRef.current;
+
+      // If current draft is empty, delete it; if has items, hold it
+      if (currentId && currentId !== orderId) {
+        if (items.length > 0) {
+          await database.write(async () => {
+            const record = await database.get<Order>('orders').find(currentId);
+            await record.update((o) => {
+              setRaw(o, 'held_at', Date.now());
+            });
+          });
+        } else {
+          try {
+            await database.write(async () => {
+              const record = await database.get<Order>('orders').find(currentId);
+              await record.destroyPermanently();
+            });
+          } catch {
+            // Already deleted
+          }
+        }
+      }
+
+      orderRecordIdRef.current = orderId;
+
+      // Resolve customer name
+      let customerName: string | null = null;
+      if (orderRecord.customerId) {
+        try {
+          const customer = await database.get<Customer>('customers').find(orderRecord.customerId);
+          const parts = [customer.firstName, customer.lastName].filter(Boolean);
+          customerName = parts.join(' ') || null;
+        } catch {
+          // Customer not found
+        }
+      }
+
+      // Restore order discount from DB fields
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = (orderRecord as any)._raw;
+      const restoredDiscount: OrderDiscountData | null =
+        raw.discount_type && raw.discount_value > 0
+          ? {
+              type: raw.discount_type as DiscountType,
+              value: raw.discount_value as number,
+              reason: (raw.discount_reason as string) || '',
+            }
+          : null;
+      setOrderDiscount(restoredDiscount);
+
+      setIsManagingSubmittedOrder(true);
+
+      setCurrentOrder({
+        id: orderId,
+        orderNumber: orderRecord.orderNumber,
+        orderType: (orderRecord.orderType as OrderType) || 'takeaway',
+        tableNumber: orderRecord.tableNumber || null,
+        itemCount: 0,
+        customerId: orderRecord.customerId || null,
+        customerName,
+        status,
+      });
+
+      await refreshItems(orderId, restoredDiscount);
+      await refreshHeldOrders();
+    },
+    [items.length, refreshItems, refreshHeldOrders],
+  );
+
+  // -------------------------------------------------------------------------
+  // addItemToSubmittedOrder
+  // -------------------------------------------------------------------------
+  const addItemToSubmittedOrder = useCallback(
+    async (params: AddItemParams) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      await database.write(async () => {
+        await database.get<OrderItem>('order_items').create((oi) => {
+          setRaw(oi, 'server_id', '');
+          setRaw(oi, 'order_id', orderId);
+          setRaw(oi, 'product_id', params.productId);
+          setRaw(oi, 'quantity', params.quantity);
+          setRaw(oi, 'unit_price', params.basePrice);
+          setRaw(oi, 'modifiers_json', JSON.stringify(params.selectedModifiers));
+          setRaw(oi, 'line_total', params.lineTotal);
+          setRaw(oi, 'discount_amount', 0);
+          setRaw(oi, 'discount_type', '');
+          setRaw(oi, 'discount_value', 0);
+          setRaw(oi, 'discount_reason', '');
+          setRaw(oi, 'notes', '');
+          setRaw(oi, 'voided_at', 0);
+          setRaw(oi, 'void_reason', '');
+        });
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [refreshItems, orderDiscount],
+  );
+
+  // -------------------------------------------------------------------------
+  // voidItem
+  // -------------------------------------------------------------------------
+  const voidItem = useCallback(
+    async (itemId: string, reason: string, managerApprover?: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return;
+
+      // Guard double-void
+      if (item.voidedAt && item.voidedAt > 0) return;
+
+      const now = Date.now();
+
+      await database.write(async () => {
+        // Update the order item
+        const record = await database.get<OrderItem>('order_items').find(itemId);
+        await record.update((oi) => {
+          setRaw(oi, 'voided_at', now);
+          setRaw(oi, 'void_reason', reason);
+        });
+
+        // Create audit log
+        await database.get<AuditLog>('audit_logs').create((log) => {
+          setRaw(log, 'server_id', '');
+          setRaw(log, 'action', 'void_item');
+          setRaw(log, 'entity_type', 'order_item');
+          setRaw(log, 'entity_id', itemId);
+          setRaw(log, 'staff_id', 'pos-terminal');
+          setRaw(log, 'manager_approver', managerApprover ?? '');
+          setRaw(
+            log,
+            'changes_json',
+            JSON.stringify({
+              productName: item.productName,
+              quantity: item.quantity,
+              lineTotal: item.lineTotal,
+              reason,
+            }),
+          );
+          setRaw(log, 'device_id', 'terminal-1');
+          setRaw(log, 'created_at', now);
+        });
+      });
+
+      // Emit event
+      eventBus.emit('pos.item.voided', {
+        orderId,
+        orderItemId: itemId,
+        organizationId: 'org-1',
+        productName: item.productName,
+        originalAmount: item.lineTotal,
+        voidReason: reason,
+        staffId: 'pos-terminal',
+        managerApproverId: managerApprover,
+        timestamp: new Date(),
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [items, refreshItems, orderDiscount],
+  );
+
+  // -------------------------------------------------------------------------
+  // returnToNewOrder
+  // -------------------------------------------------------------------------
+  const returnToNewOrder = useCallback(async () => {
+    setIsManagingSubmittedOrder(false);
+    await doCreateOrder();
+    await refreshHeldOrders();
+  }, [doCreateOrder, refreshHeldOrders]);
+
+  // -------------------------------------------------------------------------
   // Provider value
   // -------------------------------------------------------------------------
   const value: OrderStoreValue = {
@@ -934,6 +1144,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     applyItemDiscount,
     removeOrderDiscount,
     removeItemDiscount,
+    isManagingSubmittedOrder,
+    loadSubmittedOrder,
+    addItemToSubmittedOrder,
+    voidItem,
+    returnToNewOrder,
   };
 
   return React.createElement(OrderContext.Provider, { value }, children);

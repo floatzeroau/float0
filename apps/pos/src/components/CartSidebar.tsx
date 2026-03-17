@@ -14,6 +14,7 @@ import { CustomerSearchModal } from './CustomerSearchModal';
 import type { CustomerResult } from './CustomerSearchModal';
 import { HeldOrdersDrawer } from './HeldOrdersDrawer';
 import { DiscountModal } from './DiscountModal';
+import { VoidItemModal } from './VoidItemModal';
 import type { DiscountType } from '@float0/shared';
 
 // ---------------------------------------------------------------------------
@@ -22,20 +23,24 @@ import type { DiscountType } from '@float0/shared';
 
 interface CartItemRowProps {
   item: CartItemData;
+  isSubmittedOrder: boolean;
   onQuantityChange: (itemId: string, newQty: number) => void;
   onRemove: (itemId: string) => void;
   onEdit: (item: CartItemData) => void;
   onNoteChange: (itemId: string, note: string) => void;
   onDiscount: (item: CartItemData) => void;
+  onVoid: (item: CartItemData) => void;
 }
 
 function CartItemRow({
   item,
+  isSubmittedOrder,
   onQuantityChange,
   onRemove,
   onEdit,
   onNoteChange,
   onDiscount,
+  onVoid,
 }: CartItemRowProps) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState(item.notes);
@@ -48,7 +53,72 @@ function CartItemRow({
   const hasModifiers = item.modifiers.length > 0;
   const hasDiscount = item.discountType && item.discountValue > 0;
   const discountedTotal = hasDiscount ? item.lineTotal - item.discountAmount : item.lineTotal;
+  const isVoided = item.voidedAt > 0;
 
+  // Voided item rendering
+  if (isVoided) {
+    return (
+      <View style={[styles.itemRow, styles.itemRowVoided]}>
+        <View style={styles.itemMain}>
+          <View style={styles.itemInfo}>
+            <Text style={[styles.itemName, styles.itemNameVoided]}>{item.productName}</Text>
+            {hasModifiers && (
+              <Text style={[styles.itemModifiers, styles.textStrikethrough]}>
+                {item.modifiers.map((m) => m.name).join(', ')}
+              </Text>
+            )}
+            <View style={styles.voidBadge}>
+              <Text style={styles.voidBadgeText}>VOID</Text>
+            </View>
+            {item.voidReason !== '' && <Text style={styles.voidReasonText}>{item.voidReason}</Text>}
+          </View>
+          <View style={styles.itemPriceCol}>
+            <Text style={[styles.itemTotal, styles.itemTotalVoided]}>
+              ${item.lineTotal.toFixed(2)}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Submitted order item (not voided): show Void button, quantity display only
+  if (isSubmittedOrder) {
+    return (
+      <View style={styles.itemRow}>
+        <View style={styles.itemMain}>
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{item.productName}</Text>
+            {hasModifiers && (
+              <Text style={styles.itemModifiers}>
+                {item.modifiers.map((m) => m.name).join(', ')}
+              </Text>
+            )}
+            {hasDiscount && <Text style={styles.itemDiscountReason}>{item.discountReason}</Text>}
+            {item.notes !== '' && <Text style={styles.itemNotes}>{item.notes}</Text>}
+          </View>
+          <View style={styles.itemPriceCol}>
+            {hasDiscount ? (
+              <>
+                <Text style={styles.itemTotalStrikethrough}>${item.lineTotal.toFixed(2)}</Text>
+                <Text style={styles.itemTotalDiscounted}>${discountedTotal.toFixed(2)}</Text>
+              </>
+            ) : (
+              <Text style={styles.itemTotal}>${item.lineTotal.toFixed(2)}</Text>
+            )}
+          </View>
+        </View>
+        <View style={styles.itemControls}>
+          <Text style={styles.qtyText}>Qty: {item.quantity}</Text>
+          <TouchableOpacity style={styles.voidItemButton} onPress={() => onVoid(item)}>
+            <Text style={styles.voidItemButtonText}>Void Item</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Normal draft item rendering
   return (
     <View style={styles.itemRow}>
       <View style={styles.itemMain}>
@@ -168,6 +238,9 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     applyItemDiscount,
     removeOrderDiscount,
     removeItemDiscount,
+    isManagingSubmittedOrder,
+    voidItem,
+    returnToNewOrder,
   } = useOrder();
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -181,6 +254,15 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     itemName?: string;
     currentTotal: number;
     existing: { type: DiscountType; value: number; reason: string } | null;
+  } | null>(null);
+
+  // Void modal state
+  const [voidModalVisible, setVoidModalVisible] = useState(false);
+  const [voidTargetItem, setVoidTargetItem] = useState<{
+    id: string;
+    productName: string;
+    lineTotal: number;
+    quantity: number;
   } | null>(null);
 
   useEffect(() => {
@@ -308,6 +390,32 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     setDiscountTarget(null);
   }, []);
 
+  // Void handlers
+  const handleOpenVoid = useCallback((item: CartItemData) => {
+    setVoidTargetItem({
+      id: item.id,
+      productName: item.productName,
+      lineTotal: item.lineTotal,
+      quantity: item.quantity,
+    });
+    setVoidModalVisible(true);
+  }, []);
+
+  const handleVoidConfirm = useCallback(
+    (reason: string, managerApprover?: string) => {
+      if (!voidTargetItem) return;
+      voidItem(voidTargetItem.id, reason, managerApprover);
+      setVoidModalVisible(false);
+      setVoidTargetItem(null);
+    },
+    [voidTargetItem, voidItem],
+  );
+
+  const handleVoidCancel = useCallback(() => {
+    setVoidModalVisible(false);
+    setVoidTargetItem(null);
+  }, []);
+
   const hasItems = items.length > 0;
 
   // Order type badge text
@@ -324,27 +432,34 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
         <View style={styles.headerTop}>
           <Text style={styles.headerOrder}>{currentOrder?.orderNumber ?? 'No Order'}</Text>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.heldButton} onPress={() => setShowHeldOrders(true)}>
-              <Text style={styles.heldButtonText}>Held</Text>
-              {heldOrders.length > 0 && (
-                <View style={styles.heldBadge}>
-                  <Text style={styles.heldBadgeText}>{heldOrders.length}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            {!isManagingSubmittedOrder && (
+              <TouchableOpacity style={styles.heldButton} onPress={() => setShowHeldOrders(true)}>
+                <Text style={styles.heldButtonText}>Held</Text>
+                {heldOrders.length > 0 && (
+                  <View style={styles.heldBadge}>
+                    <Text style={styles.heldBadgeText}>{heldOrders.length}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+            {isManagingSubmittedOrder && currentOrder && (
+              <View style={styles.submittedBadge}>
+                <Text style={styles.submittedBadgeText}>{currentOrder.status.toUpperCase()}</Text>
+              </View>
+            )}
             {currentOrder && (
               <View style={styles.orderTypeBadge}>
                 <Text style={styles.orderTypeBadgeText}>{orderTypeBadge}</Text>
               </View>
             )}
-            {currentOrder && hasItems && (
+            {!isManagingSubmittedOrder && currentOrder && hasItems && (
               <TouchableOpacity style={styles.menuButton} onPress={() => setShowMenu(!showMenu)}>
                 <Text style={styles.menuButtonText}>...</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
-        {showMenu && (
+        {showMenu && !isManagingSubmittedOrder && (
           <View style={styles.menuDropdown}>
             <TouchableOpacity style={styles.menuItem} onPress={handleOpenOrderDiscount}>
               <Text style={styles.menuItemText}>
@@ -356,7 +471,7 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
             </TouchableOpacity>
           </View>
         )}
-        {currentOrder && (
+        {currentOrder && !isManagingSubmittedOrder && (
           <View style={styles.customerRow}>
             {currentOrder.customerName ? (
               <View style={styles.customerAssigned}>
@@ -386,11 +501,13 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
             <CartItemRow
               key={item.id}
               item={item}
+              isSubmittedOrder={isManagingSubmittedOrder}
               onQuantityChange={handleQuantityChange}
               onRemove={handleRemove}
               onEdit={handleEdit}
               onNoteChange={handleNoteChange}
               onDiscount={handleOpenItemDiscount}
+              onVoid={handleOpenVoid}
             />
           ))}
         </ScrollView>
@@ -433,30 +550,41 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
       </View>
 
       {/* Action buttons */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.holdButtonStyle]}
-          onPress={holdOrder}
-          disabled={!hasItems}
-        >
-          <Text style={[styles.holdButtonText, !hasItems && styles.disabledText]}>Hold</Text>
-        </TouchableOpacity>
+      {isManagingSubmittedOrder ? (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.doneButton]}
+            onPress={returnToNewOrder}
+          >
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.holdButtonStyle]}
+            onPress={holdOrder}
+            disabled={!hasItems}
+          >
+            <Text style={[styles.holdButtonText, !hasItems && styles.disabledText]}>Hold</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.submitButton, !hasItems && styles.disabledButton]}
-          onPress={submitOrder}
-          disabled={!hasItems}
-        >
-          <Text style={[styles.submitButtonText, !hasItems && styles.disabledSubmitText]}>
-            Submit
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.submitButton, !hasItems && styles.disabledButton]}
+            onPress={submitOrder}
+            disabled={!hasItems}
+          >
+            <Text style={[styles.submitButtonText, !hasItems && styles.disabledSubmitText]}>
+              Submit
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionButton, styles.payButton]} disabled>
-          <Text style={styles.payButtonText}>${cartTotals.total.toFixed(2)}</Text>
-          <Text style={styles.payComingSoon}>Coming Soon</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={[styles.actionButton, styles.payButton]} disabled>
+            <Text style={styles.payButtonText}>${cartTotals.total.toFixed(2)}</Text>
+            <Text style={styles.payComingSoon}>Coming Soon</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <CustomerSearchModal
         visible={showCustomerSearch}
@@ -478,6 +606,13 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
           onCancel={handleDiscountCancel}
         />
       )}
+
+      <VoidItemModal
+        visible={voidModalVisible}
+        item={voidTargetItem}
+        onConfirm={handleVoidConfirm}
+        onCancel={handleVoidCancel}
+      />
     </View>
   );
 }
@@ -536,6 +671,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#fff',
+  },
+  submittedBadge: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  submittedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563eb',
   },
   menuButton: {
     width: 28,
@@ -653,6 +799,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
+  itemRowVoided: {
+    backgroundColor: '#fef2f2',
+  },
   itemMain: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -666,6 +815,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  itemNameVoided: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  textStrikethrough: {
+    textDecorationLine: 'line-through',
   },
   itemModifiers: {
     fontSize: 12,
@@ -692,6 +848,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
   },
+  itemTotalVoided: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
   itemTotalStrikethrough: {
     fontSize: 12,
     color: '#999',
@@ -701,6 +861,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#16a34a',
+  },
+
+  // Void styles
+  voidBadge: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  voidBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  voidReasonText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#dc2626',
+    marginTop: 2,
+  },
+  voidItemButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#fef2f2',
+  },
+  voidItemButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#dc2626',
   },
 
   // Quantity & actions
@@ -870,6 +1062,14 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#bbb',
+  },
+  doneButton: {
+    backgroundColor: '#1a1a1a',
+  },
+  doneButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
   payButton: {
     backgroundColor: '#e8e8e8',

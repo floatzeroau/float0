@@ -296,6 +296,56 @@ describe('calculateCartTotals with order discount', () => {
   });
 });
 
+describe('calculateCartTotals with voided items', () => {
+  it('excludes voided items from totals', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [] },
+      { unitPrice: 5, quantity: 2, isGstFree: false, modifiers: [], voidedAt: Date.now() },
+    ]);
+
+    expect(result.subtotal).toBe(10);
+    expect(result.total).toBe(10);
+  });
+
+  it('returns zeros when all items are voided', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [], voidedAt: Date.now() },
+      { unitPrice: 5, quantity: 1, isGstFree: false, modifiers: [], voidedAt: Date.now() },
+    ]);
+
+    expect(result.subtotal).toBe(0);
+    expect(result.gstAmount).toBe(0);
+    expect(result.total).toBe(0);
+  });
+
+  it('includes items with voidedAt=0 (not voided)', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [], voidedAt: 0 },
+    ]);
+
+    expect(result.subtotal).toBe(10);
+    expect(result.total).toBe(10);
+  });
+
+  it('excludes voided items with discount from totals', () => {
+    const result = calculateCartTotals([
+      {
+        unitPrice: 20,
+        quantity: 1,
+        isGstFree: false,
+        modifiers: [],
+        discount: { type: 'fixed', value: 5 },
+        voidedAt: Date.now(),
+      },
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [] },
+    ]);
+
+    expect(result.subtotal).toBe(10);
+    expect(result.total).toBe(10);
+    expect(result.itemDiscountTotal).toBe(0);
+  });
+});
+
 describe('requiresManagerApproval', () => {
   it('returns false for percentage within threshold', () => {
     expect(requiresManagerApproval('percentage', 20)).toBe(false);

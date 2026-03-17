@@ -222,11 +222,27 @@ export class OrderItem extends Model {
   @field('discount_value') discountValue!: number;
   @text('discount_reason') discountReason?: string;
   @text('notes') notes?: string;
+  @field('voided_at') voidedAt?: number;
+  @text('void_reason') voidReason?: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
   @immutableRelation('orders', 'order_id') order: any;
   @immutableRelation('products', 'product_id') product: any;
+}
+
+export class AuditLog extends Model {
+  static table = 'audit_logs';
+
+  @text('server_id') serverId!: string;
+  @text('action') action!: string;
+  @text('entity_type') entityType!: string;
+  @text('entity_id') entityId!: string;
+  @text('staff_id') staffId!: string;
+  @text('manager_approver') managerApprover?: string;
+  @text('changes_json') changesJson?: string;
+  @text('device_id') deviceId?: string;
+  @date('created_at') createdAt!: Date;
 }
 
 export class Payment extends Model {

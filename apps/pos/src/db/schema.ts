@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 5,
+  version: 6,
   tables: [
     tableSchema({
       name: 'products',
@@ -126,8 +126,24 @@ export const schema = appSchema({
         { name: 'discount_value', type: 'number' },
         { name: 'discount_reason', type: 'string', isOptional: true },
         { name: 'notes', type: 'string', isOptional: true },
+        { name: 'voided_at', type: 'number', isOptional: true },
+        { name: 'void_reason', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'audit_logs',
+      columns: [
+        { name: 'server_id', type: 'string' },
+        { name: 'action', type: 'string' },
+        { name: 'entity_type', type: 'string' },
+        { name: 'entity_id', type: 'string' },
+        { name: 'staff_id', type: 'string' },
+        { name: 'manager_approver', type: 'string', isOptional: true },
+        { name: 'changes_json', type: 'string', isOptional: true },
+        { name: 'device_id', type: 'string', isOptional: true },
+        { name: 'created_at', type: 'number' },
       ],
     }),
     tableSchema({

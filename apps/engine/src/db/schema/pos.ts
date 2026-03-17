@@ -288,6 +288,8 @@ export const orderItems = pgTable(
     modifiersJson: jsonb(),
     lineTotal: doublePrecision().notNull(),
     notes: text(),
+    voidedAt: timestamp({ withTimezone: true }),
+    voidReason: text(),
     _version: integer().notNull().default(1),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

@@ -38,6 +38,18 @@ export interface LoyaltyTierChanged {
   newTier: string;
 }
 
+export interface PosItemVoided {
+  orderId: string;
+  orderItemId: string;
+  organizationId: string;
+  productName: string;
+  originalAmount: number;
+  voidReason: string;
+  staffId: string;
+  managerApproverId?: string;
+  timestamp: Date;
+}
+
 export interface ProductsAvailabilityChanged {
   productId: string;
   organizationId: string;
@@ -52,6 +64,7 @@ export interface EventMap {
   'pos.order.refunded': PosOrderRefunded;
   'inventory.stock.low': InventoryStockLow;
   'loyalty.tier.changed': LoyaltyTierChanged;
+  'pos.item.voided': PosItemVoided;
   'products.availability_changed': ProductsAvailabilityChanged;
 }
 

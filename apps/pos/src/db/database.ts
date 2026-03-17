@@ -15,6 +15,7 @@ import {
   Payment,
   Shift,
   Staff,
+  AuditLog,
 } from './models';
 
 const adapter = new SQLiteAdapter({
@@ -40,5 +41,6 @@ export const database = new Database({
     Payment,
     Shift,
     Staff,
+    AuditLog,
   ],
 });

@@ -18,7 +18,8 @@ import { calculateLineTotal } from '@float0/shared';
 // ---------------------------------------------------------------------------
 
 function TopBar() {
-  const { currentOrder, createNewOrder, setOrderType, setTableNumber } = useOrder();
+  const { currentOrder, createNewOrder, setOrderType, setTableNumber, isManagingSubmittedOrder } =
+    useOrder();
 
   const handleToggle = useCallback(
     (type: OrderType) => {
@@ -52,62 +53,70 @@ function TopBar() {
       </View>
 
       <View style={styles.topBarCenter}>
-        {currentOrder && (
-          <>
-            <View style={styles.toggleGroup}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  currentOrder.orderType === 'takeaway' && styles.toggleActive,
-                ]}
-                onPress={() => handleToggle('takeaway')}
-              >
-                <Text
+        {isManagingSubmittedOrder ? (
+          <View style={styles.managingLabel}>
+            <Text style={styles.managingLabelText}>Managing Submitted Order</Text>
+          </View>
+        ) : (
+          currentOrder && (
+            <>
+              <View style={styles.toggleGroup}>
+                <TouchableOpacity
                   style={[
-                    styles.toggleText,
-                    currentOrder.orderType === 'takeaway' && styles.toggleTextActive,
+                    styles.toggleButton,
+                    currentOrder.orderType === 'takeaway' && styles.toggleActive,
                   ]}
+                  onPress={() => handleToggle('takeaway')}
                 >
-                  Takeaway
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  currentOrder.orderType === 'dine_in' && styles.toggleActive,
-                ]}
-                onPress={() => handleToggle('dine_in')}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      currentOrder.orderType === 'takeaway' && styles.toggleTextActive,
+                    ]}
+                  >
+                    Takeaway
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[
-                    styles.toggleText,
-                    currentOrder.orderType === 'dine_in' && styles.toggleTextActive,
+                    styles.toggleButton,
+                    currentOrder.orderType === 'dine_in' && styles.toggleActive,
                   ]}
+                  onPress={() => handleToggle('dine_in')}
                 >
-                  Dine-in
-                </Text>
-              </TouchableOpacity>
-            </View>
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      currentOrder.orderType === 'dine_in' && styles.toggleTextActive,
+                    ]}
+                  >
+                    Dine-in
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            {currentOrder.orderType === 'dine_in' && (
-              <TextInput
-                style={styles.tableInput}
-                placeholder="Table #"
-                placeholderTextColor="#999"
-                keyboardType="number-pad"
-                maxLength={2}
-                value={currentOrder.tableNumber ?? ''}
-                onChangeText={handleTableChange}
-              />
-            )}
-          </>
+              {currentOrder.orderType === 'dine_in' && (
+                <TextInput
+                  style={styles.tableInput}
+                  placeholder="Table #"
+                  placeholderTextColor="#999"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  value={currentOrder.tableNumber ?? ''}
+                  onChangeText={handleTableChange}
+                />
+              )}
+            </>
+          )
         )}
       </View>
 
       <View style={styles.topBarRight}>
-        <TouchableOpacity style={styles.newOrderButton} onPress={createNewOrder}>
-          <Text style={styles.newOrderText}>New Order</Text>
-        </TouchableOpacity>
+        {!isManagingSubmittedOrder && (
+          <TouchableOpacity style={styles.newOrderButton} onPress={createNewOrder}>
+            <Text style={styles.newOrderText}>New Order</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -118,7 +127,14 @@ function TopBar() {
 // ---------------------------------------------------------------------------
 
 export default function POSScreen() {
-  const { currentOrder, createNewOrder, addItem, updateItemModifiers } = useOrder();
+  const {
+    currentOrder,
+    createNewOrder,
+    addItem,
+    updateItemModifiers,
+    addItemToSubmittedOrder,
+    isManagingSubmittedOrder,
+  } = useOrder();
   const [initialized, setInitialized] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -161,7 +177,8 @@ export default function POSScreen() {
         }
 
         const lineTotal = calculateLineTotal(product.basePrice, [], 1);
-        await addItem({
+        const addFn = isManagingSubmittedOrder ? addItemToSubmittedOrder : addItem;
+        await addFn({
           productId: product.id,
           productName: product.name,
           basePrice: product.basePrice,
@@ -172,7 +189,7 @@ export default function POSScreen() {
         });
       }
     },
-    [addItem],
+    [addItem, addItemToSubmittedOrder, isManagingSubmittedOrder],
   );
 
   const handleModifierCancel = useCallback(() => {
@@ -198,7 +215,8 @@ export default function POSScreen() {
           // default false
         }
 
-        await addItem({
+        const addFn = isManagingSubmittedOrder ? addItemToSubmittedOrder : addItem;
+        await addFn({
           productId: result.productId,
           productName: result.productName,
           basePrice: result.basePrice,
@@ -209,7 +227,13 @@ export default function POSScreen() {
         });
       }
     },
-    [editingItemId, addItem, updateItemModifiers],
+    [
+      editingItemId,
+      addItem,
+      addItemToSubmittedOrder,
+      isManagingSubmittedOrder,
+      updateItemModifiers,
+    ],
   );
 
   const handleEditItem = useCallback((item: CartItemData) => {
@@ -350,6 +374,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1a1a1a',
     textAlign: 'center',
+  },
+
+  // Managing label
+  managingLabel: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  managingLabelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
   },
 
   // New Order button

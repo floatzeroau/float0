@@ -163,5 +163,31 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 6,
+      steps: [
+        addColumns({
+          table: 'order_items',
+          columns: [
+            { name: 'voided_at', type: 'number', isOptional: true },
+            { name: 'void_reason', type: 'string', isOptional: true },
+          ],
+        }),
+        createTable({
+          name: 'audit_logs',
+          columns: [
+            { name: 'server_id', type: 'string' },
+            { name: 'action', type: 'string' },
+            { name: 'entity_type', type: 'string' },
+            { name: 'entity_id', type: 'string' },
+            { name: 'staff_id', type: 'string' },
+            { name: 'manager_approver', type: 'string', isOptional: true },
+            { name: 'changes_json', type: 'string', isOptional: true },
+            { name: 'device_id', type: 'string', isOptional: true },
+            { name: 'created_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 });

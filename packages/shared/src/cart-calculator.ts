@@ -26,6 +26,7 @@ export interface CartItem {
   isGstFree: boolean;
   modifiers: CartItemModifier[];
   discount?: ItemDiscount;
+  voidedAt?: number;
 }
 
 export interface CartTotals {
@@ -124,6 +125,8 @@ export function calculateCartTotals(items: CartItem[], orderDiscount?: OrderDisc
   let itemDiscountTotal = 0;
 
   for (const item of items) {
+    if (item.voidedAt && item.voidedAt > 0) continue;
+
     const adjustments = item.modifiers.map((m) => m.priceAdjustment);
     const lineTotal = calculateLineTotal(item.unitPrice, adjustments, item.quantity);
 
