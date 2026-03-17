@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { hash } from 'bcrypt';
+import { eq, and } from 'drizzle-orm';
 import { db } from './connection.js';
 import { organizations, users, orgMemberships } from './schema/core.js';
 import {
@@ -16,24 +17,40 @@ const SALT_ROUNDS = 10;
 async function seed() {
   console.log('Seeding database...');
 
-  const [org] = await db
-    .insert(organizations)
-    .values({
-      name: 'Float0 Demo Cafe',
-      abn: '12345678901',
-      address: '123 Collins St, Melbourne VIC 3000',
-      phone: '+61 3 9000 0000',
-      email: 'hello@float0demo.com.au',
-      timezone: 'Australia/Melbourne',
-      currency: 'AUD',
-      enabledModules: ['pos', 'inventory', 'loyalty'],
-      subscriptionTier: 'professional',
-      settings: {},
-    })
-    .returning();
+  // ── Organization (find or create) ─────────────────────
+  const ORG_EMAIL = 'hello@float0demo.com.au';
 
-  console.log(`Created organization: ${org.name} (${org.id})`);
+  let org: typeof organizations.$inferSelect;
+  const [existingOrg] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.email, ORG_EMAIL))
+    .limit(1);
 
+  if (existingOrg) {
+    org = existingOrg;
+    console.log(`Organization already exists: ${org.name} (${org.id})`);
+  } else {
+    const [created] = await db
+      .insert(organizations)
+      .values({
+        name: 'Float0 Demo Cafe',
+        abn: '12345678901',
+        address: '123 Collins St, Melbourne VIC 3000',
+        phone: '+61 3 9000 0000',
+        email: ORG_EMAIL,
+        timezone: 'Australia/Melbourne',
+        currency: 'AUD',
+        enabledModules: ['pos', 'inventory', 'loyalty'],
+        subscriptionTier: 'professional',
+        settings: {},
+      })
+      .returning();
+    org = created;
+    console.log(`Created organization: ${org.name} (${org.id})`);
+  }
+
+  // ── User (upsert by email) ────────────────────────────
   const passwordHash = await hash('admin123', SALT_ROUNDS);
   const pinHash = await hash('1234', SALT_ROUNDS);
 
@@ -47,24 +64,51 @@ async function seed() {
       phone: '+61 400 000 000',
       isActive: true,
     })
-    .returning();
-
-  console.log(`Created user: ${user.email} (${user.id})`);
-
-  const [membership] = await db
-    .insert(orgMemberships)
-    .values({
-      userId: user.id,
-      organizationId: org.id,
-      role: 'owner',
-      pinHash,
-      permissions: [],
+    .onConflictDoUpdate({
+      target: users.email,
+      set: { firstName: 'Admin', lastName: 'User', passwordHash },
     })
     .returning();
 
-  console.log(`Created membership: ${membership.id} (role: ${membership.role})`);
+  console.log(`Upserted user: ${user.email} (${user.id})`);
 
-  // ── POS Seed Data ────────────────────────────────────
+  // ── Org Membership (upsert by userId + organizationId) ─
+  const [existingMembership] = await db
+    .select()
+    .from(orgMemberships)
+    .where(and(eq(orgMemberships.userId, user.id), eq(orgMemberships.organizationId, org.id)))
+    .limit(1);
+
+  if (existingMembership) {
+    console.log(
+      `Membership already exists: ${existingMembership.id} (role: ${existingMembership.role})`,
+    );
+  } else {
+    const [membership] = await db
+      .insert(orgMemberships)
+      .values({
+        userId: user.id,
+        organizationId: org.id,
+        role: 'owner',
+        pinHash,
+        permissions: [],
+      })
+      .returning();
+    console.log(`Created membership: ${membership.id} (role: ${membership.role})`);
+  }
+
+  // ── POS Seed Data (skip if already seeded) ─────────────
+  const existingCategories = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.organizationId, org.id))
+    .limit(1);
+
+  if (existingCategories.length > 0) {
+    console.log('POS data already seeded, skipping...');
+    console.log('Seed complete.');
+    process.exit(0);
+  }
 
   const [catCoffee, catTea, catColdDrinks, catSpecialty, catFood, catPastry] = await db
     .insert(categories)
