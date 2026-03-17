@@ -30,6 +30,12 @@ export interface LoyaltyTierChanged {
   newTier: string;
 }
 
+export interface ProductsAvailabilityChanged {
+  productId: string;
+  organizationId: string;
+  isAvailable: boolean;
+}
+
 // ── Event map (event name → payload type) ───────────────
 
 export interface EventMap {
@@ -37,6 +43,7 @@ export interface EventMap {
   'pos.order.refunded': PosOrderRefunded;
   'inventory.stock.low': InventoryStockLow;
   'loyalty.tier.changed': LoyaltyTierChanged;
+  'products.availability_changed': ProductsAvailabilityChanged;
 }
 
 export type EventName = keyof EventMap;

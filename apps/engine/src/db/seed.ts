@@ -94,7 +94,16 @@ async function seed() {
     `Created categories: ${[catCoffee, catTea, catColdDrinks, catSpecialty, catFood, catPastry].map((c) => c.name).join(', ')}`,
   );
 
-  const [pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread] = await db
+  const [
+    pFlatWhite,
+    pLatte,
+    pCappuccino,
+    pCroissant,
+    pBananaBread,
+    pEnglishBreakfast,
+    pIcedLatte,
+    pSourdough,
+  ] = await db
     .insert(products)
     .values([
       {
@@ -102,6 +111,8 @@ async function seed() {
         name: 'Flat White',
         categoryId: catCoffee.id,
         basePrice: 4.5,
+        sku: 'FW-001',
+        barcode: '9300001000011',
         isAvailable: true,
         sortOrder: 0,
       },
@@ -110,6 +121,8 @@ async function seed() {
         name: 'Latte',
         categoryId: catCoffee.id,
         basePrice: 4.5,
+        sku: 'LT-001',
+        barcode: '9300001000028',
         isAvailable: true,
         sortOrder: 1,
       },
@@ -118,6 +131,8 @@ async function seed() {
         name: 'Cappuccino',
         categoryId: catCoffee.id,
         basePrice: 4.5,
+        sku: 'CP-001',
+        barcode: '9300001000035',
         isAvailable: true,
         sortOrder: 2,
       },
@@ -127,6 +142,8 @@ async function seed() {
         description: 'Freshly baked butter croissant',
         categoryId: catFood.id,
         basePrice: 5.0,
+        sku: 'CR-001',
+        barcode: '9300001000042',
         isAvailable: true,
         sortOrder: 0,
       },
@@ -136,14 +153,49 @@ async function seed() {
         description: 'Warm banana bread with butter',
         categoryId: catFood.id,
         basePrice: 6.0,
+        sku: 'BB-001',
+        barcode: '9300001000059',
         isAvailable: true,
         sortOrder: 1,
+      },
+      {
+        organizationId: org.id,
+        name: 'English Breakfast',
+        description: 'Classic black tea',
+        categoryId: catTea.id,
+        basePrice: 4.0,
+        sku: 'EB-001',
+        barcode: '9300001000066',
+        isAvailable: true,
+        sortOrder: 0,
+      },
+      {
+        organizationId: org.id,
+        name: 'Iced Latte',
+        description: 'Espresso over ice with milk',
+        categoryId: catColdDrinks.id,
+        basePrice: 5.5,
+        sku: 'IL-001',
+        barcode: '9300001000073',
+        isAvailable: true,
+        sortOrder: 0,
+      },
+      {
+        organizationId: org.id,
+        name: 'Sourdough Toast',
+        description: 'Thick-cut sourdough with butter and jam',
+        categoryId: catFood.id,
+        basePrice: 7.0,
+        sku: 'ST-001',
+        barcode: '9300001000080',
+        isAvailable: true,
+        sortOrder: 2,
       },
     ])
     .returning();
 
   console.log(
-    `Created products: ${[pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread].map((p) => p.name).join(', ')}`,
+    `Created products: ${[pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread, pEnglishBreakfast, pIcedLatte, pSourdough].map((p) => p.name).join(', ')}`,
   );
 
   const [mgSize, mgMilk, mgExtras] = await db
