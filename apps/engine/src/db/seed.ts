@@ -146,22 +146,73 @@ async function seed() {
     `Created products: ${[pFlatWhite, pLatte, pCappuccino, pCroissant, pBananaBread].map((p) => p.name).join(', ')}`,
   );
 
-  const [mgMilk] = await db
+  const [mgSize, mgMilk, mgExtras] = await db
     .insert(modifierGroups)
-    .values({
-      organizationId: org.id,
-      name: 'Milk Type',
-      displayName: 'Choose your milk',
-      selectionType: 'single',
-      minSelections: 1,
-      maxSelections: 1,
-      sortOrder: 0,
-    })
+    .values([
+      {
+        organizationId: org.id,
+        name: 'Size',
+        displayName: 'Choose size',
+        selectionType: 'single',
+        minSelections: 1,
+        maxSelections: 1,
+        sortOrder: 0,
+      },
+      {
+        organizationId: org.id,
+        name: 'Milk',
+        displayName: 'Choose your milk',
+        selectionType: 'single',
+        minSelections: 0,
+        maxSelections: 1,
+        sortOrder: 1,
+      },
+      {
+        organizationId: org.id,
+        name: 'Extras',
+        displayName: 'Add extras',
+        selectionType: 'multiple',
+        minSelections: 0,
+        maxSelections: 3,
+        sortOrder: 2,
+      },
+    ])
     .returning();
 
-  console.log(`Created modifier group: ${mgMilk.name}`);
+  console.log(
+    `Created modifier groups: ${[mgSize, mgMilk, mgExtras].map((g) => g.name).join(', ')}`,
+  );
 
   await db.insert(modifiers).values([
+    // Size modifiers
+    {
+      organizationId: org.id,
+      name: 'Small',
+      modifierGroupId: mgSize.id,
+      priceAdjustment: -0.5,
+      isDefault: false,
+      isAvailable: true,
+      sortOrder: 0,
+    },
+    {
+      organizationId: org.id,
+      name: 'Regular',
+      modifierGroupId: mgSize.id,
+      priceAdjustment: 0,
+      isDefault: true,
+      isAvailable: true,
+      sortOrder: 1,
+    },
+    {
+      organizationId: org.id,
+      name: 'Large',
+      modifierGroupId: mgSize.id,
+      priceAdjustment: 0.5,
+      isDefault: false,
+      isAvailable: true,
+      sortOrder: 2,
+    },
+    // Milk modifiers
     {
       organizationId: org.id,
       name: 'Full Cream',
@@ -189,33 +240,53 @@ async function seed() {
       isAvailable: true,
       sortOrder: 2,
     },
+    // Extras modifiers
+    {
+      organizationId: org.id,
+      name: 'Extra Shot',
+      modifierGroupId: mgExtras.id,
+      priceAdjustment: 0.5,
+      isDefault: false,
+      isAvailable: true,
+      sortOrder: 0,
+    },
+    {
+      organizationId: org.id,
+      name: 'Vanilla Syrup',
+      modifierGroupId: mgExtras.id,
+      priceAdjustment: 0.5,
+      isDefault: false,
+      isAvailable: true,
+      sortOrder: 1,
+    },
+    {
+      organizationId: org.id,
+      name: 'Whipped Cream',
+      modifierGroupId: mgExtras.id,
+      priceAdjustment: 1.0,
+      isDefault: false,
+      isAvailable: true,
+      sortOrder: 2,
+    },
   ]);
 
-  console.log('Created modifiers: Full Cream, Oat, Soy');
+  console.log('Created modifiers for Size, Milk, Extras');
 
-  // Link milk type modifier group to all coffee products
-  await db.insert(productModifierGroups).values([
-    {
+  // Link modifier groups to coffee products
+  const coffeeProducts = [pFlatWhite, pLatte, pCappuccino];
+  const coffeeGroups = [mgSize, mgMilk, mgExtras];
+  const linkValues = coffeeProducts.flatMap((product) =>
+    coffeeGroups.map((group, idx) => ({
       organizationId: org.id,
-      productId: pFlatWhite.id,
-      modifierGroupId: mgMilk.id,
-      sortOrder: 0,
-    },
-    {
-      organizationId: org.id,
-      productId: pLatte.id,
-      modifierGroupId: mgMilk.id,
-      sortOrder: 0,
-    },
-    {
-      organizationId: org.id,
-      productId: pCappuccino.id,
-      modifierGroupId: mgMilk.id,
-      sortOrder: 0,
-    },
-  ]);
+      productId: product.id,
+      modifierGroupId: group.id,
+      sortOrder: idx,
+    })),
+  );
 
-  console.log('Linked Milk Type to coffee products');
+  await db.insert(productModifierGroups).values(linkValues);
+
+  console.log('Linked Size, Milk, Extras to coffee products');
 
   await db.insert(customers).values([
     {
