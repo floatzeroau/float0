@@ -346,6 +346,81 @@ describe('calculateCartTotals with voided items', () => {
   });
 });
 
+describe('calculateCartTotals with price overrides', () => {
+  it('uses override price instead of unit price', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [], overridePrice: 7 },
+    ]);
+
+    // Override price $7 instead of $10
+    expect(result.subtotal).toBe(7);
+    expect(result.total).toBe(7);
+    // GST = 7 / 11 ≈ 0.636... → 0.64
+    expect(result.gstAmount).toBe(0.64);
+  });
+
+  it('applies override price with modifiers', () => {
+    const result = calculateCartTotals([
+      {
+        unitPrice: 10,
+        quantity: 1,
+        isGstFree: false,
+        modifiers: [{ priceAdjustment: 1.5 }],
+        overridePrice: 6,
+      },
+    ]);
+
+    // Override $6 + $1.50 modifier = $7.50
+    expect(result.subtotal).toBe(7.5);
+    expect(result.total).toBe(7.5);
+  });
+
+  it('applies override price with discount', () => {
+    const result = calculateCartTotals([
+      {
+        unitPrice: 20,
+        quantity: 1,
+        isGstFree: false,
+        modifiers: [],
+        overridePrice: 15,
+        discount: { type: 'fixed', value: 5 },
+      },
+    ]);
+
+    // Override $15, discount $5 → subtotal $10
+    expect(result.subtotal).toBe(10);
+    expect(result.total).toBe(10);
+    expect(result.itemDiscountTotal).toBe(5);
+  });
+
+  it('calculates GST on override price', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 22, quantity: 1, isGstFree: false, modifiers: [], overridePrice: 11 },
+    ]);
+
+    // GST = 11 / 11 = 1.00
+    expect(result.gstAmount).toBe(1);
+  });
+
+  it('uses original price when overridePrice is 0', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [], overridePrice: 0 },
+    ]);
+
+    expect(result.subtotal).toBe(10);
+    expect(result.total).toBe(10);
+  });
+
+  it('uses original price when overridePrice is undefined', () => {
+    const result = calculateCartTotals([
+      { unitPrice: 10, quantity: 1, isGstFree: false, modifiers: [] },
+    ]);
+
+    expect(result.subtotal).toBe(10);
+    expect(result.total).toBe(10);
+  });
+});
+
 describe('requiresManagerApproval', () => {
   it('returns false for percentage within threshold', () => {
     expect(requiresManagerApproval('percentage', 20)).toBe(false);

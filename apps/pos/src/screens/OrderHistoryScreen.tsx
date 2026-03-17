@@ -37,6 +37,8 @@ interface OrderDetailItem {
   notes: string;
   voidedAt: number;
   voidReason: string;
+  overridePrice: number;
+  overrideReason: string;
 }
 
 type FilterTab = 'all' | 'active' | 'completed' | 'cancelled';
@@ -112,6 +114,8 @@ function OrderDetailModal({
             notes: oi.notes ?? '',
             voidedAt: raw.voided_at || 0,
             voidReason: raw.void_reason || '',
+            overridePrice: raw.override_price || 0,
+            overrideReason: raw.override_reason || '',
           };
         }),
       );
@@ -152,6 +156,7 @@ function OrderDetailModal({
           <ScrollView style={styles.detailItems} showsVerticalScrollIndicator={false}>
             {items.map((item) => {
               const isVoided = item.voidedAt > 0;
+              const hasOverride = item.overridePrice > 0;
               return (
                 <View key={item.id} style={styles.detailItemRow}>
                   <View style={styles.detailItemInfo}>
@@ -162,6 +167,16 @@ function OrderDetailModal({
                       <Text style={styles.detailItemMods}>
                         {item.modifiers.map((m) => m.name).join(', ')}
                       </Text>
+                    )}
+                    {hasOverride && !isVoided && (
+                      <>
+                        <View style={styles.detailOverrideBadge}>
+                          <Text style={styles.detailOverrideBadgeText}>OVERRIDE</Text>
+                        </View>
+                        {item.overrideReason !== '' && (
+                          <Text style={styles.detailOverrideReason}>{item.overrideReason}</Text>
+                        )}
+                      </>
                     )}
                     {isVoided && (
                       <>
@@ -177,9 +192,22 @@ function OrderDetailModal({
                       <Text style={styles.detailItemNotes}>{item.notes}</Text>
                     )}
                   </View>
-                  <Text style={[styles.detailItemTotal, isVoided && styles.detailItemTotalVoided]}>
-                    ${item.lineTotal.toFixed(2)}
-                  </Text>
+                  {hasOverride && !isVoided ? (
+                    <View style={styles.detailItemPriceCol}>
+                      <Text style={styles.detailItemTotalStrikethrough}>
+                        ${item.unitPrice.toFixed(2)}
+                      </Text>
+                      <Text style={styles.detailItemTotalOverride}>
+                        ${item.overridePrice.toFixed(2)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text
+                      style={[styles.detailItemTotal, isVoided && styles.detailItemTotalVoided]}
+                    >
+                      ${item.lineTotal.toFixed(2)}
+                    </Text>
+                  )}
                 </View>
               );
             })}
@@ -590,6 +618,38 @@ const styles = StyleSheet.create({
   detailItemTotalVoided: {
     textDecorationLine: 'line-through',
     color: '#999',
+  },
+  detailOverrideBadge: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  detailOverrideBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  detailOverrideReason: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#2563eb',
+    marginTop: 2,
+  },
+  detailItemPriceCol: {
+    alignItems: 'flex-end',
+  },
+  detailItemTotalStrikethrough: {
+    fontSize: 12,
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  detailItemTotalOverride: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
   },
   detailVoidBadge: {
     backgroundColor: '#dc2626',

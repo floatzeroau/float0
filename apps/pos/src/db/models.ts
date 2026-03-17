@@ -224,6 +224,8 @@ export class OrderItem extends Model {
   @text('notes') notes?: string;
   @field('voided_at') voidedAt?: number;
   @text('void_reason') voidReason?: string;
+  @field('override_price') overridePrice?: number;
+  @text('override_reason') overrideReason?: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

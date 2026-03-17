@@ -290,6 +290,8 @@ export const orderItems = pgTable(
     notes: text(),
     voidedAt: timestamp({ withTimezone: true }),
     voidReason: text(),
+    overridePrice: doublePrecision(),
+    overrideReason: text(),
     _version: integer().notNull().default(1),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

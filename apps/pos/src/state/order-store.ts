@@ -42,6 +42,8 @@ export interface CartItemData {
   discountReason: string;
   voidedAt: number;
   voidReason: string;
+  overridePrice: number;
+  overrideReason: string;
 }
 
 export interface CartTotalsData {
@@ -121,6 +123,13 @@ interface OrderStoreValue {
   loadSubmittedOrder: (orderId: string) => Promise<void>;
   addItemToSubmittedOrder: (params: AddItemParams) => Promise<void>;
   voidItem: (itemId: string, reason: string, managerApprover?: string) => Promise<void>;
+  overrideItemPrice: (
+    itemId: string,
+    newPrice: number,
+    reason: string,
+    managerApprover: string,
+  ) => Promise<void>;
+  removeItemPriceOverride: (itemId: string) => Promise<void>;
   returnToNewOrder: () => Promise<void>;
 }
 
@@ -201,6 +210,8 @@ const OrderContext = createContext<OrderStoreValue>({
   loadSubmittedOrder: async () => {},
   addItemToSubmittedOrder: async () => {},
   voidItem: async () => {},
+  overrideItemPrice: async () => {},
+  removeItemPriceOverride: async () => {},
   returnToNewOrder: async () => {},
 });
 
@@ -248,6 +259,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           const discountReason = raw.discount_reason || '';
           const voidedAt = raw.voided_at || 0;
           const voidReason = raw.void_reason || '';
+          const overridePrice = raw.override_price || 0;
+          const overrideReason = raw.override_reason || '';
 
           return {
             id: oi.id,
@@ -265,6 +278,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             discountReason,
             voidedAt,
             voidReason,
+            overridePrice,
+            overrideReason,
           };
         }),
       );
@@ -289,6 +304,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
               ? { type: item.discountType, value: item.discountValue }
               : undefined,
           voidedAt: item.voidedAt,
+          overridePrice: item.overridePrice,
         })),
         orderDiscountParam,
       );
@@ -512,6 +528,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(oi, 'notes', '');
           setRaw(oi, 'voided_at', 0);
           setRaw(oi, 'void_reason', '');
+          setRaw(oi, 'override_price', 0);
+          setRaw(oi, 'override_reason', '');
         });
       });
 
@@ -1035,6 +1053,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(oi, 'notes', '');
           setRaw(oi, 'voided_at', 0);
           setRaw(oi, 'void_reason', '');
+          setRaw(oi, 'override_price', 0);
+          setRaw(oi, 'override_reason', '');
         });
       });
 
@@ -1109,6 +1129,107 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   // -------------------------------------------------------------------------
+  // overrideItemPrice
+  // -------------------------------------------------------------------------
+  const overrideItemPrice = useCallback(
+    async (itemId: string, newPrice: number, reason: string, managerApprover: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return;
+
+      // Guard: cannot override a voided item
+      if (item.voidedAt && item.voidedAt > 0) return;
+
+      const modifierAdjustments = item.modifiers.map((m) => m.priceAdjustment);
+      const newLineTotal = calculateLineTotal(newPrice, modifierAdjustments, item.quantity);
+
+      const now = Date.now();
+
+      await database.write(async () => {
+        const record = await database.get<OrderItem>('order_items').find(itemId);
+        await record.update((oi) => {
+          setRaw(oi, 'override_price', newPrice);
+          setRaw(oi, 'override_reason', reason);
+          setRaw(oi, 'line_total', newLineTotal);
+        });
+
+        // Create audit log
+        await database.get<AuditLog>('audit_logs').create((log) => {
+          setRaw(log, 'server_id', '');
+          setRaw(log, 'action', 'price_override');
+          setRaw(log, 'entity_type', 'order_item');
+          setRaw(log, 'entity_id', itemId);
+          setRaw(log, 'staff_id', 'pos-terminal');
+          setRaw(log, 'manager_approver', managerApprover);
+          setRaw(
+            log,
+            'changes_json',
+            JSON.stringify({
+              productName: item.productName,
+              originalPrice: item.unitPrice,
+              overridePrice: newPrice,
+              reason,
+            }),
+          );
+          setRaw(log, 'device_id', 'terminal-1');
+          setRaw(log, 'created_at', now);
+        });
+      });
+
+      // Emit event
+      eventBus.emit('pos.item.price_overridden', {
+        orderId,
+        orderItemId: itemId,
+        organizationId: 'org-1',
+        productName: item.productName,
+        originalPrice: item.unitPrice,
+        overridePrice: newPrice,
+        overrideReason: reason,
+        staffId: 'pos-terminal',
+        managerApproverId: managerApprover,
+        timestamp: new Date(),
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [items, refreshItems, orderDiscount],
+  );
+
+  // -------------------------------------------------------------------------
+  // removeItemPriceOverride
+  // -------------------------------------------------------------------------
+  const removeItemPriceOverride = useCallback(
+    async (itemId: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return;
+
+      const modifierAdjustments = item.modifiers.map((m) => m.priceAdjustment);
+      const originalLineTotal = calculateLineTotal(
+        item.unitPrice,
+        modifierAdjustments,
+        item.quantity,
+      );
+
+      await database.write(async () => {
+        const record = await database.get<OrderItem>('order_items').find(itemId);
+        await record.update((oi) => {
+          setRaw(oi, 'override_price', 0);
+          setRaw(oi, 'override_reason', '');
+          setRaw(oi, 'line_total', originalLineTotal);
+        });
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [items, refreshItems, orderDiscount],
+  );
+
+  // -------------------------------------------------------------------------
   // returnToNewOrder
   // -------------------------------------------------------------------------
   const returnToNewOrder = useCallback(async () => {
@@ -1148,6 +1269,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     loadSubmittedOrder,
     addItemToSubmittedOrder,
     voidItem,
+    overrideItemPrice,
+    removeItemPriceOverride,
     returnToNewOrder,
   };
 

@@ -189,5 +189,17 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: 'order_items',
+          columns: [
+            { name: 'override_price', type: 'number' },
+            { name: 'override_reason', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

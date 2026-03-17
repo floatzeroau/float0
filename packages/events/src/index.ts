@@ -50,6 +50,19 @@ export interface PosItemVoided {
   timestamp: Date;
 }
 
+export interface PosItemPriceOverridden {
+  orderId: string;
+  orderItemId: string;
+  organizationId: string;
+  productName: string;
+  originalPrice: number;
+  overridePrice: number;
+  overrideReason: string;
+  staffId: string;
+  managerApproverId: string;
+  timestamp: Date;
+}
+
 export interface ProductsAvailabilityChanged {
   productId: string;
   organizationId: string;
@@ -65,6 +78,7 @@ export interface EventMap {
   'inventory.stock.low': InventoryStockLow;
   'loyalty.tier.changed': LoyaltyTierChanged;
   'pos.item.voided': PosItemVoided;
+  'pos.item.price_overridden': PosItemPriceOverridden;
   'products.availability_changed': ProductsAvailabilityChanged;
 }
 

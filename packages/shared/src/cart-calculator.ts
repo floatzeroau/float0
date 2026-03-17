@@ -27,6 +27,7 @@ export interface CartItem {
   modifiers: CartItemModifier[];
   discount?: ItemDiscount;
   voidedAt?: number;
+  overridePrice?: number;
 }
 
 export interface CartTotals {
@@ -128,7 +129,9 @@ export function calculateCartTotals(items: CartItem[], orderDiscount?: OrderDisc
     if (item.voidedAt && item.voidedAt > 0) continue;
 
     const adjustments = item.modifiers.map((m) => m.priceAdjustment);
-    const lineTotal = calculateLineTotal(item.unitPrice, adjustments, item.quantity);
+    const basePrice =
+      item.overridePrice != null && item.overridePrice > 0 ? item.overridePrice : item.unitPrice;
+    const lineTotal = calculateLineTotal(basePrice, adjustments, item.quantity);
 
     // Apply item-level discount
     let discountedLineTotal = lineTotal;

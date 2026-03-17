@@ -15,6 +15,7 @@ import type { CustomerResult } from './CustomerSearchModal';
 import { HeldOrdersDrawer } from './HeldOrdersDrawer';
 import { DiscountModal } from './DiscountModal';
 import { VoidItemModal } from './VoidItemModal';
+import { PriceOverrideModal } from './PriceOverrideModal';
 import type { DiscountType } from '@float0/shared';
 
 // ---------------------------------------------------------------------------
@@ -30,6 +31,7 @@ interface CartItemRowProps {
   onNoteChange: (itemId: string, note: string) => void;
   onDiscount: (item: CartItemData) => void;
   onVoid: (item: CartItemData) => void;
+  onPriceOverride: (item: CartItemData) => void;
 }
 
 function CartItemRow({
@@ -41,6 +43,7 @@ function CartItemRow({
   onNoteChange,
   onDiscount,
   onVoid,
+  onPriceOverride,
 }: CartItemRowProps) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState(item.notes);
@@ -54,6 +57,7 @@ function CartItemRow({
   const hasDiscount = item.discountType && item.discountValue > 0;
   const discountedTotal = hasDiscount ? item.lineTotal - item.discountAmount : item.lineTotal;
   const isVoided = item.voidedAt > 0;
+  const hasOverride = item.overridePrice > 0;
 
   // Voided item rendering
   if (isVoided) {
@@ -94,11 +98,24 @@ function CartItemRow({
                 {item.modifiers.map((m) => m.name).join(', ')}
               </Text>
             )}
+            {hasOverride && (
+              <View style={styles.overrideBadge}>
+                <Text style={styles.overrideBadgeText}>OVERRIDE</Text>
+              </View>
+            )}
+            {hasOverride && item.overrideReason !== '' && (
+              <Text style={styles.overrideReasonText}>{item.overrideReason}</Text>
+            )}
             {hasDiscount && <Text style={styles.itemDiscountReason}>{item.discountReason}</Text>}
             {item.notes !== '' && <Text style={styles.itemNotes}>{item.notes}</Text>}
           </View>
           <View style={styles.itemPriceCol}>
-            {hasDiscount ? (
+            {hasOverride ? (
+              <>
+                <Text style={styles.itemTotalStrikethrough}>${item.unitPrice.toFixed(2)}</Text>
+                <Text style={styles.itemTotalOverride}>${item.overridePrice.toFixed(2)}</Text>
+              </>
+            ) : hasDiscount ? (
               <>
                 <Text style={styles.itemTotalStrikethrough}>${item.lineTotal.toFixed(2)}</Text>
                 <Text style={styles.itemTotalDiscounted}>${discountedTotal.toFixed(2)}</Text>
@@ -110,9 +127,17 @@ function CartItemRow({
         </View>
         <View style={styles.itemControls}>
           <Text style={styles.qtyText}>Qty: {item.quantity}</Text>
-          <TouchableOpacity style={styles.voidItemButton} onPress={() => onVoid(item)}>
-            <Text style={styles.voidItemButtonText}>Void Item</Text>
-          </TouchableOpacity>
+          <View style={styles.submittedActions}>
+            <TouchableOpacity
+              style={styles.priceOverrideButton}
+              onPress={() => onPriceOverride(item)}
+            >
+              <Text style={styles.priceOverrideButtonText}>Price</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.voidItemButton} onPress={() => onVoid(item)}>
+              <Text style={styles.voidItemButtonText}>Void Item</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -127,13 +152,26 @@ function CartItemRow({
           {hasModifiers && (
             <Text style={styles.itemModifiers}>{item.modifiers.map((m) => m.name).join(', ')}</Text>
           )}
+          {hasOverride && (
+            <View style={styles.overrideBadge}>
+              <Text style={styles.overrideBadgeText}>OVERRIDE</Text>
+            </View>
+          )}
+          {hasOverride && item.overrideReason !== '' && (
+            <Text style={styles.overrideReasonText}>{item.overrideReason}</Text>
+          )}
           {hasDiscount && <Text style={styles.itemDiscountReason}>{item.discountReason}</Text>}
           {item.notes !== '' && !showNoteInput && (
             <Text style={styles.itemNotes}>{item.notes}</Text>
           )}
         </View>
         <View style={styles.itemPriceCol}>
-          {hasDiscount ? (
+          {hasOverride ? (
+            <>
+              <Text style={styles.itemTotalStrikethrough}>${item.unitPrice.toFixed(2)}</Text>
+              <Text style={styles.itemTotalOverride}>${item.overridePrice.toFixed(2)}</Text>
+            </>
+          ) : hasDiscount ? (
             <>
               <Text style={styles.itemTotalStrikethrough}>${item.lineTotal.toFixed(2)}</Text>
               <Text style={styles.itemTotalDiscounted}>${discountedTotal.toFixed(2)}</Text>
@@ -173,6 +211,10 @@ function CartItemRow({
           )}
           <TouchableOpacity onPress={() => onDiscount(item)}>
             <Text style={[styles.actionText, hasDiscount && styles.actionTextGreen]}>Discount</Text>
+          </TouchableOpacity>
+          <Text style={styles.actionDivider}>|</Text>
+          <TouchableOpacity onPress={() => onPriceOverride(item)}>
+            <Text style={[styles.actionText, hasOverride && styles.actionTextBlue]}>Price</Text>
           </TouchableOpacity>
           <Text style={styles.actionDivider}>|</Text>
           <TouchableOpacity
@@ -240,6 +282,7 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     removeItemDiscount,
     isManagingSubmittedOrder,
     voidItem,
+    overrideItemPrice,
     returnToNewOrder,
   } = useOrder();
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
@@ -263,6 +306,17 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     productName: string;
     lineTotal: number;
     quantity: number;
+  } | null>(null);
+
+  // Price override modal state
+  const [priceOverrideModalVisible, setPriceOverrideModalVisible] = useState(false);
+  const [priceOverrideTargetItem, setPriceOverrideTargetItem] = useState<{
+    id: string;
+    productName: string;
+    unitPrice: number;
+    lineTotal: number;
+    quantity: number;
+    modifiers: { id: string; name: string; priceAdjustment: number }[];
   } | null>(null);
 
   useEffect(() => {
@@ -416,6 +470,34 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     setVoidTargetItem(null);
   }, []);
 
+  // Price override handlers
+  const handleOpenPriceOverride = useCallback((item: CartItemData) => {
+    setPriceOverrideTargetItem({
+      id: item.id,
+      productName: item.productName,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+      quantity: item.quantity,
+      modifiers: item.modifiers,
+    });
+    setPriceOverrideModalVisible(true);
+  }, []);
+
+  const handlePriceOverrideConfirm = useCallback(
+    (newPrice: number, reason: string, managerApprover: string) => {
+      if (!priceOverrideTargetItem) return;
+      overrideItemPrice(priceOverrideTargetItem.id, newPrice, reason, managerApprover);
+      setPriceOverrideModalVisible(false);
+      setPriceOverrideTargetItem(null);
+    },
+    [priceOverrideTargetItem, overrideItemPrice],
+  );
+
+  const handlePriceOverrideCancel = useCallback(() => {
+    setPriceOverrideModalVisible(false);
+    setPriceOverrideTargetItem(null);
+  }, []);
+
   const hasItems = items.length > 0;
 
   // Order type badge text
@@ -508,6 +590,7 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
               onNoteChange={handleNoteChange}
               onDiscount={handleOpenItemDiscount}
               onVoid={handleOpenVoid}
+              onPriceOverride={handleOpenPriceOverride}
             />
           ))}
         </ScrollView>
@@ -612,6 +695,13 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
         item={voidTargetItem}
         onConfirm={handleVoidConfirm}
         onCancel={handleVoidCancel}
+      />
+
+      <PriceOverrideModal
+        visible={priceOverrideModalVisible}
+        item={priceOverrideTargetItem}
+        onConfirm={handlePriceOverrideConfirm}
+        onCancel={handlePriceOverrideCancel}
       />
     </View>
   );
@@ -883,6 +973,47 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     marginTop: 2,
   },
+  // Override styles
+  overrideBadge: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  overrideBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  overrideReasonText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#2563eb',
+    marginTop: 2,
+  },
+  itemTotalOverride: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
+  },
+  submittedActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  priceOverrideButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#eff6ff',
+  },
+  priceOverrideButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563eb',
+  },
+
   voidItemButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -938,6 +1069,9 @@ const styles = StyleSheet.create({
   },
   actionTextGreen: {
     color: '#16a34a',
+  },
+  actionTextBlue: {
+    color: '#2563eb',
   },
   actionDivider: {
     fontSize: 12,
