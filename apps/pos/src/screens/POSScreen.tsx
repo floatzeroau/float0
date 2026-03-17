@@ -1,13 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { useOrder } from '../state/order-store';
-import type { OrderType } from '../state/order-store';
+import type { OrderType, CartItemData } from '../state/order-store';
 import { CategoryTabs } from '../components/CategoryTabs';
 import { ProductSearch } from '../components/ProductSearch';
 import { ProductGrid } from '../components/ProductGrid';
 import type { ProductItem } from '../components/ProductGrid';
 import { ModifierModal } from '../components/ModifierModal';
 import type { ModifierModalResult } from '../components/ModifierModal';
+import { CartSidebar } from '../components/CartSidebar';
+import { database } from '../db/database';
+import type { Product } from '../db/models';
+import { calculateLineTotal } from '@float0/shared';
 
 // ---------------------------------------------------------------------------
 // Top Bar
@@ -114,11 +118,12 @@ function TopBar() {
 // ---------------------------------------------------------------------------
 
 export default function POSScreen() {
-  const { currentOrder, createNewOrder } = useOrder();
+  const { currentOrder, createNewOrder, addItem, updateItemModifiers } = useOrder();
   const [initialized, setInitialized] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [modifierProduct, setModifierProduct] = useState<ProductItem | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initialized && !currentOrder) {
@@ -140,23 +145,82 @@ export default function POSScreen() {
     setSearchQuery('');
   }, []);
 
-  const handleProductSelect = useCallback((product: ProductItem) => {
-    if (product.hasModifierGroups) {
-      setModifierProduct(product);
-    } else {
-      // TODO: add directly to cart (FLO-49)
-      console.log('Product added:', product.name, product.id);
-    }
-  }, []);
+  const handleProductSelect = useCallback(
+    async (product: ProductItem) => {
+      if (product.hasModifierGroups) {
+        setEditingItemId(null);
+        setModifierProduct(product);
+      } else {
+        // Add directly to cart — fetch isGstFree from DB
+        let isGstFree = false;
+        try {
+          const dbProduct = await database.get<Product>('products').find(product.id);
+          isGstFree = dbProduct.isGstFree;
+        } catch {
+          // default false
+        }
+
+        const lineTotal = calculateLineTotal(product.basePrice, [], 1);
+        await addItem({
+          productId: product.id,
+          productName: product.name,
+          basePrice: product.basePrice,
+          isGstFree,
+          selectedModifiers: [],
+          quantity: 1,
+          lineTotal,
+        });
+      }
+    },
+    [addItem],
+  );
 
   const handleModifierCancel = useCallback(() => {
     setModifierProduct(null);
+    setEditingItemId(null);
   }, []);
 
-  const handleModifierAdd = useCallback((result: ModifierModalResult) => {
-    setModifierProduct(null);
-    // TODO: add to cart with modifiers (FLO-49)
-    console.log('Product with modifiers:', result);
+  const handleModifierAdd = useCallback(
+    async (result: ModifierModalResult) => {
+      setModifierProduct(null);
+
+      if (editingItemId) {
+        // Update existing item modifiers
+        await updateItemModifiers(editingItemId, result.selectedModifiers, result.lineTotal);
+        setEditingItemId(null);
+      } else {
+        // Add new item
+        let isGstFree = false;
+        try {
+          const dbProduct = await database.get<Product>('products').find(result.productId);
+          isGstFree = dbProduct.isGstFree;
+        } catch {
+          // default false
+        }
+
+        await addItem({
+          productId: result.productId,
+          productName: result.productName,
+          basePrice: result.basePrice,
+          isGstFree,
+          selectedModifiers: result.selectedModifiers,
+          quantity: result.quantity,
+          lineTotal: result.lineTotal,
+        });
+      }
+    },
+    [editingItemId, addItem, updateItemModifiers],
+  );
+
+  const handleEditItem = useCallback((item: CartItemData) => {
+    // Re-open modifier modal for this item's product
+    setEditingItemId(item.id);
+    setModifierProduct({
+      id: item.productId,
+      name: item.productName,
+      basePrice: item.unitPrice,
+      hasModifierGroups: true,
+    } as ProductItem);
   }, []);
 
   return (
@@ -180,10 +244,7 @@ export default function POSScreen() {
           />
         </View>
         <View style={styles.cartSidebar}>
-          <Text style={styles.placeholderText}>Cart</Text>
-          {currentOrder && currentOrder.itemCount === 0 && (
-            <Text style={styles.emptyCartText}>No items yet</Text>
-          )}
+          <CartSidebar onEditItem={handleEditItem} />
         </View>
       </View>
 
@@ -316,18 +377,6 @@ const styles = StyleSheet.create({
   },
   cartSidebar: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#fff',
-  },
-  placeholderText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#ccc',
-  },
-  emptyCartText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#999',
   },
 });

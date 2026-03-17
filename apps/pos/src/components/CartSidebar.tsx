@@ -1,0 +1,499 @@
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { useOrder } from '../state/order-store';
+import type { CartItemData } from '../state/order-store';
+
+// ---------------------------------------------------------------------------
+// CartItem Row
+// ---------------------------------------------------------------------------
+
+interface CartItemRowProps {
+  item: CartItemData;
+  onQuantityChange: (itemId: string, newQty: number) => void;
+  onRemove: (itemId: string) => void;
+  onEdit: (item: CartItemData) => void;
+  onNoteChange: (itemId: string, note: string) => void;
+}
+
+function CartItemRow({ item, onQuantityChange, onRemove, onEdit, onNoteChange }: CartItemRowProps) {
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [noteText, setNoteText] = useState(item.notes);
+
+  const handleNoteSubmit = useCallback(() => {
+    onNoteChange(item.id, noteText);
+    setShowNoteInput(false);
+  }, [item.id, noteText, onNoteChange]);
+
+  const hasModifiers = item.modifiers.length > 0;
+
+  return (
+    <View style={styles.itemRow}>
+      <View style={styles.itemMain}>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{item.productName}</Text>
+          {hasModifiers && (
+            <Text style={styles.itemModifiers}>{item.modifiers.map((m) => m.name).join(', ')}</Text>
+          )}
+          {item.notes !== '' && !showNoteInput && (
+            <Text style={styles.itemNotes}>{item.notes}</Text>
+          )}
+        </View>
+        <Text style={styles.itemTotal}>${item.lineTotal.toFixed(2)}</Text>
+      </View>
+
+      {/* Quantity controls */}
+      <View style={styles.itemControls}>
+        <View style={styles.qtyGroup}>
+          <TouchableOpacity
+            style={styles.qtyButton}
+            onPress={() => onQuantityChange(item.id, item.quantity - 1)}
+          >
+            <Text style={styles.qtyButtonText}>-</Text>
+          </TouchableOpacity>
+          <Text style={styles.qtyText}>{item.quantity}</Text>
+          <TouchableOpacity
+            style={styles.qtyButton}
+            onPress={() => onQuantityChange(item.id, item.quantity + 1)}
+          >
+            <Text style={styles.qtyButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.actionGroup}>
+          {hasModifiers && (
+            <>
+              <TouchableOpacity onPress={() => onEdit(item)}>
+                <Text style={styles.actionText}>Edit</Text>
+              </TouchableOpacity>
+              <Text style={styles.actionDivider}>|</Text>
+            </>
+          )}
+          <TouchableOpacity
+            onPress={() => {
+              setShowNoteInput(!showNoteInput);
+              setNoteText(item.notes);
+            }}
+          >
+            <Text style={styles.actionText}>Note</Text>
+          </TouchableOpacity>
+          <Text style={styles.actionDivider}>|</Text>
+          <TouchableOpacity onPress={() => onRemove(item.id)}>
+            <Text style={[styles.actionText, styles.actionRemove]}>Remove</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Inline note input */}
+      {showNoteInput && (
+        <View style={styles.noteInputRow}>
+          <TextInput
+            style={styles.noteInput}
+            placeholder="Add a note..."
+            placeholderTextColor="#999"
+            value={noteText}
+            onChangeText={setNoteText}
+            onSubmitEditing={handleNoteSubmit}
+            autoFocus
+          />
+          <TouchableOpacity style={styles.noteSaveButton} onPress={handleNoteSubmit}>
+            <Text style={styles.noteSaveText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CartSidebar
+// ---------------------------------------------------------------------------
+
+interface CartSidebarProps {
+  onEditItem?: (item: CartItemData) => void;
+}
+
+export function CartSidebar({ onEditItem }: CartSidebarProps) {
+  const {
+    currentOrder,
+    items,
+    cartTotals,
+    updateItemQuantity,
+    removeItem,
+    addItemNote,
+    submitOrder,
+    holdOrder,
+  } = useOrder();
+
+  const handleQuantityChange = useCallback(
+    (itemId: string, newQty: number) => {
+      updateItemQuantity(itemId, newQty);
+    },
+    [updateItemQuantity],
+  );
+
+  const handleRemove = useCallback(
+    (itemId: string) => {
+      removeItem(itemId);
+    },
+    [removeItem],
+  );
+
+  const handleEdit = useCallback(
+    (item: CartItemData) => {
+      onEditItem?.(item);
+    },
+    [onEditItem],
+  );
+
+  const handleNoteChange = useCallback(
+    (itemId: string, note: string) => {
+      addItemNote(itemId, note);
+    },
+    [addItemNote],
+  );
+
+  const hasItems = items.length > 0;
+
+  // Order type badge text
+  const orderTypeBadge = currentOrder
+    ? currentOrder.orderType === 'takeaway'
+      ? 'Takeaway'
+      : `Dine-in${currentOrder.tableNumber ? ` #${currentOrder.tableNumber}` : ''}`
+    : '';
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerOrder}>{currentOrder?.orderNumber ?? 'No Order'}</Text>
+        {currentOrder && (
+          <View style={styles.orderTypeBadge}>
+            <Text style={styles.orderTypeBadgeText}>{orderTypeBadge}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Item list */}
+      {hasItems ? (
+        <ScrollView style={styles.itemList} showsVerticalScrollIndicator={false}>
+          {items.map((item) => (
+            <CartItemRow
+              key={item.id}
+              item={item}
+              onQuantityChange={handleQuantityChange}
+              onRemove={handleRemove}
+              onEdit={handleEdit}
+              onNoteChange={handleNoteChange}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No items yet</Text>
+        </View>
+      )}
+
+      {/* Totals */}
+      <View style={styles.totalsSection}>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Subtotal</Text>
+          <Text style={styles.totalValue}>${cartTotals.subtotal.toFixed(2)}</Text>
+        </View>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>GST (10%)</Text>
+          <Text style={styles.totalValue}>${cartTotals.gstAmount.toFixed(2)}</Text>
+        </View>
+        <View style={[styles.totalRow, styles.grandTotalRow]}>
+          <Text style={styles.grandTotalLabel}>Total</Text>
+          <Text style={styles.grandTotalValue}>${cartTotals.total.toFixed(2)}</Text>
+        </View>
+      </View>
+
+      {/* Action buttons */}
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.holdButton]}
+          onPress={holdOrder}
+          disabled={!hasItems}
+        >
+          <Text style={[styles.holdButtonText, !hasItems && styles.disabledText]}>Hold</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.submitButton, !hasItems && styles.disabledButton]}
+          onPress={submitOrder}
+          disabled={!hasItems}
+        >
+          <Text style={[styles.submitButtonText, !hasItems && styles.disabledSubmitText]}>
+            Submit
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.actionButton, styles.payButton]} disabled>
+          <Text style={styles.payButtonText}>${cartTotals.total.toFixed(2)}</Text>
+          <Text style={styles.payComingSoon}>Coming Soon</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerOrder: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  orderTypeBadge: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  orderTypeBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+
+  // Item list
+  itemList: {
+    flex: 1,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
+
+  // Item row
+  itemRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  itemMain: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  itemInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  itemModifiers: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  itemNotes: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#888',
+    marginTop: 2,
+  },
+  itemTotal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+
+  // Quantity & actions
+  itemControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  qtyGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  qtyButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  qtyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  actionText: {
+    fontSize: 12,
+    color: '#888',
+  },
+  actionDivider: {
+    fontSize: 12,
+    color: '#ddd',
+  },
+  actionRemove: {
+    color: '#dc2626',
+  },
+
+  // Note input
+  noteInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  noteInput: {
+    flex: 1,
+    height: 32,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    fontSize: 12,
+    color: '#1a1a1a',
+  },
+  noteSaveButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 6,
+  },
+  noteSaveText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+
+  // Totals
+  totalsSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  totalLabel: {
+    fontSize: 13,
+    color: '#666',
+  },
+  totalValue: {
+    fontSize: 13,
+    color: '#666',
+  },
+  grandTotalRow: {
+    marginTop: 4,
+    marginBottom: 0,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  grandTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  grandTotalValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+
+  // Actions
+  actions: {
+    flexDirection: 'row',
+    padding: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  holdButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  holdButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  submitButton: {
+    backgroundColor: '#1a1a1a',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
+  submitButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  disabledSubmitText: {
+    color: '#fff',
+  },
+  disabledText: {
+    color: '#bbb',
+  },
+  payButton: {
+    backgroundColor: '#e8e8e8',
+  },
+  payButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#999',
+  },
+  payComingSoon: {
+    fontSize: 9,
+    color: '#bbb',
+    marginTop: 1,
+  },
+});
