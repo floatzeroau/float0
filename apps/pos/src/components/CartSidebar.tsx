@@ -2,6 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 import { useOrder } from '../state/order-store';
 import type { CartItemData } from '../state/order-store';
+import { CustomerSearchModal } from './CustomerSearchModal';
+import type { CustomerResult } from './CustomerSearchModal';
 
 // ---------------------------------------------------------------------------
 // CartItem Row
@@ -120,9 +122,11 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     updateItemQuantity,
     removeItem,
     addItemNote,
+    setCustomer,
     submitOrder,
     holdOrder,
   } = useOrder();
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
 
   const handleQuantityChange = useCallback(
     (itemId: string, newQty: number) => {
@@ -152,6 +156,18 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     [addItemNote],
   );
 
+  const handleCustomerSelect = useCallback(
+    (customer: CustomerResult) => {
+      setCustomer(customer.id);
+      setShowCustomerSearch(false);
+    },
+    [setCustomer],
+  );
+
+  const handleRemoveCustomer = useCallback(() => {
+    setCustomer(null);
+  }, [setCustomer]);
+
   const hasItems = items.length > 0;
 
   // Order type badge text
@@ -165,10 +181,33 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerOrder}>{currentOrder?.orderNumber ?? 'No Order'}</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerOrder}>{currentOrder?.orderNumber ?? 'No Order'}</Text>
+          {currentOrder && (
+            <View style={styles.orderTypeBadge}>
+              <Text style={styles.orderTypeBadgeText}>{orderTypeBadge}</Text>
+            </View>
+          )}
+        </View>
         {currentOrder && (
-          <View style={styles.orderTypeBadge}>
-            <Text style={styles.orderTypeBadgeText}>{orderTypeBadge}</Text>
+          <View style={styles.customerRow}>
+            {currentOrder.customerName ? (
+              <View style={styles.customerAssigned}>
+                <Text style={styles.customerName} numberOfLines={1}>
+                  {currentOrder.customerName}
+                </Text>
+                <TouchableOpacity onPress={handleRemoveCustomer} style={styles.customerRemove}>
+                  <Text style={styles.customerRemoveText}>X</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.addCustomerButton}
+                onPress={() => setShowCustomerSearch(true)}
+              >
+                <Text style={styles.addCustomerText}>+ Customer</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -234,6 +273,12 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
           <Text style={styles.payComingSoon}>Coming Soon</Text>
         </TouchableOpacity>
       </View>
+
+      <CustomerSearchModal
+        visible={showCustomerSearch}
+        onSelect={handleCustomerSelect}
+        onCancel={() => setShowCustomerSearch(false)}
+      />
     </View>
   );
 }
@@ -250,13 +295,15 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerOrder: {
     fontSize: 16,
@@ -273,6 +320,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#666',
+  },
+
+  // Customer
+  customerRow: {
+    marginTop: 8,
+  },
+  addCustomerButton: {
+    paddingVertical: 4,
+  },
+  addCustomerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#888',
+  },
+  customerAssigned: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  customerName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1a6ed8',
+    maxWidth: 160,
+  },
+  customerRemove: {
+    marginLeft: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#dbeafe',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customerRemoveText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1a6ed8',
   },
 
   // Item list

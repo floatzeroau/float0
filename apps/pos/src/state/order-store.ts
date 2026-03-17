@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 import { Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
-import type { Order, OrderItem, Product } from '../db/models';
+import type { Order, OrderItem, Product, Customer } from '../db/models';
 import { calculateLineTotal, calculateCartTotals } from '@float0/shared';
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,7 @@ export interface CurrentOrder {
   tableNumber: string | null;
   itemCount: number;
   customerId: string | null;
+  customerName: string | null;
   status: 'draft' | 'open' | 'submitted';
 }
 
@@ -65,6 +66,7 @@ interface OrderStoreValue {
     newLineTotal: number,
   ) => Promise<void>;
   addItemNote: (itemId: string, note: string) => Promise<void>;
+  setCustomer: (customerId: string | null) => Promise<void>;
   submitOrder: () => Promise<void>;
   holdOrder: () => Promise<void>;
 }
@@ -123,6 +125,7 @@ const OrderContext = createContext<OrderStoreValue>({
   removeItem: async () => {},
   updateItemModifiers: async () => {},
   addItemNote: async () => {},
+  setCustomer: async () => {},
   submitOrder: async () => {},
   holdOrder: async () => {},
 });
@@ -237,6 +240,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         tableNumber: null,
         itemCount: 0,
         customerId: null,
+        customerName: null,
         status: 'draft',
       });
 
@@ -450,6 +454,37 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   // -------------------------------------------------------------------------
+  // setCustomer
+  // -------------------------------------------------------------------------
+  const setCustomer = useCallback(async (customerId: string | null) => {
+    const orderId = orderRecordIdRef.current;
+    if (!orderId) return;
+
+    let customerName: string | null = null;
+    if (customerId) {
+      try {
+        const customer = await database.get<Customer>('customers').find(customerId);
+        const parts = [customer.firstName, customer.lastName].filter(Boolean);
+        customerName = parts.join(' ') || null;
+      } catch {
+        // Customer not found
+      }
+    }
+
+    await database.write(async () => {
+      const record = await database.get<Order>('orders').find(orderId);
+      await record.update((o) => {
+        setRaw(o, 'customer_id', customerId ?? '');
+      });
+    });
+
+    setCurrentOrder((prev) => {
+      if (!prev) return prev;
+      return { ...prev, customerId, customerName };
+    });
+  }, []);
+
+  // -------------------------------------------------------------------------
   // submitOrder
   // -------------------------------------------------------------------------
   const submitOrder = useCallback(async () => {
@@ -504,6 +539,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     removeItem,
     updateItemModifiers,
     addItemNote,
+    setCustomer,
     submitOrder,
     holdOrder,
   };
