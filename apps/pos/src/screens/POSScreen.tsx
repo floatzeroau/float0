@@ -2,6 +2,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { useOrder } from '../state/order-store';
 import type { OrderType } from '../state/order-store';
+import { CategoryTabs } from '../components/CategoryTabs';
+import { ProductSearch } from '../components/ProductSearch';
+import { ProductGrid } from '../components/ProductGrid';
+import type { ProductItem } from '../components/ProductGrid';
 
 // ---------------------------------------------------------------------------
 // Top Bar
@@ -110,6 +114,8 @@ function TopBar() {
 export default function POSScreen() {
   const { currentOrder, createNewOrder } = useOrder();
   const [initialized, setInitialized] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!initialized && !currentOrder) {
@@ -118,12 +124,44 @@ export default function POSScreen() {
     }
   }, [initialized, currentOrder, createNewOrder]);
 
+  const handleCategorySelect = useCallback((categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+    setSearchQuery('');
+  }, []);
+
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
+  const handleProductSelect = useCallback((product: ProductItem) => {
+    // TODO: if product.hasModifierGroups → open modifier modal (FLO-49)
+    // TODO: else → add directly to cart
+    console.log('Product selected:', product.name, product.id);
+  }, []);
+
   return (
     <View style={styles.container}>
       <TopBar />
       <View style={styles.content}>
         <View style={styles.productArea}>
-          <Text style={styles.placeholderText}>Products</Text>
+          <ProductSearch
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            onClear={handleSearchClear}
+          />
+          <CategoryTabs
+            selectedCategoryId={searchQuery ? null : selectedCategoryId}
+            onSelectCategory={handleCategorySelect}
+          />
+          <ProductGrid
+            categoryId={searchQuery ? null : selectedCategoryId}
+            searchQuery={searchQuery}
+            onProductSelect={handleProductSelect}
+          />
         </View>
         <View style={styles.cartSidebar}>
           <Text style={styles.placeholderText}>Cart</Text>
@@ -248,8 +286,6 @@ const styles = StyleSheet.create({
   },
   productArea: {
     flex: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderRightWidth: 1,
     borderRightColor: '#e0e0e0',
   },
