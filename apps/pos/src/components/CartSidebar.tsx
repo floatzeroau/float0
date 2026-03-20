@@ -259,9 +259,10 @@ function CartItemRow({
 
 interface CartSidebarProps {
   onEditItem?: (item: CartItemData) => void;
+  onPay?: () => void;
 }
 
-export function CartSidebar({ onEditItem }: CartSidebarProps) {
+export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
   const {
     currentOrder,
     items,
@@ -662,9 +663,14 @@ export function CartSidebar({ onEditItem }: CartSidebarProps) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionButton, styles.payButton]} disabled>
-            <Text style={styles.payButtonText}>${cartTotals.total.toFixed(2)}</Text>
-            <Text style={styles.payComingSoon}>Coming Soon</Text>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.payButton, !hasItems && styles.disabledButton]}
+            onPress={onPay}
+            disabled={!hasItems}
+          >
+            <Text style={[styles.payButtonText, !hasItems && styles.disabledSubmitText]}>
+              Pay ${cartTotals.total.toFixed(2)}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1206,16 +1212,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   payButton: {
-    backgroundColor: '#e8e8e8',
+    backgroundColor: '#10b981',
   },
   payButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#999',
-  },
-  payComingSoon: {
-    fontSize: 9,
-    color: '#bbb',
-    marginTop: 1,
+    color: '#fff',
   },
 });

@@ -2,11 +2,17 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 import { Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
-import type { Order, OrderItem, Product, Customer, AuditLog } from '../db/models';
-import { calculateLineTotal, calculateCartTotals, calculateItemDiscount } from '@float0/shared';
+import type { Order, OrderItem, Product, Customer, AuditLog, Payment } from '../db/models';
+import {
+  calculateLineTotal,
+  calculateCartTotals,
+  calculateItemDiscount,
+  roundToFiveCents,
+} from '@float0/shared';
 import type { DiscountType, OrderDiscount } from '@float0/shared';
 import { eventBus } from '@float0/events';
 import { transitionOrder } from './order-lifecycle';
+import { onPaymentCompleted } from '../sync/payment-sync-hook';
 import type { OrderStatusDB } from './order-lifecycle';
 
 // ---------------------------------------------------------------------------
@@ -131,6 +137,12 @@ interface OrderStoreValue {
   ) => Promise<void>;
   removeItemPriceOverride: (itemId: string) => Promise<void>;
   returnToNewOrder: () => Promise<void>;
+  completePayment: (params: {
+    method: 'cash';
+    amount: number;
+    tenderedAmount: number;
+    changeGiven: number;
+  }) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +155,11 @@ function getStartOfDay(): Date {
   return d;
 }
 
-function setRaw(record: Order | OrderItem | AuditLog, field: string, value: string | number) {
+function setRaw(
+  record: Order | OrderItem | AuditLog | Payment,
+  field: string,
+  value: string | number,
+) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (record._raw as any)[field] = value;
 }
@@ -213,6 +229,7 @@ const OrderContext = createContext<OrderStoreValue>({
   overrideItemPrice: async () => {},
   removeItemPriceOverride: async () => {},
   returnToNewOrder: async () => {},
+  completePayment: async () => {},
 });
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
@@ -1239,6 +1256,77 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   }, [doCreateOrder, refreshHeldOrders]);
 
   // -------------------------------------------------------------------------
+  // completePayment
+  // -------------------------------------------------------------------------
+  const completePayment = useCallback(
+    async (params: {
+      method: 'cash';
+      amount: number;
+      tenderedAmount: number;
+      changeGiven: number;
+    }) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      if (items.length === 0) {
+        Alert.alert('Cannot pay', 'Add at least one item before paying.');
+        return;
+      }
+
+      // Auto-submit draft orders before paying
+      const status = currentOrder?.status;
+      if (status === 'draft') {
+        await transitionOrder(orderId, 'submitted');
+      }
+
+      // Create Payment record
+      let paymentId = '';
+      const now = Date.now();
+      await database.write(async () => {
+        const payment = await database.get<Payment>('payments').create((p) => {
+          setRaw(p, 'server_id', '');
+          setRaw(p, 'order_id', orderId);
+          setRaw(p, 'method', params.method);
+          setRaw(p, 'amount', params.amount);
+          setRaw(p, 'tip_amount', 0);
+          setRaw(p, 'tendered_amount', params.tenderedAmount);
+          setRaw(p, 'change_given', params.changeGiven);
+          setRaw(p, 'status', 'completed');
+          setRaw(p, 'created_at', now);
+          setRaw(p, 'updated_at', now);
+        });
+        paymentId = payment.id;
+      });
+
+      // Transition order to completed
+      await transitionOrder(orderId, 'completed');
+
+      eventBus.emit('pos.order.completed', {
+        orderId,
+        organizationId: 'org-1',
+        total: params.amount,
+        items: items
+          .filter((i) => !i.voidedAt)
+          .map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          })),
+        timestamp: new Date(),
+      });
+
+      // Priority sync payment
+      onPaymentCompleted(orderId, paymentId);
+
+      // Auto-start a new order after brief delay
+      setTimeout(() => {
+        doCreateOrder();
+      }, 300);
+    },
+    [items, currentOrder, doCreateOrder],
+  );
+
+  // -------------------------------------------------------------------------
   // Provider value
   // -------------------------------------------------------------------------
   const value: OrderStoreValue = {
@@ -1272,6 +1360,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     overrideItemPrice,
     removeItemPriceOverride,
     returnToNewOrder,
+    completePayment,
   };
 
   return React.createElement(OrderContext.Provider, { value }, children);

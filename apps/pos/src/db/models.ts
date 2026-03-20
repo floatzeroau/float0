@@ -260,6 +260,8 @@ export class Payment extends Model {
   @field('amount') amount!: number;
   @field('tip_amount') tipAmount!: number;
   @text('reference') reference?: string;
+  @field('tendered_amount') tenderedAmount?: number;
+  @field('change_given') changeGiven?: number;
   @text('status') status!: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

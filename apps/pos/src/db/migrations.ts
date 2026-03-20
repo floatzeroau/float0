@@ -201,5 +201,17 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 8,
+      steps: [
+        addColumns({
+          table: 'payments',
+          columns: [
+            { name: 'tendered_amount', type: 'number', isOptional: true },
+            { name: 'change_given', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

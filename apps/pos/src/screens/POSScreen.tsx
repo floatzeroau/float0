@@ -9,6 +9,7 @@ import type { ProductItem } from '../components/ProductGrid';
 import { ModifierModal } from '../components/ModifierModal';
 import type { ModifierModalResult } from '../components/ModifierModal';
 import { CartSidebar } from '../components/CartSidebar';
+import { PaymentScreen } from '../components/PaymentScreen';
 import { database } from '../db/database';
 import type { Product } from '../db/models';
 import { calculateLineTotal } from '@float0/shared';
@@ -134,12 +135,15 @@ export default function POSScreen() {
     updateItemModifiers,
     addItemToSubmittedOrder,
     isManagingSubmittedOrder,
+    completePayment,
+    cartTotals,
   } = useOrder();
   const [initialized, setInitialized] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [modifierProduct, setModifierProduct] = useState<ProductItem | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [paymentVisible, setPaymentVisible] = useState(false);
 
   useEffect(() => {
     if (!initialized && !currentOrder) {
@@ -247,6 +251,27 @@ export default function POSScreen() {
     } as ProductItem);
   }, []);
 
+  const handlePayPress = useCallback(() => {
+    setPaymentVisible(true);
+  }, []);
+
+  const handlePaymentComplete = useCallback(
+    async (params: {
+      method: 'cash';
+      amount: number;
+      tenderedAmount: number;
+      changeGiven: number;
+    }) => {
+      await completePayment(params);
+      setPaymentVisible(false);
+    },
+    [completePayment],
+  );
+
+  const handlePaymentCancel = useCallback(() => {
+    setPaymentVisible(false);
+  }, []);
+
   return (
     <View style={styles.container}>
       <TopBar />
@@ -268,7 +293,7 @@ export default function POSScreen() {
           />
         </View>
         <View style={styles.cartSidebar}>
-          <CartSidebar onEditItem={handleEditItem} />
+          <CartSidebar onEditItem={handleEditItem} onPay={handlePayPress} />
         </View>
       </View>
 
@@ -279,6 +304,14 @@ export default function POSScreen() {
         basePrice={modifierProduct?.basePrice ?? 0}
         onCancel={handleModifierCancel}
         onAdd={handleModifierAdd}
+      />
+
+      <PaymentScreen
+        visible={paymentVisible}
+        orderTotal={cartTotals.total}
+        orderNumber={currentOrder?.orderNumber ?? ''}
+        onComplete={handlePaymentComplete}
+        onCancel={handlePaymentCancel}
       />
     </View>
   );

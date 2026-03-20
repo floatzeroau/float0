@@ -20,7 +20,7 @@ export type OrderStatusDB =
 
 const VALID_TRANSITIONS: Record<OrderStatusDB, OrderStatusDB[]> = {
   draft: ['submitted', 'cancelled'],
-  submitted: ['in_progress', 'cancelled'],
+  submitted: ['in_progress', 'completed', 'cancelled'],
   in_progress: ['ready', 'cancelled'],
   ready: ['completed'],
   completed: ['refunded'],
