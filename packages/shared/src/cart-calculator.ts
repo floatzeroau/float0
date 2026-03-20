@@ -1,4 +1,4 @@
-import { calculateGST } from './money.js';
+import { calculateGST, roundToFiveCents } from './money.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -168,5 +168,40 @@ export function calculateCartTotals(items: CartItem[], orderDiscount?: OrderDisc
     itemDiscountTotal: Math.round(itemDiscountTotal * 100) / 100,
     orderDiscountAmount: Math.round(orderDiscountAmount * 100) / 100,
     totalDiscount: Math.round(totalDiscount * 100) / 100,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Payment total calculation with method-specific rounding
+// ---------------------------------------------------------------------------
+
+export type CashOrCard = 'cash' | 'card';
+
+export interface PaymentTotal {
+  /** Amount to charge / collect */
+  payableAmount: number;
+  /** Rounding adjustment (positive = customer pays more, negative = pays less). Zero for card. */
+  roundingAmount: number;
+}
+
+/**
+ * Calculate the payable amount for a given payment method.
+ *
+ * - Cash: rounds to nearest 5 cents (Australian rounding rules).
+ * - Card / EFTPOS: exact amount, no rounding.
+ */
+export function calculatePaymentTotal(cartTotal: number, method: CashOrCard): PaymentTotal {
+  if (method === 'cash') {
+    const rounded = roundToFiveCents(cartTotal);
+    return {
+      payableAmount: rounded,
+      roundingAmount: Math.round((rounded - cartTotal) * 100) / 100,
+    };
+  }
+
+  // Card — no rounding
+  return {
+    payableAmount: Math.round(cartTotal * 100) / 100,
+    roundingAmount: 0,
   };
 }

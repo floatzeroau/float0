@@ -88,6 +88,24 @@ export interface HeldOrderSummary {
   heldAt: number; // timestamp ms
 }
 
+export interface CashPaymentParams {
+  method: 'cash';
+  amount: number;
+  tenderedAmount: number;
+  changeGiven: number;
+  roundingAmount: number;
+}
+
+export interface CardPaymentParams {
+  method: 'card';
+  amount: number;
+  approvalCode: string;
+  cardType: string;
+  lastFour: string;
+}
+
+export type CompletePaymentParams = CashPaymentParams | CardPaymentParams;
+
 const MAX_HELD_ORDERS = 20;
 const HELD_ORDER_WARNING_THRESHOLD = 15;
 export const VOID_THRESHOLD_AMOUNT = 10;
@@ -137,12 +155,7 @@ interface OrderStoreValue {
   ) => Promise<void>;
   removeItemPriceOverride: (itemId: string) => Promise<void>;
   returnToNewOrder: () => Promise<void>;
-  completePayment: (params: {
-    method: 'cash';
-    amount: number;
-    tenderedAmount: number;
-    changeGiven: number;
-  }) => Promise<void>;
+  completePayment: (params: CompletePaymentParams) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -1259,12 +1272,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   // completePayment
   // -------------------------------------------------------------------------
   const completePayment = useCallback(
-    async (params: {
-      method: 'cash';
-      amount: number;
-      tenderedAmount: number;
-      changeGiven: number;
-    }) => {
+    async (params: CompletePaymentParams) => {
       const orderId = orderRecordIdRef.current;
       if (!orderId) return;
 
@@ -1289,8 +1297,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(p, 'method', params.method);
           setRaw(p, 'amount', params.amount);
           setRaw(p, 'tip_amount', 0);
-          setRaw(p, 'tendered_amount', params.tenderedAmount);
-          setRaw(p, 'change_given', params.changeGiven);
+
+          if (params.method === 'cash') {
+            setRaw(p, 'tendered_amount', params.tenderedAmount);
+            setRaw(p, 'change_given', params.changeGiven);
+            setRaw(p, 'rounding_amount', params.roundingAmount);
+          } else {
+            setRaw(p, 'reference', params.approvalCode);
+            setRaw(p, 'card_type', params.cardType);
+            setRaw(p, 'last_four', params.lastFour);
+          }
+
           setRaw(p, 'status', 'completed');
           setRaw(p, 'created_at', now);
           setRaw(p, 'updated_at', now);

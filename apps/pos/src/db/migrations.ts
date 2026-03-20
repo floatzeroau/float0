@@ -213,5 +213,18 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 9,
+      steps: [
+        addColumns({
+          table: 'payments',
+          columns: [
+            { name: 'rounding_amount', type: 'number', isOptional: true },
+            { name: 'card_type', type: 'string', isOptional: true },
+            { name: 'last_four', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

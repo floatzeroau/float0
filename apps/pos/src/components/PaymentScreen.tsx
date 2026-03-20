@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
-import { roundToFiveCents } from '@float0/shared';
+import { calculatePaymentTotal } from '@float0/shared';
+import type { CompletePaymentParams } from '../state/order-store';
+import { getTerminalService } from '../services';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -10,16 +12,11 @@ interface PaymentScreenProps {
   visible: boolean;
   orderTotal: number;
   orderNumber: string;
-  onComplete: (params: {
-    method: 'cash';
-    amount: number;
-    tenderedAmount: number;
-    changeGiven: number;
-  }) => Promise<void>;
+  onComplete: (params: CompletePaymentParams) => Promise<void>;
   onCancel: () => void;
 }
 
-type Phase = 'method' | 'cash';
+type Phase = 'method' | 'cash' | 'card_processing' | 'card_error';
 
 const QUICK_TENDER_VALUES = [5, 10, 20, 50, 100];
 
@@ -37,8 +34,10 @@ export function PaymentScreen({
   const [phase, setPhase] = useState<Phase>('method');
   const [tenderedInput, setTenderedInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cardError, setCardError] = useState('');
 
-  const roundedTotal = useMemo(() => roundToFiveCents(orderTotal), [orderTotal]);
+  const cashPayment = useMemo(() => calculatePaymentTotal(orderTotal, 'cash'), [orderTotal]);
+  const cardPayment = useMemo(() => calculatePaymentTotal(orderTotal, 'card'), [orderTotal]);
 
   const tenderedAmount = useMemo(() => {
     if (tenderedInput === '') return 0;
@@ -46,32 +45,65 @@ export function PaymentScreen({
   }, [tenderedInput]);
 
   const changeAmount = useMemo(
-    () => Math.max(0, tenderedAmount - roundedTotal),
-    [tenderedAmount, roundedTotal],
+    () => Math.max(0, tenderedAmount - cashPayment.payableAmount),
+    [tenderedAmount, cashPayment.payableAmount],
   );
 
-  const isSufficient = tenderedAmount >= roundedTotal;
+  const isSufficient = tenderedAmount >= cashPayment.payableAmount;
 
   const quickTenderOptions = useMemo(
-    () => QUICK_TENDER_VALUES.filter((v) => v >= roundedTotal),
-    [roundedTotal],
+    () => QUICK_TENDER_VALUES.filter((v) => v >= cashPayment.payableAmount),
+    [cashPayment.payableAmount],
   );
 
   const handleReset = useCallback(() => {
     setPhase('method');
     setTenderedInput('');
     setLoading(false);
+    setCardError('');
   }, []);
 
   const handleCancel = useCallback(() => {
+    if (phase === 'card_processing') {
+      const terminal = getTerminalService();
+      terminal.cancelTransaction();
+    }
     handleReset();
     onCancel();
-  }, [handleReset, onCancel]);
+  }, [handleReset, onCancel, phase]);
 
   const handleCashSelect = useCallback(() => {
     setPhase('cash');
     setTenderedInput('');
   }, []);
+
+  const handleCardSelect = useCallback(async () => {
+    setPhase('card_processing');
+    setCardError('');
+
+    const terminal = getTerminalService();
+    try {
+      const result = await terminal.sendPayment(cardPayment.payableAmount);
+
+      if (result.success) {
+        setLoading(true);
+        await onComplete({
+          method: 'card',
+          amount: cardPayment.payableAmount,
+          approvalCode: result.approvalCode ?? '',
+          cardType: result.cardType ?? '',
+          lastFour: result.lastFour ?? '',
+        });
+        handleReset();
+      } else {
+        setCardError(result.errorMessage ?? 'Payment declined');
+        setPhase('card_error');
+      }
+    } catch {
+      setCardError('Terminal communication error');
+      setPhase('card_error');
+    }
+  }, [cardPayment.payableAmount, onComplete, handleReset]);
 
   const handleKeyPress = useCallback((key: string) => {
     if (key === 'backspace') {
@@ -79,7 +111,6 @@ export function PaymentScreen({
     } else {
       setTenderedInput((prev) => {
         const next = prev + key;
-        // Limit to reasonable amount (99999.99 = 9999999 cents)
         if (next.length > 7) return prev;
         return next;
       });
@@ -87,31 +118,37 @@ export function PaymentScreen({
   }, []);
 
   const handleQuickTender = useCallback((amount: number) => {
-    // Convert dollar amount to cents string
     setTenderedInput(String(Math.round(amount * 100)));
   }, []);
 
   const handleExact = useCallback(() => {
-    setTenderedInput(String(Math.round(roundedTotal * 100)));
-  }, [roundedTotal]);
+    setTenderedInput(String(Math.round(cashPayment.payableAmount * 100)));
+  }, [cashPayment.payableAmount]);
 
-  const handleConfirm = useCallback(async () => {
+  const handleCashConfirm = useCallback(async () => {
     if (!isSufficient || loading) return;
     setLoading(true);
     try {
       await onComplete({
         method: 'cash',
-        amount: roundedTotal,
+        amount: cashPayment.payableAmount,
         tenderedAmount,
         changeGiven: changeAmount,
+        roundingAmount: cashPayment.roundingAmount,
       });
       handleReset();
     } catch {
       setLoading(false);
     }
-  }, [isSufficient, loading, onComplete, roundedTotal, tenderedAmount, changeAmount, handleReset]);
+  }, [isSufficient, loading, onComplete, cashPayment, tenderedAmount, changeAmount, handleReset]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
+
+  const formatRounding = (val: number) => {
+    if (val === 0) return '$0.00';
+    const sign = val > 0 ? '+' : '-';
+    return `${sign}$${Math.abs(val).toFixed(2)}`;
+  };
 
   // ---------------------------------------------------------------------------
   // Render
@@ -123,12 +160,14 @@ export function PaymentScreen({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
-            <Text style={styles.backButtonText}>Back</Text>
+            <Text style={styles.backButtonText}>
+              {phase === 'card_processing' ? 'Cancel' : 'Back'}
+            </Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Payment — {orderNumber}</Text>
           <View style={styles.headerTotalContainer}>
             <Text style={styles.headerTotalLabel}>Total</Text>
-            <Text style={styles.headerTotalValue}>{formatCurrency(roundedTotal)}</Text>
+            <Text style={styles.headerTotalValue}>{formatCurrency(orderTotal)}</Text>
           </View>
         </View>
 
@@ -141,9 +180,9 @@ export function PaymentScreen({
                 <Text style={styles.cashMethodIcon}>$</Text>
                 <Text style={styles.cashMethodText}>Cash</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cardMethodButton} disabled>
+              <TouchableOpacity style={styles.cardMethodButton} onPress={handleCardSelect}>
                 <Text style={styles.cardMethodIcon}>Card</Text>
-                <Text style={styles.cardMethodComingSoon}>Coming Soon</Text>
+                <Text style={styles.cardMethodSubtext}>EFTPOS</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -154,9 +193,24 @@ export function PaymentScreen({
           <View style={styles.cashContainer}>
             {/* Left side: amounts */}
             <View style={styles.cashLeft}>
+              {/* Total with rounding breakdown */}
               <View style={styles.amountSection}>
-                <Text style={styles.amountLabel}>Order Total (rounded)</Text>
-                <Text style={styles.amountTotal}>{formatCurrency(roundedTotal)}</Text>
+                <Text style={styles.amountLabel}>Order Total</Text>
+                <Text style={styles.amountTotal}>{formatCurrency(orderTotal)}</Text>
+                {cashPayment.roundingAmount !== 0 && (
+                  <View style={styles.roundingRow}>
+                    <Text style={styles.roundingText}>
+                      Rounding: {formatRounding(cashPayment.roundingAmount)}
+                    </Text>
+                    <Text style={styles.roundingArrow}>
+                      {' '}
+                      Cash: {formatCurrency(cashPayment.payableAmount)}
+                    </Text>
+                  </View>
+                )}
+                {cashPayment.roundingAmount === 0 && (
+                  <Text style={styles.roundingTextNeutral}>No rounding needed</Text>
+                )}
               </View>
 
               <View style={styles.amountSection}>
@@ -198,7 +252,7 @@ export function PaymentScreen({
                   styles.confirmButton,
                   (!isSufficient || loading) && styles.confirmButtonDisabled,
                 ]}
-                onPress={handleConfirm}
+                onPress={handleCashConfirm}
                 disabled={!isSufficient || loading}
               >
                 {loading ? (
@@ -226,6 +280,35 @@ export function PaymentScreen({
                   ),
                 )}
               </View>
+            </View>
+          </View>
+        )}
+
+        {/* Phase 3: Card Processing */}
+        {phase === 'card_processing' && (
+          <View style={styles.cardProcessingContainer}>
+            <ActivityIndicator size="large" color="#2563eb" />
+            <Text style={styles.cardProcessingTitle}>Waiting for terminal...</Text>
+            <Text style={styles.cardProcessingAmount}>
+              {formatCurrency(cardPayment.payableAmount)}
+            </Text>
+            <Text style={styles.cardProcessingHint}>Present card on the EFTPOS terminal</Text>
+          </View>
+        )}
+
+        {/* Phase 4: Card Error */}
+        {phase === 'card_error' && (
+          <View style={styles.cardErrorContainer}>
+            <Text style={styles.cardErrorIcon}>!</Text>
+            <Text style={styles.cardErrorTitle}>Payment Failed</Text>
+            <Text style={styles.cardErrorMessage}>{cardError}</Text>
+            <View style={styles.cardErrorActions}>
+              <TouchableOpacity style={styles.cardRetryButton} onPress={handleCardSelect}>
+                <Text style={styles.cardRetryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cardBackButton} onPress={() => setPhase('method')}>
+                <Text style={styles.cardBackButtonText}>Choose Another Method</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -324,19 +407,19 @@ const styles = StyleSheet.create({
   cardMethodButton: {
     width: 200,
     height: 200,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#2563eb',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardMethodIcon: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#999',
+    fontWeight: '700',
+    color: '#fff',
   },
-  cardMethodComingSoon: {
-    fontSize: 12,
-    color: '#bbb',
+  cardMethodSubtext: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
     marginTop: 4,
   },
 
@@ -391,6 +474,28 @@ const styles = StyleSheet.create({
   amountInsufficient: {
     fontSize: 24,
     color: '#ef4444',
+  },
+
+  // Rounding
+  roundingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  roundingText: {
+    fontSize: 13,
+    color: '#f59e0b',
+    fontWeight: '500',
+  },
+  roundingArrow: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '600',
+  },
+  roundingTextNeutral: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 4,
   },
 
   // Quick tender
@@ -457,5 +562,89 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+
+  // Card processing
+  cardProcessingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  cardProcessingTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginTop: 24,
+  },
+  cardProcessingAmount: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#2563eb',
+    marginTop: 12,
+  },
+  cardProcessingHint: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 16,
+  },
+
+  // Card error
+  cardErrorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  cardErrorIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#fef2f2',
+    color: '#ef4444',
+    fontSize: 32,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 64,
+    overflow: 'hidden',
+  },
+  cardErrorTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginTop: 16,
+  },
+  cardErrorMessage: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  cardErrorActions: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 32,
+  },
+  cardRetryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+  },
+  cardRetryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  cardBackButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+  },
+  cardBackButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
   },
 });

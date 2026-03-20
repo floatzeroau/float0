@@ -262,6 +262,9 @@ export class Payment extends Model {
   @text('reference') reference?: string;
   @field('tendered_amount') tenderedAmount?: number;
   @field('change_given') changeGiven?: number;
+  @field('rounding_amount') roundingAmount?: number;
+  @text('card_type') cardType?: string;
+  @text('last_four') lastFour?: string;
   @text('status') status!: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

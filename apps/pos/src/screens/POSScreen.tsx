@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { useOrder } from '../state/order-store';
-import type { OrderType, CartItemData } from '../state/order-store';
+import type { OrderType, CartItemData, CompletePaymentParams } from '../state/order-store';
 import { CategoryTabs } from '../components/CategoryTabs';
 import { ProductSearch } from '../components/ProductSearch';
 import { ProductGrid } from '../components/ProductGrid';
@@ -256,12 +256,7 @@ export default function POSScreen() {
   }, []);
 
   const handlePaymentComplete = useCallback(
-    async (params: {
-      method: 'cash';
-      amount: number;
-      tenderedAmount: number;
-      changeGiven: number;
-    }) => {
+    async (params: CompletePaymentParams) => {
       await completePayment(params);
       setPaymentVisible(false);
     },

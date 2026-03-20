@@ -5,6 +5,7 @@ import {
   calculateItemDiscount,
   calculateOrderDiscount,
   requiresManagerApproval,
+  calculatePaymentTotal,
   DISCOUNT_THRESHOLDS,
 } from './cart-calculator.js';
 
@@ -452,5 +453,87 @@ describe('requiresManagerApproval', () => {
   it('exports default thresholds', () => {
     expect(DISCOUNT_THRESHOLDS.percentageMax).toBe(20);
     expect(DISCOUNT_THRESHOLDS.fixedMax).toBe(10);
+  });
+});
+
+describe('calculatePaymentTotal', () => {
+  describe('cash payments', () => {
+    it('rounds to nearest 5 cents — round down', () => {
+      // $9.92 → $9.90
+      const result = calculatePaymentTotal(9.92, 'cash');
+      expect(result.payableAmount).toBe(9.9);
+      expect(result.roundingAmount).toBe(-0.02);
+    });
+
+    it('rounds to nearest 5 cents — round up', () => {
+      // $9.93 → $9.95
+      const result = calculatePaymentTotal(9.93, 'cash');
+      expect(result.payableAmount).toBe(9.95);
+      expect(result.roundingAmount).toBe(0.02);
+    });
+
+    it('no rounding needed for exact 5c amount', () => {
+      const result = calculatePaymentTotal(10.0, 'cash');
+      expect(result.payableAmount).toBe(10.0);
+      expect(result.roundingAmount).toBe(0);
+    });
+
+    it('rounds $9.91 down to $9.90', () => {
+      const result = calculatePaymentTotal(9.91, 'cash');
+      expect(result.payableAmount).toBe(9.9);
+      expect(result.roundingAmount).toBe(-0.01);
+    });
+
+    it('rounds $9.98 up to $10.00', () => {
+      const result = calculatePaymentTotal(9.98, 'cash');
+      expect(result.payableAmount).toBe(10.0);
+      expect(result.roundingAmount).toBe(0.02);
+    });
+
+    it('handles $0.01 rounding', () => {
+      // $10.01 → $10.00
+      const result = calculatePaymentTotal(10.01, 'cash');
+      expect(result.payableAmount).toBe(10.0);
+      expect(result.roundingAmount).toBe(-0.01);
+    });
+
+    it('handles $0.04 rounding', () => {
+      // $10.04 → $10.05
+      const result = calculatePaymentTotal(10.04, 'cash');
+      expect(result.payableAmount).toBe(10.05);
+      expect(result.roundingAmount).toBe(0.01);
+    });
+
+    it('handles zero total', () => {
+      const result = calculatePaymentTotal(0, 'cash');
+      expect(result.payableAmount).toBe(0);
+      expect(result.roundingAmount).toBe(0);
+    });
+  });
+
+  describe('card payments', () => {
+    it('returns exact amount with no rounding', () => {
+      const result = calculatePaymentTotal(9.92, 'card');
+      expect(result.payableAmount).toBe(9.92);
+      expect(result.roundingAmount).toBe(0);
+    });
+
+    it('returns exact amount for whole dollars', () => {
+      const result = calculatePaymentTotal(10.0, 'card');
+      expect(result.payableAmount).toBe(10.0);
+      expect(result.roundingAmount).toBe(0);
+    });
+
+    it('returns exact amount for odd cents', () => {
+      const result = calculatePaymentTotal(13.37, 'card');
+      expect(result.payableAmount).toBe(13.37);
+      expect(result.roundingAmount).toBe(0);
+    });
+
+    it('handles zero total', () => {
+      const result = calculatePaymentTotal(0, 'card');
+      expect(result.payableAmount).toBe(0);
+      expect(result.roundingAmount).toBe(0);
+    });
   });
 });
