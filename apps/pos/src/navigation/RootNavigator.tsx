@@ -19,8 +19,8 @@ import { isInitialSyncComplete } from '../sync/initial-sync';
 // ---------------------------------------------------------------------------
 
 export type RootStackParamList = {
-  InitialSync: undefined;
   Login: undefined;
+  InitialSync: undefined;
   Main: undefined;
 };
 
@@ -69,18 +69,17 @@ export default function RootNavigator() {
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
 
   useEffect(() => {
-    isInitialSyncComplete().then((complete) => {
-      setInitialRoute(complete ? 'Login' : 'InitialSync');
-    });
+    // Always start at Login; after PIN auth, LoginScreen checks
+    // whether initial sync is needed before navigating forward.
+    setInitialRoute('Login');
   }, []);
 
-  // Wait until we know whether initial sync has run
   if (!initialRoute) return null;
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
-      <Stack.Screen name="InitialSync" component={InitialSyncScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="InitialSync" component={InitialSyncScreen} />
       <Stack.Screen name="Main" component={MainTabs} options={{ gestureEnabled: false }} />
     </Stack.Navigator>
   );

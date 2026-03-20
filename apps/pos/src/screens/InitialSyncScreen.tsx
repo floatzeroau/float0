@@ -63,7 +63,7 @@ export default function InitialSyncScreen({ navigation }: Props) {
         updateEta(p);
       });
       setStatus('complete');
-      setTimeout(() => navigation.replace('Login'), 500);
+      setTimeout(() => navigation.replace('Main'), 500);
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Sync failed');

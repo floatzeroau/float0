@@ -6,12 +6,17 @@
   "scripts": {
     "build": "tsc --noEmit",
     "dev": "expo start --dev-client",
+    "dev:sim": "expo start --dev-client --ios --clear",
     "lint": "eslint index.ts src/",
-    "test": "vitest run"
+    "test": "vitest run",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
-    "@float0/shared": "workspace:*",
+    "@babel/runtime": "^7.29.2",
     "@float0/events": "workspace:*",
+    "@float0/shared": "workspace:*",
+    "@nozbe/simdjson": "^3",
     "@nozbe/watermelondb": "~0.28",
     "@react-native-async-storage/async-storage": "^2",
     "@react-native-community/netinfo": "^11",
@@ -29,6 +34,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@babel/plugin-proposal-decorators": "^7.29.0",
     "@swc/core": "^1",
     "@types/react": "~18.3.0",
     "typescript": "^5.7.0",

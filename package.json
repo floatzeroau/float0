@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:all": "docker compose up -d || true; turbo run dev --filter=@float0/engine --filter=@float0/hub --filter=@float0/portal & turbo run dev:sim --filter=@float0/pos",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write .",

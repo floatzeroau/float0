@@ -80,9 +80,18 @@ async function seed() {
     .limit(1);
 
   if (existingMembership) {
-    console.log(
-      `Membership already exists: ${existingMembership.id} (role: ${existingMembership.role})`,
-    );
+    // Always ensure PIN hash is set
+    if (!existingMembership.pinHash) {
+      await db
+        .update(orgMemberships)
+        .set({ pinHash })
+        .where(eq(orgMemberships.id, existingMembership.id));
+      console.log(`Updated membership PIN: ${existingMembership.id}`);
+    } else {
+      console.log(
+        `Membership already exists: ${existingMembership.id} (role: ${existingMembership.role})`,
+      );
+    }
   } else {
     const [membership] = await db
       .insert(orgMemberships)

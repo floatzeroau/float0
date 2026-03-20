@@ -79,7 +79,7 @@ export default function LoginScreen({ navigation }: Props) {
 
     try {
       // Use stored orgId or fall back to a default for development
-      const orgId = await SecureStore.getItemAsync(ORG_ID_KEY);
+      const orgId = (await SecureStore.getItemAsync(ORG_ID_KEY)) ?? process.env.EXPO_PUBLIC_ORG_ID;
       if (!orgId) {
         setError('No organization configured');
         setLoading(false);
@@ -97,7 +97,10 @@ export default function LoginScreen({ navigation }: Props) {
       if (res.ok) {
         await SecureStore.setItemAsync(TOKEN_KEY, body.accessToken);
         setPin('');
-        navigation.replace('Main');
+        // Check if initial sync is needed; if so, sync first (now authenticated)
+        const { isInitialSyncComplete } = await import('../sync/initial-sync');
+        const synced = await isInitialSyncComplete();
+        navigation.replace(synced ? 'Main' : 'InitialSync');
       } else if (res.status === 429) {
         const retryAfter = body.retryAfter ?? 300;
         startLockout(retryAfter);
