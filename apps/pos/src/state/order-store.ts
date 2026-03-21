@@ -158,6 +158,7 @@ interface OrderStoreValue {
   removeItemPriceOverride: (itemId: string) => Promise<void>;
   returnToNewOrder: () => Promise<void>;
   completePayment: (params: CompletePaymentParams) => Promise<void>;
+  recordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -245,6 +246,7 @@ const OrderContext = createContext<OrderStoreValue>({
   removeItemPriceOverride: async () => {},
   returnToNewOrder: async () => {},
   completePayment: async () => {},
+  recordPartialPayment: async () => {},
 });
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
@@ -1271,6 +1273,59 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   }, [doCreateOrder, refreshHeldOrders]);
 
   // -------------------------------------------------------------------------
+  // recordPartialPayment (split payment — records one portion without completing order)
+  // -------------------------------------------------------------------------
+  const recordPartialPayment = useCallback(
+    async (params: CompletePaymentParams) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      if (items.length === 0) {
+        Alert.alert('Cannot pay', 'Add at least one item before paying.');
+        return;
+      }
+
+      // Auto-submit draft orders on first partial payment
+      const status = currentOrder?.status;
+      if (status === 'draft') {
+        await transitionOrder(orderId, 'submitted');
+      }
+
+      // Create Payment record
+      let paymentId = '';
+      const now = Date.now();
+      await database.write(async () => {
+        const payment = await database.get<Payment>('payments').create((p) => {
+          setRaw(p, 'server_id', '');
+          setRaw(p, 'order_id', orderId);
+          setRaw(p, 'method', params.method);
+          setRaw(p, 'amount', params.amount);
+          setRaw(p, 'tip_amount', params.tipAmount);
+
+          if (params.method === 'cash') {
+            setRaw(p, 'tendered_amount', params.tenderedAmount);
+            setRaw(p, 'change_given', params.changeGiven);
+            setRaw(p, 'rounding_amount', params.roundingAmount);
+          } else {
+            setRaw(p, 'reference', params.approvalCode);
+            setRaw(p, 'card_type', params.cardType);
+            setRaw(p, 'last_four', params.lastFour);
+          }
+
+          setRaw(p, 'status', 'completed');
+          setRaw(p, 'created_at', now);
+          setRaw(p, 'updated_at', now);
+        });
+        paymentId = payment.id;
+      });
+
+      // Priority sync payment (but do NOT complete the order)
+      onPaymentCompleted(orderId, paymentId);
+    },
+    [items, currentOrder],
+  );
+
+  // -------------------------------------------------------------------------
   // completePayment
   // -------------------------------------------------------------------------
   const completePayment = useCallback(
@@ -1323,7 +1378,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       eventBus.emit('pos.order.completed', {
         orderId,
         organizationId: 'org-1',
-        total: params.amount,
+        total: cartTotals.total,
         tipAmount: params.tipAmount,
         items: items
           .filter((i) => !i.voidedAt)
@@ -1343,7 +1398,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         doCreateOrder();
       }, 300);
     },
-    [items, currentOrder, doCreateOrder],
+    [items, currentOrder, cartTotals, doCreateOrder],
   );
 
   // -------------------------------------------------------------------------
@@ -1381,6 +1436,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     removeItemPriceOverride,
     returnToNewOrder,
     completePayment,
+    recordPartialPayment,
   };
 
   return React.createElement(OrderContext.Provider, { value }, children);

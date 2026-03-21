@@ -136,6 +136,7 @@ export default function POSScreen() {
     addItemToSubmittedOrder,
     isManagingSubmittedOrder,
     completePayment,
+    recordPartialPayment,
     cartTotals,
   } = useOrder();
   const [initialized, setInitialized] = useState(false);
@@ -306,6 +307,7 @@ export default function POSScreen() {
         orderTotal={cartTotals.total}
         orderNumber={currentOrder?.orderNumber ?? ''}
         onComplete={handlePaymentComplete}
+        onRecordPartialPayment={recordPartialPayment}
         onCancel={handlePaymentCancel}
       />
     </View>

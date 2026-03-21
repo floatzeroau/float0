@@ -4,6 +4,7 @@ import { calculatePaymentTotal } from '@float0/shared';
 import type { CompletePaymentParams } from '../state/order-store';
 import { getTerminalService } from '../services';
 import { TipPrompt } from './TipPrompt';
+import { SplitPaymentFlow } from './SplitPaymentFlow';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,10 +15,11 @@ interface PaymentScreenProps {
   orderTotal: number;
   orderNumber: string;
   onComplete: (params: CompletePaymentParams) => Promise<void>;
+  onRecordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
   onCancel: () => void;
 }
 
-type Phase = 'method' | 'tip' | 'cash' | 'card_processing' | 'card_error';
+type Phase = 'method' | 'tip' | 'cash' | 'card_processing' | 'card_error' | 'split';
 
 const QUICK_TENDER_VALUES = [5, 10, 20, 50, 100];
 const TIP_ENABLED = true;
@@ -31,6 +33,7 @@ export function PaymentScreen({
   orderTotal,
   orderNumber,
   onComplete,
+  onRecordPartialPayment,
   onCancel,
 }: PaymentScreenProps) {
   const [phase, setPhase] = useState<Phase>('method');
@@ -122,6 +125,15 @@ export function PaymentScreen({
     [orderTotal, onComplete, handleReset],
   );
 
+  const handleSplitSelect = useCallback(() => {
+    if (TIP_ENABLED) {
+      setSelectedMethod(null);
+      setPhase('tip');
+    } else {
+      setPhase('split');
+    }
+  }, []);
+
   const handleCardMethodSelect = useCallback(() => {
     if (TIP_ENABLED) {
       setSelectedMethod('card');
@@ -137,8 +149,11 @@ export function PaymentScreen({
       if (selectedMethod === 'cash') {
         setPhase('cash');
         setTenderedInput('');
-      } else {
+      } else if (selectedMethod === 'card') {
         processCardPayment(tip);
+      } else {
+        // split mode
+        setPhase('split');
       }
     },
     [selectedMethod, processCardPayment],
@@ -250,6 +265,10 @@ export function PaymentScreen({
               <TouchableOpacity style={styles.cardMethodButton} onPress={handleCardMethodSelect}>
                 <Text style={styles.cardMethodIcon}>Card</Text>
                 <Text style={styles.cardMethodSubtext}>EFTPOS</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.splitMethodButton} onPress={handleSplitSelect}>
+                <Text style={styles.splitMethodIcon}>÷</Text>
+                <Text style={styles.splitMethodText}>Split</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -408,6 +427,22 @@ export function PaymentScreen({
             </View>
           </View>
         )}
+
+        {/* Phase: Split Payment */}
+        {phase === 'split' && (
+          <SplitPaymentFlow
+            orderTotal={orderTotal}
+            orderNumber={orderNumber}
+            tipAmount={tipAmount}
+            onRecordPartialPayment={onRecordPartialPayment}
+            onComplete={onComplete}
+            onCancel={() => {
+              setTipAmount(0);
+              setSelectedMethod(null);
+              setPhase('method');
+            }}
+          />
+        )}
       </View>
     </Modal>
   );
@@ -527,6 +562,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
     marginTop: 4,
+  },
+  splitMethodButton: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#7c3aed',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  splitMethodIcon: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  splitMethodText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+    marginTop: 8,
   },
 
   // Cash entry
