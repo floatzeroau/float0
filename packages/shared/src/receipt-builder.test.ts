@@ -6,6 +6,7 @@ import type {
   ReceiptItemInput,
   ReceiptPaymentInput,
 } from './receipt-builder.js';
+import { ATO_TAX_INVOICE_THRESHOLD } from './constants.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -211,5 +212,63 @@ describe('buildReceipt', () => {
     const receipt = buildReceipt(business, baseOrder, items, payments, 'Alex');
 
     expect(receipt.items[0].modifiers).toEqual(['Extra Shot', 'Oat Milk']);
+  });
+
+  // -------------------------------------------------------------------------
+  // ATO tax invoice formatting
+  // -------------------------------------------------------------------------
+
+  it('marks order below threshold as simplified', () => {
+    const order = { ...baseOrder, total: 50, subtotal: 50, gstAmount: 4.55 };
+    const items = [makeItem({ unitPrice: 50, lineTotal: 50 })];
+    const payments = [makeCashPayment({ amount: 50 })];
+
+    const receipt = buildReceipt(business, order, items, payments, 'Alex');
+
+    expect(receipt.invoiceType).toBe('simplified');
+  });
+
+  it('marks order at threshold as full_tax_invoice', () => {
+    const order = {
+      ...baseOrder,
+      total: ATO_TAX_INVOICE_THRESHOLD,
+      subtotal: ATO_TAX_INVOICE_THRESHOLD,
+      gstAmount: 7.5,
+    };
+    const items = [
+      makeItem({ unitPrice: ATO_TAX_INVOICE_THRESHOLD, lineTotal: ATO_TAX_INVOICE_THRESHOLD }),
+    ];
+    const payments = [makeCashPayment({ amount: ATO_TAX_INVOICE_THRESHOLD })];
+
+    const receipt = buildReceipt(business, order, items, payments, 'Alex');
+
+    expect(receipt.invoiceType).toBe('full_tax_invoice');
+  });
+
+  it('marks order above threshold as full_tax_invoice', () => {
+    const order = { ...baseOrder, total: 100, subtotal: 100, gstAmount: 9.09 };
+    const items = [makeItem({ unitPrice: 100, lineTotal: 100 })];
+    const payments = [makeCashPayment({ amount: 100 })];
+
+    const receipt = buildReceipt(business, order, items, payments, 'Alex');
+
+    expect(receipt.invoiceType).toBe('full_tax_invoice');
+  });
+
+  it('full tax invoice includes customer name when provided', () => {
+    const order = {
+      ...baseOrder,
+      total: 100,
+      subtotal: 100,
+      gstAmount: 9.09,
+      customerName: 'Jane Smith',
+    };
+    const items = [makeItem({ unitPrice: 100, lineTotal: 100 })];
+    const payments = [makeCashPayment({ amount: 100 })];
+
+    const receipt = buildReceipt(business, order, items, payments, 'Alex');
+
+    expect(receipt.invoiceType).toBe('full_tax_invoice');
+    expect(receipt.customerName).toBe('Jane Smith');
   });
 });

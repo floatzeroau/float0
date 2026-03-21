@@ -56,9 +56,14 @@ function orderTypeLabel(type: string): string {
 
 export function ReceiptPreview({ data }: ReceiptPreviewProps) {
   const lines: string[] = [];
+  const isFullTaxInvoice = data.invoiceType === 'full_tax_invoice';
 
   // Header
   lines.push(divider('='));
+  if (isFullTaxInvoice) {
+    lines.push(center('TAX INVOICE'));
+    lines.push('');
+  }
   lines.push(center(data.businessName.toUpperCase()));
   lines.push(center(data.address));
   lines.push(center(`Ph: ${data.phone}`));
@@ -108,10 +113,20 @@ export function ReceiptPreview({ data }: ReceiptPreviewProps) {
   if (data.discountTotal > 0) {
     lines.push(pad('Discount', `-${formatCurrency(data.discountTotal)}`));
   }
-  lines.push(pad('GST (incl)', formatCurrency(data.gstAmount)));
+
+  if (isFullTaxInvoice) {
+    lines.push(pad('Total GST', formatCurrency(data.gstAmount)));
+  } else {
+    lines.push(pad('GST (incl)', formatCurrency(data.gstAmount)));
+  }
 
   lines.push(divider());
   lines.push(pad('TOTAL', formatCurrency(data.total)));
+
+  if (!isFullTaxInvoice) {
+    lines.push(`Total includes GST of ${formatCurrency(data.gstAmount)}`);
+  }
+
   lines.push(divider());
 
   // Payments
