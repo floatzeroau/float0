@@ -7,7 +7,7 @@ import { SYNC_INTERVAL_MS } from '../config';
 
 const MAX_CONSECUTIVE_FAILURES = 5;
 const MAX_PRIORITY_RETRIES = 10;
-const PUSH_TABLES = ['orders', 'order_items', 'payments', 'shifts'];
+const PUSH_TABLES = ['orders', 'order_items', 'payments', 'shifts', 'cash_movements'];
 const PRIORITY_QUEUE_KEY = 'float0_priority_sync_queue';
 
 export interface PriorityItem {

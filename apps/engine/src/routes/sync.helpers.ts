@@ -11,6 +11,7 @@ import {
   orderItems,
   payments,
   shifts,
+  cashMovements,
   syncConflicts,
 } from '../db/schema/pos.js';
 import { orgMemberships, users } from '../db/schema/core.js';
@@ -35,6 +36,7 @@ interface SyncChanges {
   order_items: SyncTableChanges;
   payments: SyncTableChanges;
   shifts: SyncTableChanges;
+  cash_movements: SyncTableChanges;
 }
 
 export interface RejectedRecord {
@@ -214,6 +216,7 @@ export async function pullAllChanges(
     order_items: emptyChanges,
     payments: emptyChanges,
     shifts: emptyChanges,
+    cash_movements: emptyChanges,
   };
 
   // Pull server-managed tables
@@ -234,6 +237,7 @@ const pushTableMap = {
   order_items: orderItems,
   payments: payments,
   shifts: shifts,
+  cash_movements: cashMovements,
 } as const;
 
 // Tables where server data is authoritative (catalog data)
@@ -382,7 +386,7 @@ export async function getSyncStatus(
 ): Promise<{ lastSyncAt: number | null; pendingPushCount: number }> {
   // Approximate lastSyncAt: most recent updatedAt across push tables
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pushTables: any[] = [orders, orderItems, payments, shifts];
+  const pushTables: any[] = [orders, orderItems, payments, shifts, cashMovements];
   let lastSyncAt: number | null = null;
 
   for (const table of pushTables) {

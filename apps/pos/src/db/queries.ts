@@ -4,6 +4,7 @@ import type { Product } from './models';
 import type { Order } from './models';
 import type { Payment } from './models';
 import type { Shift } from './models';
+import type { CashMovement } from './models';
 import type { Customer } from './models';
 
 export async function getProductsByCategory(
@@ -65,6 +66,37 @@ export async function getHeldOrderCount(database: Database): Promise<number> {
     .get<Order>('orders')
     .query(Q.where('held_at', Q.notEq(null)), Q.where('held_at', Q.gt(0)))
     .fetchCount();
+}
+
+export async function getShiftCashMovementTotals(
+  database: Database,
+  shiftId: string,
+): Promise<{ cashIn: number; cashOut: number }> {
+  const movements = await database
+    .get<CashMovement>('cash_movements')
+    .query(Q.where('shift_id', shiftId))
+    .fetch();
+
+  let cashIn = 0;
+  let cashOut = 0;
+  for (const m of movements) {
+    if (m.direction === 'in') {
+      cashIn += m.amount;
+    } else {
+      cashOut += m.amount;
+    }
+  }
+  return { cashIn, cashOut };
+}
+
+export async function getShiftCashMovements(
+  database: Database,
+  shiftId: string,
+): Promise<CashMovement[]> {
+  return database
+    .get<CashMovement>('cash_movements')
+    .query(Q.where('shift_id', shiftId), Q.sortBy('created_at', Q.desc))
+    .fetch();
 }
 
 export async function getCustomerByPhone(

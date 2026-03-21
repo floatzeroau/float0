@@ -42,6 +42,8 @@ export const paymentStatusEnum = pgEnum('payment_status', [
 
 export const shiftStatusEnum = pgEnum('shift_status', ['open', 'closed', 'reconciled']);
 
+export const cashMovementDirectionEnum = pgEnum('cash_movement_direction', ['in', 'out']);
+
 export const selectionTypeEnum = pgEnum('selection_type', ['single', 'multiple']);
 
 export const conflictResolutionEnum = pgEnum('conflict_resolution', ['server_wins', 'device_wins']);
@@ -363,5 +365,34 @@ export const shifts = pgTable(
   (t) => [
     index('shifts_organization_id_idx').on(t.organizationId),
     index('shifts_updated_at_idx').on(t.updatedAt),
+  ],
+);
+
+// ── Cash Movements ───────────────────────────────────
+
+export const cashMovements = pgTable(
+  'cash_movements',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    shiftId: uuid()
+      .notNull()
+      .references(() => shifts.id),
+    direction: cashMovementDirectionEnum().notNull(),
+    amount: doublePrecision().notNull(),
+    reason: varchar({ length: 255 }).notNull(),
+    staffId: uuid().notNull(),
+    managerApproverId: uuid(),
+    _version: integer().notNull().default(1),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index('cash_movements_organization_id_idx').on(t.organizationId),
+    index('cash_movements_shift_id_idx').on(t.shiftId),
+    index('cash_movements_updated_at_idx').on(t.updatedAt),
   ],
 );

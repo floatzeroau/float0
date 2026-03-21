@@ -15,7 +15,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { database } from '../db/database';
 import type { Shift } from '../db/models';
-import { getActiveShift, getShiftCashTotal, getHeldOrderCount } from '../db/queries';
+import {
+  getActiveShift,
+  getShiftCashTotal,
+  getHeldOrderCount,
+  getShiftCashMovementTotals,
+} from '../db/queries';
 import { onShiftClosed } from '../sync/payment-sync-hook';
 import { API_URL, STAFF_ID_KEY, STAFF_NAME_KEY, AUTH_TOKEN_KEY } from '../config';
 
@@ -106,10 +111,11 @@ export default function CloseShiftScreen({ navigation }: Props) {
 
       setShift(activeShift);
 
-      // Calculate expected cash: opening_float + cash sales during shift
+      // Calculate expected cash: opening_float + cash sales + cash_in - cash_out
       const openedAtMs = (activeShift._raw as any).opened_at as number;
       const cashTotal = await getShiftCashTotal(database, openedAtMs);
-      setExpectedCashDollars(activeShift.openingFloat + cashTotal);
+      const { cashIn, cashOut } = await getShiftCashMovementTotals(database, activeShift.id);
+      setExpectedCashDollars(activeShift.openingFloat + cashTotal + cashIn - cashOut);
       setLoading(false);
     })();
   }, [navigation]);

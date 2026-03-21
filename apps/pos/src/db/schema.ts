@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 11,
+  version: 12,
   tables: [
     tableSchema({
       name: 'products',
@@ -183,6 +183,20 @@ export const schema = appSchema({
         { name: 'variance', type: 'number', isOptional: true },
         { name: 'variance_notes', type: 'string', isOptional: true },
         { name: 'status', type: 'string' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'cash_movements',
+      columns: [
+        { name: 'server_id', type: 'string' },
+        { name: 'shift_id', type: 'string' },
+        { name: 'direction', type: 'string' },
+        { name: 'amount', type: 'number' },
+        { name: 'reason', type: 'string' },
+        { name: 'staff_id', type: 'string' },
+        { name: 'manager_approver_id', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

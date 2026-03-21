@@ -13,8 +13,11 @@ import { CartSidebar } from '../components/CartSidebar';
 import { PaymentScreen } from '../components/PaymentScreen';
 import { DocketPreview } from '../components/DocketPreview';
 import { OpenDrawerModal } from '../components/OpenDrawerModal';
+import { CashMovementModal } from '../components/CashMovementModal';
 import { database } from '../db/database';
-import type { Product, AuditLog, Shift } from '../db/models';
+import type { Product, AuditLog, Shift, CashMovement } from '../db/models';
+import { onCashMovement } from '../sync/payment-sync-hook';
+import { useShift } from '../state/ShiftProvider';
 import { getPrinterService } from '../services';
 import { calculateLineTotal } from '@float0/shared';
 
@@ -27,7 +30,15 @@ function setRaw(record: any, field: string, value: string | number) {
 // Top Bar
 // ---------------------------------------------------------------------------
 
-function TopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
+function TopBar({
+  onOpenDrawer,
+  onCashIn,
+  onCashOut,
+}: {
+  onOpenDrawer: () => void;
+  onCashIn: () => void;
+  onCashOut: () => void;
+}) {
   const { currentOrder, createNewOrder, setOrderType, setTableNumber, isManagingSubmittedOrder } =
     useOrder();
 
@@ -122,6 +133,12 @@ function TopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
       </View>
 
       <View style={styles.topBarRight}>
+        <TouchableOpacity style={styles.cashMovementButton} onPress={onCashIn}>
+          <Text style={styles.cashMovementText}>Cash In</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.cashMovementButton} onPress={onCashOut}>
+          <Text style={styles.cashMovementText}>Cash Out</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.openDrawerButton} onPress={onOpenDrawer}>
           <Text style={styles.openDrawerText}>Open Drawer</Text>
         </TouchableOpacity>
@@ -160,6 +177,9 @@ export default function POSScreen() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [paymentVisible, setPaymentVisible] = useState(false);
   const [drawerModalVisible, setDrawerModalVisible] = useState(false);
+  const [cashMovementDirection, setCashMovementDirection] = useState<'in' | 'out'>('in');
+  const [cashMovementVisible, setCashMovementVisible] = useState(false);
+  const { currentShift } = useShift();
 
   useEffect(() => {
     if (!initialized && !currentOrder) {
@@ -284,6 +304,76 @@ export default function POSScreen() {
     setPaymentVisible(false);
   }, []);
 
+  const handleCashMovement = useCallback(
+    async (data: {
+      direction: 'in' | 'out';
+      amount: number;
+      reason: string;
+      staffId: string;
+      managerApproverId: string | null;
+    }) => {
+      setCashMovementVisible(false);
+
+      const shiftId = currentShift?.id ?? '';
+      if (!shiftId) return;
+
+      const now = Date.now();
+      let movementId = '';
+
+      await database.write(async () => {
+        const movement = await database.get<CashMovement>('cash_movements').create((m) => {
+          setRaw(m, 'server_id', '');
+          setRaw(m, 'shift_id', shiftId);
+          setRaw(m, 'direction', data.direction);
+          setRaw(m, 'amount', data.amount);
+          setRaw(m, 'reason', data.reason);
+          setRaw(m, 'staff_id', data.staffId);
+          if (data.managerApproverId) {
+            setRaw(m, 'manager_approver_id', data.managerApproverId);
+          }
+          setRaw(m, 'created_at', now);
+          setRaw(m, 'updated_at', now);
+        });
+        movementId = movement.id;
+
+        // Audit log
+        await database.get<AuditLog>('audit_logs').create((log) => {
+          setRaw(log, 'server_id', '');
+          setRaw(log, 'action', `cash_${data.direction}`);
+          setRaw(log, 'entity_type', 'cash_movement');
+          setRaw(log, 'entity_id', movement.id);
+          setRaw(log, 'staff_id', data.staffId);
+          if (data.managerApproverId) {
+            setRaw(log, 'manager_approver', data.managerApproverId);
+          }
+          setRaw(
+            log,
+            'changes_json',
+            JSON.stringify({
+              direction: data.direction,
+              amount: data.amount,
+              reason: data.reason,
+              shiftId,
+            }),
+          );
+          setRaw(log, 'device_id', 'terminal-1');
+          setRaw(log, 'created_at', now);
+        });
+      });
+
+      // Priority sync
+      if (movementId) {
+        onCashMovement(movementId);
+      }
+
+      Alert.alert(
+        data.direction === 'in' ? 'Cash In Recorded' : 'Cash Out Recorded',
+        `$${data.amount.toFixed(2)} — ${data.reason}`,
+      );
+    },
+    [currentShift],
+  );
+
   const handleOpenDrawer = useCallback(async (reason: string, staffId: string) => {
     setDrawerModalVisible(false);
 
@@ -334,7 +424,17 @@ export default function POSScreen() {
 
   return (
     <View style={styles.container}>
-      <TopBar onOpenDrawer={() => setDrawerModalVisible(true)} />
+      <TopBar
+        onOpenDrawer={() => setDrawerModalVisible(true)}
+        onCashIn={() => {
+          setCashMovementDirection('in');
+          setCashMovementVisible(true);
+        }}
+        onCashOut={() => {
+          setCashMovementDirection('out');
+          setCashMovementVisible(true);
+        }}
+      />
       <View style={styles.content}>
         <View style={styles.productArea}>
           <ProductSearch
@@ -383,6 +483,13 @@ export default function POSScreen() {
         visible={drawerModalVisible}
         onConfirm={handleOpenDrawer}
         onCancel={() => setDrawerModalVisible(false)}
+      />
+
+      <CashMovementModal
+        visible={cashMovementVisible}
+        direction={cashMovementDirection}
+        onConfirm={handleCashMovement}
+        onCancel={() => setCashMovementVisible(false)}
       />
     </View>
   );
@@ -493,6 +600,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2563eb',
+  },
+
+  // Cash movement buttons
+  cashMovementButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 4,
+  },
+  cashMovementText: {
+    color: '#1a1a1a',
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Open Drawer button

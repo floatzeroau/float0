@@ -244,5 +244,24 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 12,
+      steps: [
+        createTable({
+          name: 'cash_movements',
+          columns: [
+            { name: 'server_id', type: 'string' },
+            { name: 'shift_id', type: 'string' },
+            { name: 'direction', type: 'string' },
+            { name: 'amount', type: 'number' },
+            { name: 'reason', type: 'string' },
+            { name: 'staff_id', type: 'string' },
+            { name: 'manager_approver_id', type: 'string', isOptional: true },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 });

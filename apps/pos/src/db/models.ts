@@ -277,11 +277,32 @@ export class Payment extends Model {
 // Shifts & Staff
 // ---------------------------------------------------------------------------
 
+export class CashMovement extends Model {
+  static table = 'cash_movements';
+
+  static associations = {
+    shifts: { type: 'belongs_to' as const, key: 'shift_id' },
+  };
+
+  @text('server_id') serverId!: string;
+  @text('shift_id') shiftId!: string;
+  @text('direction') direction!: string;
+  @field('amount') amount!: number;
+  @text('reason') reason!: string;
+  @text('staff_id') staffId!: string;
+  @text('manager_approver_id') managerApproverId?: string;
+  @date('created_at') createdAt!: Date;
+  @date('updated_at') updatedAt!: Date;
+
+  @immutableRelation('shifts', 'shift_id') shift: any;
+}
+
 export class Shift extends Model {
   static table = 'shifts';
 
   static associations = {
     staff: { type: 'belongs_to' as const, key: 'staff_id' },
+    cash_movements: { type: 'has_many' as const, foreignKey: 'shift_id' },
   };
 
   @text('server_id') serverId!: string;
@@ -300,6 +321,7 @@ export class Shift extends Model {
   @date('updated_at') updatedAt!: Date;
 
   @immutableRelation('staff', 'staff_id') staffMember: any;
+  @children('cash_movements') cashMovements: any;
 }
 
 export class Staff extends Model {

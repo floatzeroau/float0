@@ -26,3 +26,12 @@ export function onShiftClosed(shiftId: string): void {
 
   syncManagerRef.syncPriority([{ table: 'shifts', id: shiftId }]);
 }
+
+export function onCashMovement(movementId: string): void {
+  if (!syncManagerRef) {
+    console.warn('SyncManager not initialized, cannot priority sync cash movement');
+    return;
+  }
+
+  syncManagerRef.syncPriority([{ table: 'cash_movements', id: movementId }]);
+}
