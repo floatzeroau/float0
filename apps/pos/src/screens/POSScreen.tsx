@@ -310,6 +310,8 @@ export default function POSScreen() {
         visible={paymentVisible}
         orderTotal={cartTotals.total}
         orderNumber={currentOrder?.orderNumber ?? ''}
+        orderId={currentOrder?.id ?? ''}
+        customerEmail={currentOrder?.customerEmail ?? undefined}
         onComplete={handlePaymentComplete}
         onRecordPartialPayment={recordPartialPayment}
         onCancel={handlePaymentCancel}

@@ -39,6 +39,7 @@ export interface CurrentOrder {
   itemCount: number;
   customerId: string | null;
   customerName: string | null;
+  customerEmail: string | null;
   status: OrderStatusDB;
 }
 
@@ -487,6 +488,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         itemCount: 0,
         customerId: null,
         customerName: null,
+        customerEmail: null,
         status: 'draft',
       });
 
@@ -717,11 +719,13 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     if (!orderId) return;
 
     let customerName: string | null = null;
+    let customerEmail: string | null = null;
     if (customerId) {
       try {
         const customer = await database.get<Customer>('customers').find(customerId);
         const parts = [customer.firstName, customer.lastName].filter(Boolean);
         customerName = parts.join(' ') || null;
+        customerEmail = customer.email || null;
       } catch {
         // Customer not found
       }
@@ -736,7 +740,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     setCurrentOrder((prev) => {
       if (!prev) return prev;
-      return { ...prev, customerId, customerName };
+      return { ...prev, customerId, customerName, customerEmail };
     });
   }, []);
 
@@ -995,13 +999,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       orderRecordIdRef.current = heldOrderId;
 
-      // Resolve customer name
+      // Resolve customer name and email
       let customerName: string | null = null;
+      let customerEmail: string | null = null;
       if (heldRecord.customerId) {
         try {
           const customer = await database.get<Customer>('customers').find(heldRecord.customerId);
           const parts = [customer.firstName, customer.lastName].filter(Boolean);
           customerName = parts.join(' ') || null;
+          customerEmail = customer.email || null;
         } catch {
           // Customer not found
         }
@@ -1028,6 +1034,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         itemCount: 0, // will be updated by refreshItems
         customerId: heldRecord.customerId || null,
         customerName,
+        customerEmail,
         status: 'draft',
       });
 
@@ -1075,13 +1082,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       orderRecordIdRef.current = orderId;
 
-      // Resolve customer name
+      // Resolve customer name and email
       let customerName: string | null = null;
+      let customerEmail: string | null = null;
       if (orderRecord.customerId) {
         try {
           const customer = await database.get<Customer>('customers').find(orderRecord.customerId);
           const parts = [customer.firstName, customer.lastName].filter(Boolean);
           customerName = parts.join(' ') || null;
+          customerEmail = customer.email || null;
         } catch {
           // Customer not found
         }
@@ -1110,6 +1119,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         itemCount: 0,
         customerId: orderRecord.customerId || null,
         customerName,
+        customerEmail,
         status,
       });
 

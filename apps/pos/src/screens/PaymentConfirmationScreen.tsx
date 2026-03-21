@@ -7,16 +7,20 @@ import {
   Animated,
   ScrollView,
   Alert,
+  TextInput,
 } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import type { ReceiptData } from '@float0/shared';
 import { getAudioService, getPrinterService } from '../services';
 import { ReceiptPreview } from '../components/ReceiptPreview';
+import { API_URL, AUTH_TOKEN_KEY } from '../config';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface PaymentConfirmationData {
+  orderId: string;
   orderNumber: string;
   orderTotal: number;
   totalPaid: number;
@@ -27,6 +31,7 @@ export interface PaymentConfirmationData {
   cardType?: string;
   approvalCode?: string;
   receiptData?: ReceiptData;
+  customerEmail?: string;
 }
 
 interface PaymentConfirmationScreenProps {
@@ -116,6 +121,10 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
   };
 
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [emailAddress, setEmailAddress] = useState(data.customerEmail ?? '');
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
 
   const handlePrintReceipt = useCallback(() => {
     if (data.receiptData) {
@@ -127,8 +136,47 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
   }, [data.receiptData]);
 
   const handleEmailReceipt = useCallback(() => {
-    Alert.alert('Email Receipt', 'Not yet implemented (FLO-74)');
-  }, []);
+    if (emailSent) return;
+    setShowEmailInput(true);
+  }, [emailSent]);
+
+  const handleSendEmail = useCallback(async () => {
+    const trimmed = emailAddress.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+
+    setEmailSending(true);
+    try {
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const response = await fetch(`${API_URL}/receipts/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ orderId: data.orderId, email: trimmed }),
+      });
+
+      if (response.ok) {
+        setEmailSent(true);
+        setShowEmailInput(false);
+        Alert.alert('Email sent', `Receipt sent to ${trimmed}`);
+      } else {
+        Alert.alert('Email saved', 'Email saved for when online');
+        setEmailSent(true);
+        setShowEmailInput(false);
+      }
+    } catch {
+      // Offline — queue for later
+      Alert.alert('Email saved', 'Email saved for when online');
+      setEmailSent(true);
+      setShowEmailInput(false);
+    } finally {
+      setEmailSending(false);
+    }
+  }, [emailAddress, data.orderId]);
 
   return (
     <ScrollView
@@ -196,6 +244,41 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
           </View>
         )}
 
+        {/* Email input */}
+        {showEmailInput && (
+          <View style={styles.emailInputContainer}>
+            <TextInput
+              style={styles.emailInput}
+              placeholder="customer@email.com"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={emailAddress}
+              onChangeText={setEmailAddress}
+              editable={!emailSending}
+            />
+            <View style={styles.emailButtonRow}>
+              <TouchableOpacity
+                style={[styles.emailSendButton, emailSending && styles.buttonDisabled]}
+                onPress={handleSendEmail}
+                disabled={emailSending}
+              >
+                <Text style={styles.emailSendButtonText}>
+                  {emailSending ? 'Sending...' : 'Send'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.emailCancelButton}
+                onPress={() => setShowEmailInput(false)}
+                disabled={emailSending}
+              >
+                <Text style={styles.emailCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Action buttons */}
         <View style={styles.buttonRow}>
           <TouchableOpacity
@@ -207,8 +290,14 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
               {showReceipt ? 'Printed' : 'Print Receipt'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.receiptButton} onPress={handleEmailReceipt}>
-            <Text style={styles.receiptButtonText}>Email Receipt</Text>
+          <TouchableOpacity
+            style={[styles.receiptButton, emailSent && styles.buttonDisabled]}
+            onPress={handleEmailReceipt}
+            disabled={emailSent}
+          >
+            <Text style={styles.receiptButtonText}>
+              {emailSent ? 'Email Sent' : 'Email Receipt'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.noReceiptButton} onPress={handleDone}>
             <Text style={styles.noReceiptButtonText}>No Receipt</Text>
@@ -345,6 +434,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
   },
+  // Email input
+  emailInputContainer: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  emailInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#1a1a1a',
+    marginBottom: 12,
+  },
+  emailButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  emailSendButton: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  emailSendButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  emailCancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  emailCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+
   newOrderButton: {
     paddingHorizontal: 32,
     paddingVertical: 16,

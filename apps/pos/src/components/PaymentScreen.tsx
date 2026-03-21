@@ -18,6 +18,8 @@ interface PaymentScreenProps {
   visible: boolean;
   orderTotal: number;
   orderNumber: string;
+  orderId: string;
+  customerEmail?: string;
   onComplete: (params: CompletePaymentParams) => Promise<ReceiptData | undefined>;
   onRecordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
   onCancel: () => void;
@@ -44,6 +46,8 @@ export function PaymentScreen({
   visible,
   orderTotal,
   orderNumber,
+  orderId,
+  customerEmail,
   onComplete,
   onRecordPartialPayment,
   onCancel,
@@ -195,6 +199,7 @@ export function PaymentScreen({
             lastFour: result.lastFour ?? '',
           });
           showConfirmation({
+            orderId,
             orderNumber,
             orderTotal,
             totalPaid: amountToCharge,
@@ -204,6 +209,7 @@ export function PaymentScreen({
             cardType: result.cardType ?? '',
             approvalCode: result.approvalCode ?? '',
             receiptData,
+            customerEmail,
           });
         } else {
           const errorMsg = result.errorMessage ?? 'Payment declined';
@@ -225,7 +231,16 @@ export function PaymentScreen({
         logFailedAttempt('Terminal communication error', amountToCharge, attempt, false);
       }
     },
-    [orderTotal, orderNumber, onComplete, showConfirmation, retryCount, logFailedAttempt],
+    [
+      orderTotal,
+      orderNumber,
+      orderId,
+      customerEmail,
+      onComplete,
+      showConfirmation,
+      retryCount,
+      logFailedAttempt,
+    ],
   );
 
   const handleSplitSelect = useCallback(() => {
@@ -301,6 +316,7 @@ export function PaymentScreen({
         roundingAmount: cashPayment.roundingAmount,
       });
       showConfirmation({
+        orderId,
         orderNumber,
         orderTotal,
         totalPaid: cashPayment.payableAmount,
@@ -308,6 +324,7 @@ export function PaymentScreen({
         paymentMethod: 'cash',
         changeGiven: changeAmount,
         receiptData,
+        customerEmail,
       });
     } catch {
       setLoading(false);
@@ -323,6 +340,8 @@ export function PaymentScreen({
     showConfirmation,
     orderNumber,
     orderTotal,
+    orderId,
+    customerEmail,
   ]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
@@ -548,12 +567,14 @@ export function PaymentScreen({
             onComplete={async (params) => {
               const receiptData = await onComplete(params);
               showConfirmation({
+                orderId,
                 orderNumber,
                 orderTotal: orderTotal + tipAmount,
                 totalPaid: orderTotal + tipAmount,
                 tipAmount,
                 paymentMethod: 'split',
                 receiptData,
+                customerEmail,
               });
             }}
             onCancel={() => {
