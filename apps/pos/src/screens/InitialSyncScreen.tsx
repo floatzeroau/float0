@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useDatabase } from '@nozbe/watermelondb/react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -8,6 +9,7 @@ import {
   resetInitialSync,
   type InitialSyncProgress,
 } from '../sync/initial-sync';
+import { STAFF_ID_KEY } from '../config';
 
 const ENTITY_LABELS: Record<string, string> = {
   categories: 'categories',
@@ -63,7 +65,16 @@ export default function InitialSyncScreen({ navigation }: Props) {
         updateEta(p);
       });
       setStatus('complete');
-      setTimeout(() => navigation.replace('Main'), 500);
+      setTimeout(async () => {
+        const staffId = await SecureStore.getItemAsync(STAFF_ID_KEY);
+        if (staffId) {
+          const { getActiveShift } = await import('../db/queries');
+          const shift = await getActiveShift(database, staffId);
+          navigation.replace(shift ? 'Main' : 'OpenShift');
+        } else {
+          navigation.replace('Main');
+        }
+      }, 500);
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Sync failed');

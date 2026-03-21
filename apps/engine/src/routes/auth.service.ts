@@ -227,7 +227,7 @@ export async function pinLogin(
   orgId: string,
   pin: string,
   ipAddress?: string,
-): Promise<{ accessToken: string }> {
+): Promise<{ accessToken: string; staffId: string; staffName: string }> {
   // Get all memberships for org that have a PIN set
   const memberships = await db
     .select()
@@ -291,7 +291,11 @@ export async function pinLogin(
       ipAddress: ipAddress ?? null,
     });
 
-    return { accessToken };
+    return {
+      accessToken,
+      staffId: membership.id,
+      staffName: `${user.firstName} ${user.lastName}`.trim(),
+    };
   }
 
   // No match found — increment failed attempts for all PIN-enabled memberships in this org

@@ -10,7 +10,7 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { API_URL } from '../config';
+import { API_URL, STAFF_ID_KEY, STAFF_NAME_KEY } from '../config';
 
 const PIN_LENGTH = 4;
 const ORG_ID_KEY = 'float0_org_id';
@@ -96,11 +96,19 @@ export default function LoginScreen({ navigation }: Props) {
 
       if (res.ok) {
         await SecureStore.setItemAsync(TOKEN_KEY, body.accessToken);
+        await SecureStore.setItemAsync(STAFF_ID_KEY, body.staffId);
+        await SecureStore.setItemAsync(STAFF_NAME_KEY, body.staffName);
         setPin('');
-        // Check if initial sync is needed; if so, sync first (now authenticated)
         const { isInitialSyncComplete } = await import('../sync/initial-sync');
         const synced = await isInitialSyncComplete();
-        navigation.replace(synced ? 'Main' : 'InitialSync');
+        if (!synced) {
+          navigation.replace('InitialSync');
+        } else {
+          const { database } = await import('../db/database');
+          const { getActiveShift } = await import('../db/queries');
+          const shift = await getActiveShift(database, body.staffId);
+          navigation.replace(shift ? 'Main' : 'OpenShift');
+        }
       } else if (res.status === 429) {
         const retryAfter = body.retryAfter ?? 300;
         startLockout(retryAfter);

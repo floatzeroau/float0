@@ -6,13 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import InitialSyncScreen from '../screens/InitialSyncScreen';
 import LoginScreen from '../screens/LoginScreen';
+import OpenShiftScreen from '../screens/OpenShiftScreen';
 import POSScreen from '../screens/POSScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { SyncProvider } from '../sync/SyncProvider';
 import { SyncStatusBar } from '../components/SyncStatusBar';
 import { OrderProvider } from '../state/order-store';
-import { isInitialSyncComplete } from '../sync/initial-sync';
+import { ShiftProvider } from '../state/ShiftProvider';
 
 // ---------------------------------------------------------------------------
 // Type declarations
@@ -21,6 +22,7 @@ import { isInitialSyncComplete } from '../sync/initial-sync';
 export type RootStackParamList = {
   Login: undefined;
   InitialSync: undefined;
+  OpenShift: undefined;
   Main: undefined;
 };
 
@@ -40,14 +42,16 @@ function MainTabs() {
   return (
     <SyncProvider>
       <OrderProvider>
-        <SafeAreaView style={styles.container} edges={['top']}>
-          <SyncStatusBar />
-          <Tab.Navigator screenOptions={{ headerShown: false }}>
-            <Tab.Screen name="POS" component={POSScreen} />
-            <Tab.Screen name="Orders" component={OrderHistoryScreen} />
-            <Tab.Screen name="Settings" component={SettingsScreen} />
-          </Tab.Navigator>
-        </SafeAreaView>
+        <ShiftProvider>
+          <SafeAreaView style={styles.container} edges={['top']}>
+            <SyncStatusBar />
+            <Tab.Navigator screenOptions={{ headerShown: false }}>
+              <Tab.Screen name="POS" component={POSScreen} />
+              <Tab.Screen name="Orders" component={OrderHistoryScreen} />
+              <Tab.Screen name="Settings" component={SettingsScreen} />
+            </Tab.Navigator>
+          </SafeAreaView>
+        </ShiftProvider>
       </OrderProvider>
     </SyncProvider>
   );
@@ -80,6 +84,7 @@ export default function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="InitialSync" component={InitialSyncScreen} />
+      <Stack.Screen name="OpenShift" component={OpenShiftScreen} />
       <Stack.Screen name="Main" component={MainTabs} options={{ gestureEnabled: false }} />
     </Stack.Navigator>
   );
