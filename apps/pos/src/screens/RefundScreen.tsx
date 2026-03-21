@@ -16,6 +16,7 @@ import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { OrderItem, Product } from '../db/models';
 import { useOrder } from '../state/order-store';
+import { getTerminalService } from '../services';
 import { API_URL } from '../config';
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,7 @@ interface RefundOrderData {
   orderNumber: string;
   total: number;
   originalPaymentMethod: 'cash' | 'card' | 'split';
+  originalApprovalCode?: string;
 }
 
 interface RefundScreenProps {
@@ -45,7 +47,16 @@ interface RefundItem {
 }
 
 type RefundMode = 'select' | 'full' | 'partial';
-type RefundPhase = 'mode' | 'items' | 'reason' | 'pin' | 'method' | 'processing' | 'done';
+type RefundPhase =
+  | 'mode'
+  | 'items'
+  | 'reason'
+  | 'pin'
+  | 'method'
+  | 'terminal_processing'
+  | 'processing'
+  | 'terminal_failed'
+  | 'done';
 
 const PIN_LENGTH = 4;
 const ORG_ID_KEY = 'float0_org_id';
@@ -81,6 +92,12 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
 
   // Processing state
   const [processing, setProcessing] = useState(false);
+  const [terminalError, setTerminalError] = useState('');
+
+  // Animated dots for terminal processing
+  const terminalDot1 = useState(() => new Animated.Value(0.3))[0];
+  const terminalDot2 = useState(() => new Animated.Value(0.3))[0];
+  const terminalDot3 = useState(() => new Animated.Value(0.3))[0];
 
   // Load items when order changes
   useEffect(() => {
@@ -135,8 +152,36 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
       setUseCustomAmount(false);
       setRefundMethod(order?.originalPaymentMethod === 'card' ? 'card' : 'cash');
       setProcessing(false);
+      setTerminalError('');
     }
   }, [visible, order]);
+
+  // Animated dots loop for terminal processing
+  useEffect(() => {
+    if (phase !== 'terminal_processing') return;
+
+    const animate = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+        ]),
+      );
+
+    const a1 = animate(terminalDot1, 0);
+    const a2 = animate(terminalDot2, 200);
+    const a3 = animate(terminalDot3, 400);
+    a1.start();
+    a2.start();
+    a3.start();
+
+    return () => {
+      a1.stop();
+      a2.stop();
+      a3.stop();
+    };
+  }, [phase, terminalDot1, terminalDot2, terminalDot3]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
 
@@ -260,39 +305,101 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
   // Refund execution
   // ---------------------------------------------------------------------------
 
-  const executeRefund = useCallback(async () => {
-    if (!order || processing) return;
-    setProcessing(true);
-    setPhase('processing');
-
-    try {
+  const processRefundRecord = useCallback(
+    async (
+      method: 'cash' | 'card',
+      terminalData?: { approvalCode: string; cardType: string; cardLastFour: string },
+    ) => {
       await refundOrder({
-        orderId: order.id,
+        orderId: order!.id,
         refundAmount,
         reason,
-        refundMethod,
+        refundMethod: method,
         managerApprover: approvedManagerId,
         isFullRefund: mode === 'full',
         refundedItemIds: mode === 'partial' && !useCustomAmount ? selectedItemIds : undefined,
+        ...(terminalData && {
+          approvalCode: terminalData.approvalCode,
+          cardType: terminalData.cardType,
+          cardLastFour: terminalData.cardLastFour,
+        }),
       });
+    },
+    [
+      order,
+      refundOrder,
+      refundAmount,
+      reason,
+      approvedManagerId,
+      mode,
+      useCustomAmount,
+      selectedItemIds,
+    ],
+  );
+
+  const executeRefund = useCallback(async () => {
+    if (!order || processing) return;
+    setProcessing(true);
+
+    if (refundMethod === 'card') {
+      // Card refund — send through terminal
+      setPhase('terminal_processing');
+      try {
+        const terminalService = getTerminalService();
+        const result = await terminalService.sendRefund(
+          refundAmount,
+          order.originalApprovalCode ?? '',
+        );
+
+        if (!result.success) {
+          setTerminalError(result.errorMessage ?? 'Card refund declined by terminal');
+          setProcessing(false);
+          setPhase('terminal_failed');
+          return;
+        }
+
+        // Terminal success — create refund record with card method
+        setPhase('processing');
+        await processRefundRecord('card', {
+          approvalCode: result.approvalCode ?? '',
+          cardType: result.cardType ?? '',
+          cardLastFour: result.lastFour ?? '',
+        });
+        setPhase('done');
+      } catch (err) {
+        setTerminalError(err instanceof Error ? err.message : 'Terminal communication error');
+        setProcessing(false);
+        setPhase('terminal_failed');
+      }
+    } else {
+      // Cash refund — direct
+      setPhase('processing');
+      try {
+        await processRefundRecord('cash');
+        setPhase('done');
+      } catch (err) {
+        setProcessing(false);
+        Alert.alert('Refund Failed', err instanceof Error ? err.message : 'An error occurred');
+        setPhase('method');
+      }
+    }
+  }, [order, processing, refundMethod, refundAmount, processRefundRecord]);
+
+  const handleCashFallback = useCallback(async () => {
+    if (!order) return;
+    setProcessing(true);
+    setRefundMethod('cash');
+    setPhase('processing');
+
+    try {
+      await processRefundRecord('cash');
       setPhase('done');
     } catch (err) {
       setProcessing(false);
       Alert.alert('Refund Failed', err instanceof Error ? err.message : 'An error occurred');
       setPhase('method');
     }
-  }, [
-    order,
-    processing,
-    refundOrder,
-    refundAmount,
-    reason,
-    refundMethod,
-    approvedManagerId,
-    mode,
-    useCustomAmount,
-    selectedItemIds,
-  ]);
+  }, [order, processRefundRecord]);
 
   // ---------------------------------------------------------------------------
   // Navigation helpers
@@ -587,7 +694,7 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
                 >
                   Refund to Card
                 </Text>
-                <Text style={styles.methodButtonSub}>(FLO-71)</Text>
+                <Text style={styles.methodButtonSub}>Via terminal</Text>
               </TouchableOpacity>
             </View>
 
@@ -622,7 +729,62 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
           </View>
         )}
 
-        {/* Processing */}
+        {/* Terminal Processing */}
+        {phase === 'terminal_processing' && (
+          <View style={styles.centerContainer}>
+            <View style={styles.terminalIconCircle}>
+              <Text style={styles.terminalIcon}>Card</Text>
+            </View>
+            <Text style={styles.processingText}>Processing refund on terminal...</Text>
+            <Text style={styles.processingAmount}>{formatCurrency(refundAmount)}</Text>
+            <View style={styles.terminalDots}>
+              <Animated.View style={[styles.terminalDot, { opacity: terminalDot1 }]} />
+              <Animated.View style={[styles.terminalDot, { opacity: terminalDot2 }]} />
+              <Animated.View style={[styles.terminalDot, { opacity: terminalDot3 }]} />
+            </View>
+            <Text style={styles.terminalHint}>Please wait for terminal response</Text>
+          </View>
+        )}
+
+        {/* Terminal Failed — offer cash fallback */}
+        {phase === 'terminal_failed' && (
+          <View style={styles.centerContainer}>
+            <View style={styles.failCircle}>
+              <Text style={styles.failIcon}>!</Text>
+            </View>
+            <Text style={styles.failTitle}>Card Refund Failed</Text>
+            <Text style={styles.failMessage}>{terminalError}</Text>
+            <Text style={styles.failPrompt}>Issue cash refund instead?</Text>
+
+            <View style={styles.failButtons}>
+              <TouchableOpacity style={styles.cashFallbackButton} onPress={handleCashFallback}>
+                <Text style={styles.cashFallbackText}>
+                  Cash Refund — {formatCurrency(refundAmount)}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.retryTerminalButton}
+                onPress={() => {
+                  setProcessing(false);
+                  executeRefund();
+                }}
+              >
+                <Text style={styles.retryTerminalText}>Retry Card Refund</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelFailButton}
+                onPress={() => {
+                  setProcessing(false);
+                  setPhase('method');
+                }}
+              >
+                <Text style={styles.cancelFailText}>Back</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Processing (record creation) */}
         {phase === 'processing' && (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#8b5cf6" />
@@ -1095,6 +1257,117 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
     marginTop: 16,
+  },
+  processingAmount: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#8b5cf6',
+    marginTop: 8,
+  },
+
+  // Terminal processing
+  terminalIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  terminalIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  terminalDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  terminalDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#6366f1',
+  },
+  terminalHint: {
+    fontSize: 13,
+    color: '#999',
+  },
+
+  // Terminal failure
+  failCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#dc2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  failIcon: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  failTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  failMessage: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    textAlign: 'center',
+    maxWidth: 320,
+  },
+  failPrompt: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 20,
+  },
+  failButtons: {
+    gap: 10,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  cashFallbackButton: {
+    width: '100%',
+    paddingVertical: 14,
+    backgroundColor: '#16a34a',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cashFallbackText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  retryTerminalButton: {
+    width: '100%',
+    paddingVertical: 14,
+    backgroundColor: '#6366f1',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  retryTerminalText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  cancelFailButton: {
+    paddingVertical: 10,
+  },
+  cancelFailText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
   },
 
   // Done

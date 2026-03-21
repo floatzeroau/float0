@@ -263,6 +263,7 @@ interface RefundOrderData {
   orderNumber: string;
   total: number;
   originalPaymentMethod: 'cash' | 'card' | 'split';
+  originalApprovalCode?: string;
 }
 
 export default function OrderHistoryScreen() {
@@ -339,8 +340,9 @@ export default function OrderHistoryScreen() {
       const order = orders.find((o) => o.id === orderId);
       if (!order) return;
 
-      // Determine original payment method
+      // Determine original payment method and approval code
       let originalMethod: 'cash' | 'card' | 'split' = 'cash';
+      let originalApprovalCode: string | undefined;
       try {
         const payments = await database
           .get<Payment>('payments')
@@ -351,6 +353,9 @@ export default function OrderHistoryScreen() {
           originalMethod = 'split';
         } else if (payments.length === 1) {
           originalMethod = payments[0].method === 'card' ? 'card' : 'cash';
+          if (originalMethod === 'card' && payments[0].reference) {
+            originalApprovalCode = payments[0].reference;
+          }
         }
       } catch {
         // default to cash
@@ -362,6 +367,7 @@ export default function OrderHistoryScreen() {
         orderNumber: order.orderNumber,
         total: order.total,
         originalPaymentMethod: originalMethod,
+        originalApprovalCode,
       });
     },
     [orders],

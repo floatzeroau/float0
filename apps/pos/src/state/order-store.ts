@@ -111,6 +111,9 @@ export interface RefundParams {
   managerApprover: string;
   isFullRefund: boolean;
   refundedItemIds?: string[];
+  approvalCode?: string;
+  cardType?: string;
+  cardLastFour?: string;
 }
 
 const MAX_HELD_ORDERS = 20;
@@ -1421,7 +1424,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       managerApprover,
       isFullRefund,
       refundedItemIds,
+      approvalCode,
+      cardType,
+      cardLastFour,
     } = params;
+
+    // Build reference: for card refunds include approval code, otherwise just reason
+    const reference =
+      refundMethod === 'card' && approvalCode ? `${reason} | Approval: ${approvalCode}` : reason;
 
     // Create refund payment record (negative amount)
     let paymentId = '';
@@ -1433,7 +1443,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         setRaw(p, 'method', refundMethod);
         setRaw(p, 'amount', -refundAmount);
         setRaw(p, 'tip_amount', 0);
-        setRaw(p, 'reference', reason);
+        setRaw(p, 'reference', reference);
         setRaw(p, 'status', 'refunded');
         setRaw(p, 'created_at', now);
         setRaw(p, 'updated_at', now);
@@ -1458,6 +1468,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             isFullRefund,
             refundedItemIds: refundedItemIds ?? [],
             paymentId,
+            ...(approvalCode && { approvalCode }),
+            ...(cardType && { cardType }),
+            ...(cardLastFour && { cardLastFour }),
           }),
         );
         setRaw(a, 'created_at', now);
