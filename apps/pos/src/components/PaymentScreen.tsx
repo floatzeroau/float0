@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { calculatePaymentTotal } from '@float0/shared';
+import type { ReceiptData } from '@float0/shared';
 import type { CompletePaymentParams } from '../state/order-store';
 import { getTerminalService } from '../services';
 import { TipPrompt } from './TipPrompt';
@@ -17,7 +18,7 @@ interface PaymentScreenProps {
   visible: boolean;
   orderTotal: number;
   orderNumber: string;
-  onComplete: (params: CompletePaymentParams) => Promise<void>;
+  onComplete: (params: CompletePaymentParams) => Promise<ReceiptData | undefined>;
   onRecordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
   onCancel: () => void;
 }
@@ -185,7 +186,7 @@ export function PaymentScreen({
         if (result.success) {
           setRetryCount(0);
           setLoading(true);
-          await onComplete({
+          const receiptData = await onComplete({
             method: 'card',
             amount: amountToCharge,
             tipAmount: tip,
@@ -202,6 +203,7 @@ export function PaymentScreen({
             cardLastFour: result.lastFour ?? '',
             cardType: result.cardType ?? '',
             approvalCode: result.approvalCode ?? '',
+            receiptData,
           });
         } else {
           const errorMsg = result.errorMessage ?? 'Payment declined';
@@ -290,7 +292,7 @@ export function PaymentScreen({
     if (!isSufficient || loading) return;
     setLoading(true);
     try {
-      await onComplete({
+      const receiptData = await onComplete({
         method: 'cash',
         amount: cashPayment.payableAmount,
         tipAmount,
@@ -305,6 +307,7 @@ export function PaymentScreen({
         tipAmount,
         paymentMethod: 'cash',
         changeGiven: changeAmount,
+        receiptData,
       });
     } catch {
       setLoading(false);
@@ -543,13 +546,14 @@ export function PaymentScreen({
             tipAmount={tipAmount}
             onRecordPartialPayment={onRecordPartialPayment}
             onComplete={async (params) => {
-              await onComplete(params);
+              const receiptData = await onComplete(params);
               showConfirmation({
                 orderNumber,
                 orderTotal: orderTotal + tipAmount,
                 totalPaid: orderTotal + tipAmount,
                 tipAmount,
                 paymentMethod: 'split',
+                receiptData,
               });
             }}
             onCancel={() => {

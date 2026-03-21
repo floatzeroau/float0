@@ -193,6 +193,7 @@ export class Order extends Model {
   @text('discount_reason') discountReason?: string;
   @text('notes') notes?: string;
   @field('held_at') heldAt?: number;
+  @text('receipt_json') receiptJson?: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

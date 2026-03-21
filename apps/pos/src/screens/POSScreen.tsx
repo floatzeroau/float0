@@ -258,8 +258,9 @@ export default function POSScreen() {
 
   const handlePaymentComplete = useCallback(
     async (params: CompletePaymentParams) => {
-      await completePayment(params);
+      const receiptData = await completePayment(params);
       // Modal stays open — PaymentScreen shows confirmation, then calls onCancel to close
+      return receiptData;
     },
     [completePayment],
   );

@@ -1,6 +1,16 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
-import { getAudioService } from '../services';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import type { ReceiptData } from '@float0/shared';
+import { getAudioService, getPrinterService } from '../services';
+import { ReceiptPreview } from '../components/ReceiptPreview';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,6 +26,7 @@ export interface PaymentConfirmationData {
   cardLastFour?: string;
   cardType?: string;
   approvalCode?: string;
+  receiptData?: ReceiptData;
 }
 
 interface PaymentConfirmationScreenProps {
@@ -104,18 +115,27 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
     }
   };
 
-  const handlePrintReceipt = () => {
-    handleDone();
-    Alert.alert('Print Receipt', 'Not yet implemented (FLO-72)');
-  };
+  const [showReceipt, setShowReceipt] = useState(false);
 
-  const handleEmailReceipt = () => {
-    handleDone();
+  const handlePrintReceipt = useCallback(() => {
+    if (data.receiptData) {
+      getPrinterService()
+        .printReceipt(data.receiptData)
+        .catch(() => {});
+      setShowReceipt(true);
+    }
+  }, [data.receiptData]);
+
+  const handleEmailReceipt = useCallback(() => {
     Alert.alert('Email Receipt', 'Not yet implemented (FLO-74)');
-  };
+  }, []);
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.scrollContainer}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Checkmark animation */}
       <Animated.View
         style={[
@@ -169,10 +189,23 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
           ) : null}
         </View>
 
+        {/* Receipt preview */}
+        {showReceipt && data.receiptData && (
+          <View style={styles.receiptPreviewContainer}>
+            <ReceiptPreview data={data.receiptData} />
+          </View>
+        )}
+
         {/* Action buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.receiptButton} onPress={handlePrintReceipt}>
-            <Text style={styles.receiptButtonText}>Print Receipt</Text>
+          <TouchableOpacity
+            style={[styles.receiptButton, !data.receiptData && styles.buttonDisabled]}
+            onPress={handlePrintReceipt}
+            disabled={!data.receiptData}
+          >
+            <Text style={styles.receiptButtonText}>
+              {showReceipt ? 'Printed' : 'Print Receipt'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.receiptButton} onPress={handleEmailReceipt}>
             <Text style={styles.receiptButtonText}>Email Receipt</Text>
@@ -186,7 +219,7 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
           <Text style={styles.newOrderButtonText}>New Order</Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -195,11 +228,14 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
     padding: 40,
   },
 
@@ -268,6 +304,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
     fontFamily: 'monospace',
+  },
+
+  // Receipt preview
+  receiptPreviewContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
 
   // Buttons

@@ -2,9 +2,12 @@ import type { ITerminalService } from './terminal-service';
 import { MockTerminalService } from './mock-terminal';
 import type { IAudioService } from './audio-service';
 import { ExpoAudioService } from './audio-service';
+import type { IPrinterService } from './printer-service';
+import { MockPrinterService } from './printer-service';
 
 export type { ITerminalService, TerminalResult, TerminalStatus } from './terminal-service';
 export type { IAudioService } from './audio-service';
+export type { IPrinterService, PrinterStatus } from './printer-service';
 
 // ---------------------------------------------------------------------------
 // Terminal Service Factory
@@ -43,4 +46,17 @@ export function getAudioService(): IAudioService {
     audioInstance = new ExpoAudioService();
   }
   return audioInstance;
+}
+
+// ---------------------------------------------------------------------------
+// Printer Service Factory
+// ---------------------------------------------------------------------------
+
+let printerInstance: IPrinterService | null = null;
+
+export function getPrinterService(): IPrinterService {
+  if (!printerInstance) {
+    printerInstance = new MockPrinterService();
+  }
+  return printerInstance;
 }

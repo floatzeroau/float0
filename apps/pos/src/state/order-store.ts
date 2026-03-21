@@ -3,8 +3,19 @@ import { Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { Order, OrderItem, Product, Customer, AuditLog, Payment } from '../db/models';
-import { calculateLineTotal, calculateCartTotals, calculateItemDiscount } from '@float0/shared';
-import type { DiscountType, OrderDiscount } from '@float0/shared';
+import {
+  calculateLineTotal,
+  calculateCartTotals,
+  calculateItemDiscount,
+  buildReceipt,
+} from '@float0/shared';
+import type {
+  DiscountType,
+  OrderDiscount,
+  ReceiptData,
+  ReceiptItemInput,
+  ReceiptPaymentInput,
+} from '@float0/shared';
 import { eventBus } from '@float0/events';
 import { transitionOrder } from './order-lifecycle';
 import { onPaymentCompleted } from '../sync/payment-sync-hook';
@@ -165,7 +176,7 @@ interface OrderStoreValue {
   ) => Promise<void>;
   removeItemPriceOverride: (itemId: string) => Promise<void>;
   returnToNewOrder: () => Promise<void>;
-  completePayment: (params: CompletePaymentParams) => Promise<void>;
+  completePayment: (params: CompletePaymentParams) => Promise<ReceiptData | undefined>;
   recordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
   refundOrder: (params: RefundParams) => Promise<void>;
 }
@@ -254,7 +265,7 @@ const OrderContext = createContext<OrderStoreValue>({
   overrideItemPrice: async () => {},
   removeItemPriceOverride: async () => {},
   returnToNewOrder: async () => {},
-  completePayment: async () => {},
+  completePayment: async () => undefined,
   recordPartialPayment: async () => {},
   refundOrder: async () => {},
 });
@@ -1340,13 +1351,13 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   // completePayment
   // -------------------------------------------------------------------------
   const completePayment = useCallback(
-    async (params: CompletePaymentParams) => {
+    async (params: CompletePaymentParams): Promise<ReceiptData | undefined> => {
       const orderId = orderRecordIdRef.current;
-      if (!orderId) return;
+      if (!orderId) return undefined;
 
       if (items.length === 0) {
         Alert.alert('Cannot pay', 'Add at least one item before paying.');
-        return;
+        return undefined;
       }
 
       // Auto-submit draft orders before paying
@@ -1383,6 +1394,65 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         paymentId = payment.id;
       });
 
+      // Build receipt data
+      const receiptItems: ReceiptItemInput[] = items.map((i) => ({
+        productName: i.productName,
+        modifiers: i.modifiers.map((m) => m.name),
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        lineTotal: i.lineTotal,
+        discountAmount: i.discountAmount,
+        isVoided: !!i.voidedAt,
+        isGstFree: i.isGstFree,
+      }));
+
+      const receiptPayment: ReceiptPaymentInput = {
+        method: params.method,
+        amount: params.amount,
+        tipAmount: params.tipAmount,
+        ...(params.method === 'cash' && {
+          tenderedAmount: params.tenderedAmount,
+          changeGiven: params.changeGiven,
+          roundingAmount: params.roundingAmount,
+        }),
+        ...(params.method === 'card' && {
+          cardType: params.cardType,
+          lastFour: params.lastFour,
+          approvalCode: params.approvalCode,
+        }),
+      };
+
+      const receiptData = buildReceipt(
+        {
+          businessName: 'Float POS',
+          abn: '12 345 678 901',
+          address: '123 Main Street',
+          phone: '03 9123 4567',
+        },
+        {
+          orderNumber: currentOrder?.orderNumber ?? '',
+          orderType: (currentOrder?.orderType as 'takeaway' | 'dine_in') ?? 'takeaway',
+          tableNumber: currentOrder?.tableNumber ?? undefined,
+          subtotal: cartTotals.subtotal,
+          gstAmount: cartTotals.gstAmount,
+          discountTotal: cartTotals.totalDiscount,
+          total: cartTotals.total,
+          createdAt: now,
+          customerName: currentOrder?.customerName ?? undefined,
+        },
+        receiptItems,
+        [receiptPayment],
+        'Staff',
+      );
+
+      // Store receipt JSON on order record
+      await database.write(async () => {
+        const orderRecord = await database.get<Order>('orders').find(orderId);
+        await orderRecord.update((o) => {
+          setRaw(o, 'receipt_json', JSON.stringify(receiptData));
+        });
+      });
+
       // Transition order to completed
       await transitionOrder(orderId, 'completed');
 
@@ -1408,6 +1478,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => {
         doCreateOrder();
       }, 300);
+
+      return receiptData;
     },
     [items, currentOrder, cartTotals, doCreateOrder],
   );

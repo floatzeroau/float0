@@ -226,5 +226,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 10,
+      steps: [
+        addColumns({
+          table: 'orders',
+          columns: [{ name: 'receipt_json', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });
