@@ -91,6 +91,7 @@ export interface HeldOrderSummary {
 export interface CashPaymentParams {
   method: 'cash';
   amount: number;
+  tipAmount: number;
   tenderedAmount: number;
   changeGiven: number;
   roundingAmount: number;
@@ -99,6 +100,7 @@ export interface CashPaymentParams {
 export interface CardPaymentParams {
   method: 'card';
   amount: number;
+  tipAmount: number;
   approvalCode: string;
   cardType: string;
   lastFour: string;
@@ -1296,7 +1298,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(p, 'order_id', orderId);
           setRaw(p, 'method', params.method);
           setRaw(p, 'amount', params.amount);
-          setRaw(p, 'tip_amount', 0);
+          setRaw(p, 'tip_amount', params.tipAmount);
 
           if (params.method === 'cash') {
             setRaw(p, 'tendered_amount', params.tenderedAmount);
@@ -1322,6 +1324,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         orderId,
         organizationId: 'org-1',
         total: params.amount,
+        tipAmount: params.tipAmount,
         items: items
           .filter((i) => !i.voidedAt)
           .map((i) => ({

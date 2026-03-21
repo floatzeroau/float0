@@ -4,6 +4,7 @@ export interface PosOrderCompleted {
   orderId: string;
   organizationId: string;
   total: number;
+  tipAmount: number;
   items: { productId: string; quantity: number; unitPrice: number }[];
   timestamp: Date;
 }

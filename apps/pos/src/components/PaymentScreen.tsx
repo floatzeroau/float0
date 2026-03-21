@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } fr
 import { calculatePaymentTotal } from '@float0/shared';
 import type { CompletePaymentParams } from '../state/order-store';
 import { getTerminalService } from '../services';
+import { TipPrompt } from './TipPrompt';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,9 +17,10 @@ interface PaymentScreenProps {
   onCancel: () => void;
 }
 
-type Phase = 'method' | 'cash' | 'card_processing' | 'card_error';
+type Phase = 'method' | 'tip' | 'cash' | 'card_processing' | 'card_error';
 
 const QUICK_TENDER_VALUES = [5, 10, 20, 50, 100];
+const TIP_ENABLED = true;
 
 // ---------------------------------------------------------------------------
 // PaymentScreen
@@ -35,9 +37,12 @@ export function PaymentScreen({
   const [tenderedInput, setTenderedInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [cardError, setCardError] = useState('');
+  const [tipAmount, setTipAmount] = useState(0);
+  const [selectedMethod, setSelectedMethod] = useState<'cash' | 'card' | null>(null);
 
-  const cashPayment = useMemo(() => calculatePaymentTotal(orderTotal, 'cash'), [orderTotal]);
-  const cardPayment = useMemo(() => calculatePaymentTotal(orderTotal, 'card'), [orderTotal]);
+  const totalWithTip = orderTotal + tipAmount;
+  const cashPayment = useMemo(() => calculatePaymentTotal(totalWithTip, 'cash'), [totalWithTip]);
+  const cardPayment = useMemo(() => calculatePaymentTotal(totalWithTip, 'card'), [totalWithTip]);
 
   const tenderedAmount = useMemo(() => {
     if (tenderedInput === '') return 0;
@@ -61,6 +66,8 @@ export function PaymentScreen({
     setTenderedInput('');
     setLoading(false);
     setCardError('');
+    setTipAmount(0);
+    setSelectedMethod(null);
   }, []);
 
   const handleCancel = useCallback(() => {
@@ -73,37 +80,75 @@ export function PaymentScreen({
   }, [handleReset, onCancel, phase]);
 
   const handleCashSelect = useCallback(() => {
-    setPhase('cash');
-    setTenderedInput('');
+    if (TIP_ENABLED) {
+      setSelectedMethod('cash');
+      setPhase('tip');
+    } else {
+      setPhase('cash');
+      setTenderedInput('');
+    }
   }, []);
 
-  const handleCardSelect = useCallback(async () => {
-    setPhase('card_processing');
-    setCardError('');
+  const processCardPayment = useCallback(
+    async (tip: number) => {
+      setPhase('card_processing');
+      setCardError('');
 
-    const terminal = getTerminalService();
-    try {
-      const result = await terminal.sendPayment(cardPayment.payableAmount);
+      const amountToCharge = calculatePaymentTotal(orderTotal + tip, 'card').payableAmount;
+      const terminal = getTerminalService();
+      try {
+        const result = await terminal.sendPayment(amountToCharge);
 
-      if (result.success) {
-        setLoading(true);
-        await onComplete({
-          method: 'card',
-          amount: cardPayment.payableAmount,
-          approvalCode: result.approvalCode ?? '',
-          cardType: result.cardType ?? '',
-          lastFour: result.lastFour ?? '',
-        });
-        handleReset();
-      } else {
-        setCardError(result.errorMessage ?? 'Payment declined');
+        if (result.success) {
+          setLoading(true);
+          await onComplete({
+            method: 'card',
+            amount: amountToCharge,
+            tipAmount: tip,
+            approvalCode: result.approvalCode ?? '',
+            cardType: result.cardType ?? '',
+            lastFour: result.lastFour ?? '',
+          });
+          handleReset();
+        } else {
+          setCardError(result.errorMessage ?? 'Payment declined');
+          setPhase('card_error');
+        }
+      } catch {
+        setCardError('Terminal communication error');
         setPhase('card_error');
       }
-    } catch {
-      setCardError('Terminal communication error');
-      setPhase('card_error');
+    },
+    [orderTotal, onComplete, handleReset],
+  );
+
+  const handleCardMethodSelect = useCallback(() => {
+    if (TIP_ENABLED) {
+      setSelectedMethod('card');
+      setPhase('tip');
+    } else {
+      processCardPayment(0);
     }
-  }, [cardPayment.payableAmount, onComplete, handleReset]);
+  }, [processCardPayment]);
+
+  const handleTipSelected = useCallback(
+    (tip: number) => {
+      setTipAmount(tip);
+      if (selectedMethod === 'cash') {
+        setPhase('cash');
+        setTenderedInput('');
+      } else {
+        processCardPayment(tip);
+      }
+    },
+    [selectedMethod, processCardPayment],
+  );
+
+  const handleTipCancel = useCallback(() => {
+    setTipAmount(0);
+    setSelectedMethod(null);
+    setPhase('method');
+  }, []);
 
   const handleKeyPress = useCallback((key: string) => {
     if (key === 'backspace') {
@@ -132,6 +177,7 @@ export function PaymentScreen({
       await onComplete({
         method: 'cash',
         amount: cashPayment.payableAmount,
+        tipAmount,
         tenderedAmount,
         changeGiven: changeAmount,
         roundingAmount: cashPayment.roundingAmount,
@@ -140,7 +186,16 @@ export function PaymentScreen({
     } catch {
       setLoading(false);
     }
-  }, [isSufficient, loading, onComplete, cashPayment, tenderedAmount, changeAmount, handleReset]);
+  }, [
+    isSufficient,
+    loading,
+    onComplete,
+    cashPayment,
+    tipAmount,
+    tenderedAmount,
+    changeAmount,
+    handleReset,
+  ]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
 
@@ -166,8 +221,20 @@ export function PaymentScreen({
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Payment — {orderNumber}</Text>
           <View style={styles.headerTotalContainer}>
-            <Text style={styles.headerTotalLabel}>Total</Text>
-            <Text style={styles.headerTotalValue}>{formatCurrency(orderTotal)}</Text>
+            {tipAmount > 0 ? (
+              <>
+                <Text style={styles.headerTotalLabel}>Subtotal</Text>
+                <Text style={styles.headerSubtotalValue}>{formatCurrency(orderTotal)}</Text>
+                <Text style={styles.headerTipLabel}>Tip: {formatCurrency(tipAmount)}</Text>
+                <Text style={styles.headerTotalLabel}>Total</Text>
+                <Text style={styles.headerTotalValue}>{formatCurrency(totalWithTip)}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.headerTotalLabel}>Total</Text>
+                <Text style={styles.headerTotalValue}>{formatCurrency(orderTotal)}</Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -180,12 +247,21 @@ export function PaymentScreen({
                 <Text style={styles.cashMethodIcon}>$</Text>
                 <Text style={styles.cashMethodText}>Cash</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cardMethodButton} onPress={handleCardSelect}>
+              <TouchableOpacity style={styles.cardMethodButton} onPress={handleCardMethodSelect}>
                 <Text style={styles.cardMethodIcon}>Card</Text>
                 <Text style={styles.cardMethodSubtext}>EFTPOS</Text>
               </TouchableOpacity>
             </View>
           </View>
+        )}
+
+        {/* Phase 1.5: Tip Prompt */}
+        {phase === 'tip' && (
+          <TipPrompt
+            orderTotal={orderTotal}
+            onSelectTip={handleTipSelected}
+            onCancel={handleTipCancel}
+          />
         )}
 
         {/* Phase 2: Cash Entry */}
@@ -197,6 +273,11 @@ export function PaymentScreen({
               <View style={styles.amountSection}>
                 <Text style={styles.amountLabel}>Order Total</Text>
                 <Text style={styles.amountTotal}>{formatCurrency(orderTotal)}</Text>
+                {tipAmount > 0 && (
+                  <Text style={styles.tipLine}>
+                    Tip: {formatCurrency(tipAmount)} → {formatCurrency(totalWithTip)}
+                  </Text>
+                )}
                 {cashPayment.roundingAmount !== 0 && (
                   <View style={styles.roundingRow}>
                     <Text style={styles.roundingText}>
@@ -292,6 +373,11 @@ export function PaymentScreen({
             <Text style={styles.cardProcessingAmount}>
               {formatCurrency(cardPayment.payableAmount)}
             </Text>
+            {tipAmount > 0 && (
+              <Text style={styles.cardProcessingTip}>
+                (includes {formatCurrency(tipAmount)} tip)
+              </Text>
+            )}
             <Text style={styles.cardProcessingHint}>Present card on the EFTPOS terminal</Text>
           </View>
         )}
@@ -303,10 +389,20 @@ export function PaymentScreen({
             <Text style={styles.cardErrorTitle}>Payment Failed</Text>
             <Text style={styles.cardErrorMessage}>{cardError}</Text>
             <View style={styles.cardErrorActions}>
-              <TouchableOpacity style={styles.cardRetryButton} onPress={handleCardSelect}>
+              <TouchableOpacity
+                style={styles.cardRetryButton}
+                onPress={() => processCardPayment(tipAmount)}
+              >
                 <Text style={styles.cardRetryButtonText}>Try Again</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cardBackButton} onPress={() => setPhase('method')}>
+              <TouchableOpacity
+                style={styles.cardBackButton}
+                onPress={() => {
+                  setTipAmount(0);
+                  setSelectedMethod(null);
+                  setPhase('method');
+                }}
+              >
                 <Text style={styles.cardBackButtonText}>Choose Another Method</Text>
               </TouchableOpacity>
             </View>
@@ -361,6 +457,16 @@ const styles = StyleSheet.create({
   headerTotalLabel: {
     fontSize: 12,
     color: '#999',
+  },
+  headerSubtotalValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  headerTipLabel: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '600',
   },
   headerTotalValue: {
     fontSize: 24,
@@ -476,6 +582,14 @@ const styles = StyleSheet.create({
     color: '#ef4444',
   },
 
+  // Tip line in cash phase
+  tipLine: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+
   // Rounding
   roundingRow: {
     flexDirection: 'row',
@@ -582,6 +696,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2563eb',
     marginTop: 12,
+  },
+  cardProcessingTip: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '600',
+    marginTop: 4,
   },
   cardProcessingHint: {
     fontSize: 16,
