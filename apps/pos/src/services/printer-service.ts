@@ -10,9 +10,15 @@ export interface PrinterStatus {
   printerName?: string;
 }
 
+export interface ReportPrintData {
+  title: string;
+  lines: string[];
+}
+
 export interface IPrinterService {
   printReceipt(data: ReceiptData): Promise<void>;
   printDocket(data: KitchenDocketData): Promise<void>;
+  printReport(data: ReportPrintData): Promise<void>;
   openDrawer(): Promise<void>;
   getStatus(): Promise<PrinterStatus>;
 }
@@ -33,6 +39,12 @@ export class MockPrinterService implements IPrinterService {
 
   async openDrawer(): Promise<void> {
     console.log('[MockPrinter] Cash drawer opened');
+  }
+
+  async printReport(data: ReportPrintData): Promise<void> {
+    console.log(`[MockPrinter] Report: ${data.title}`);
+    console.log(data.lines.join('\n'));
+    Alert.alert('Report Printed', `${data.title} sent to printer.`);
   }
 
   async getStatus(): Promise<PrinterStatus> {

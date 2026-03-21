@@ -8,6 +8,8 @@ import InitialSyncScreen from '../screens/InitialSyncScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OpenShiftScreen from '../screens/OpenShiftScreen';
 import CloseShiftScreen from '../screens/CloseShiftScreen';
+import ShiftReportScreen from '../screens/ShiftReportScreen';
+import ZReportScreen from '../screens/ZReportScreen';
 import POSScreen from '../screens/POSScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -25,6 +27,8 @@ export type RootStackParamList = {
   InitialSync: undefined;
   OpenShift: undefined;
   CloseShift: undefined;
+  ShiftReport: { shiftId: string; reportType: 'X' | 'shift' };
+  ZReport: undefined;
   Main: undefined;
 };
 
@@ -88,6 +92,8 @@ export default function RootNavigator() {
       <Stack.Screen name="InitialSync" component={InitialSyncScreen} />
       <Stack.Screen name="OpenShift" component={OpenShiftScreen} />
       <Stack.Screen name="CloseShift" component={CloseShiftScreen} />
+      <Stack.Screen name="ShiftReport" component={ShiftReportScreen} />
+      <Stack.Screen name="ZReport" component={ZReportScreen} />
       <Stack.Screen name="Main" component={MainTabs} options={{ gestureEnabled: false }} />
     </Stack.Navigator>
   );

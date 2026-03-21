@@ -7,7 +7,7 @@ import { MockPrinterService } from './printer-service';
 
 export type { ITerminalService, TerminalResult, TerminalStatus } from './terminal-service';
 export type { IAudioService } from './audio-service';
-export type { IPrinterService, PrinterStatus } from './printer-service';
+export type { IPrinterService, PrinterStatus, ReportPrintData } from './printer-service';
 
 // ---------------------------------------------------------------------------
 // Terminal Service Factory
