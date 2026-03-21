@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Q } from '@nozbe/watermelondb';
 import { useOrder } from '../state/order-store';
 import type { OrderType, CartItemData, CompletePaymentParams } from '../state/order-store';
 import { CategoryTabs } from '../components/CategoryTabs';
@@ -11,15 +12,22 @@ import type { ModifierModalResult } from '../components/ModifierModal';
 import { CartSidebar } from '../components/CartSidebar';
 import { PaymentScreen } from '../components/PaymentScreen';
 import { DocketPreview } from '../components/DocketPreview';
+import { OpenDrawerModal } from '../components/OpenDrawerModal';
 import { database } from '../db/database';
-import type { Product } from '../db/models';
+import type { Product, AuditLog, Shift } from '../db/models';
+import { getPrinterService } from '../services';
 import { calculateLineTotal } from '@float0/shared';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setRaw(record: any, field: string, value: string | number) {
+  (record._raw as any)[field] = value;
+}
 
 // ---------------------------------------------------------------------------
 // Top Bar
 // ---------------------------------------------------------------------------
 
-function TopBar() {
+function TopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   const { currentOrder, createNewOrder, setOrderType, setTableNumber, isManagingSubmittedOrder } =
     useOrder();
 
@@ -114,6 +122,9 @@ function TopBar() {
       </View>
 
       <View style={styles.topBarRight}>
+        <TouchableOpacity style={styles.openDrawerButton} onPress={onOpenDrawer}>
+          <Text style={styles.openDrawerText}>Open Drawer</Text>
+        </TouchableOpacity>
         {!isManagingSubmittedOrder && (
           <TouchableOpacity style={styles.newOrderButton} onPress={createNewOrder}>
             <Text style={styles.newOrderText}>New Order</Text>
@@ -148,6 +159,7 @@ export default function POSScreen() {
   const [modifierProduct, setModifierProduct] = useState<ProductItem | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [paymentVisible, setPaymentVisible] = useState(false);
+  const [drawerModalVisible, setDrawerModalVisible] = useState(false);
 
   useEffect(() => {
     if (!initialized && !currentOrder) {
@@ -272,9 +284,57 @@ export default function POSScreen() {
     setPaymentVisible(false);
   }, []);
 
+  const handleOpenDrawer = useCallback(async (reason: string, staffId: string) => {
+    setDrawerModalVisible(false);
+
+    // 1. Open the drawer
+    await getPrinterService().openDrawer();
+
+    // 2. Get active shift ID
+    const shifts = await database.get<Shift>('shifts').query(Q.where('status', 'open')).fetch();
+    const shiftId = shifts[0]?.id ?? '';
+
+    // 3. Audit log
+    const now = Date.now();
+    await database.write(async () => {
+      await database.get<AuditLog>('audit_logs').create((log) => {
+        setRaw(log, 'server_id', '');
+        setRaw(log, 'action', 'no_sale');
+        setRaw(log, 'entity_type', 'terminal');
+        setRaw(log, 'entity_id', 'terminal-1');
+        setRaw(log, 'staff_id', staffId);
+        setRaw(log, 'changes_json', JSON.stringify({ reason, shiftId }));
+        setRaw(log, 'device_id', 'terminal-1');
+        setRaw(log, 'created_at', now);
+      });
+    });
+
+    // 4. Check no-sale count for this shift
+    if (shiftId) {
+      const logs = await database
+        .get<AuditLog>('audit_logs')
+        .query(Q.where('action', 'no_sale'))
+        .fetch();
+      const shiftLogs = logs.filter((l) => {
+        const data = JSON.parse(l.changesJson ?? '{}');
+        return data.shiftId === shiftId;
+      });
+      const MAX_NO_SALE = 10;
+      if (MAX_NO_SALE > 0 && shiftLogs.length >= MAX_NO_SALE) {
+        Alert.alert(
+          'Drawer Open Limit',
+          `The cash drawer has been opened ${shiftLogs.length} times this shift without a sale. Please notify a manager.`,
+        );
+      }
+    }
+
+    // 5. Toast feedback
+    Alert.alert('Drawer Opened', 'Cash drawer opened successfully.');
+  }, []);
+
   return (
     <View style={styles.container}>
-      <TopBar />
+      <TopBar onOpenDrawer={() => setDrawerModalVisible(true)} />
       <View style={styles.content}>
         <View style={styles.productArea}>
           <ProductSearch
@@ -318,6 +378,12 @@ export default function POSScreen() {
       />
 
       {lastDocket && <DocketPreview data={lastDocket} onDismiss={clearLastDocket} />}
+
+      <OpenDrawerModal
+        visible={drawerModalVisible}
+        onConfirm={handleOpenDrawer}
+        onCancel={() => setDrawerModalVisible(false)}
+      />
     </View>
   );
 }
@@ -355,8 +421,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
     minWidth: 120,
-    alignItems: 'flex-end',
   },
 
   // Order number
@@ -425,6 +493,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2563eb',
+  },
+
+  // Open Drawer button
+  openDrawerButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  openDrawerText: {
+    color: '#1a1a1a',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // New Order button
