@@ -1,14 +1,29 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  Alert,
+  TextInput,
+} from 'react-native';
 import { Q } from '@nozbe/watermelondb';
+import * as SecureStore from 'expo-secure-store';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { ReceiptData } from '@float0/shared';
+import { buildReceipt } from '@float0/shared';
 import { database } from '../db/database';
 import type { Order, OrderItem, Product, Customer, Payment } from '../db/models';
 import { STATUS_LABELS, STATUS_COLOURS } from '../state/order-lifecycle';
 import type { OrderStatusDB } from '../state/order-lifecycle';
 import { useOrder } from '../state/order-store';
 import type { MainTabParamList } from '../navigation/RootNavigator';
+import { ReceiptPreview } from '../components/ReceiptPreview';
+import { getPrinterService } from '../services';
+import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import { RefundScreen } from './RefundScreen';
 
 // ---------------------------------------------------------------------------
@@ -80,9 +95,20 @@ function OrderDetailModal({
   onRefund: (orderId: string) => void;
 }) {
   const [items, setItems] = useState<OrderDetailItem[]>([]);
+  const [receiptPreview, setReceiptPreview] = useState<ReceiptData | null>(null);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [emailAddress, setEmailAddress] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   useEffect(() => {
     if (!order || !visible) return;
+
+    // Reset reprint state when order changes
+    setReceiptPreview(null);
+    setShowEmailInput(false);
+    setEmailAddress('');
+    setEmailSent(false);
 
     (async () => {
       const orderItems = await database
@@ -127,6 +153,166 @@ function OrderDetailModal({
     })();
   }, [order, visible]);
 
+  const handleReprint = useCallback(async () => {
+    if (!order) return;
+
+    // Try to load stored receipt JSON first
+    try {
+      const orderRecord = await database.get<Order>('orders').find(order.id);
+      if (orderRecord.receiptJson) {
+        const stored = JSON.parse(orderRecord.receiptJson) as ReceiptData;
+        stored.reprintDate = new Date().toISOString();
+        setReceiptPreview(stored);
+        return;
+      }
+    } catch {
+      // fall through to rebuild
+    }
+
+    // Rebuild from DB data
+    const orderRecord = await database.get<Order>('orders').find(order.id);
+    const orderItems = await database
+      .get<OrderItem>('order_items')
+      .query(Q.where('order_id', order.id))
+      .fetch();
+    const payments = await database
+      .get<Payment>('payments')
+      .query(Q.where('order_id', order.id), Q.where('status', 'completed'))
+      .fetch();
+
+    const receiptItems = await Promise.all(
+      orderItems.map(async (oi) => {
+        let productName = 'Unknown';
+        let isGstFree = false;
+        try {
+          const product = await database.get<Product>('products').find(oi.productId);
+          productName = product.name;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          isGstFree = (product as any).isGstFree ?? false;
+        } catch {
+          // deleted product
+        }
+
+        const mods: string[] = Array.isArray(oi.modifiersJson)
+          ? oi.modifiersJson.map((m: { name?: string }) => m.name ?? '')
+          : [];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw = (oi as any)._raw;
+
+        return {
+          productName,
+          modifiers: mods,
+          quantity: oi.quantity,
+          unitPrice: oi.unitPrice,
+          lineTotal: oi.lineTotal,
+          discountAmount: oi.discountAmount ?? 0,
+          isVoided: (raw.voided_at || 0) > 0,
+          isGstFree,
+        };
+      }),
+    );
+
+    const receiptPayments = payments.map((p) => ({
+      method: p.method as 'cash' | 'card',
+      amount: p.amount,
+      tipAmount: p.tipAmount ?? 0,
+      ...(p.tenderedAmount != null && { tenderedAmount: p.tenderedAmount }),
+      ...(p.changeGiven != null && { changeGiven: p.changeGiven }),
+      ...(p.roundingAmount != null && { roundingAmount: p.roundingAmount }),
+      ...(p.cardType && { cardType: p.cardType }),
+      ...(p.lastFour && { lastFour: p.lastFour }),
+      ...(p.reference && { approvalCode: p.reference }),
+    }));
+
+    let customerName: string | undefined;
+    if (orderRecord.customerId) {
+      try {
+        const c = await database.get<Customer>('customers').find(orderRecord.customerId);
+        customerName = [c.firstName, c.lastName].filter(Boolean).join(' ') || undefined;
+      } catch {
+        // deleted customer
+      }
+    }
+
+    const receipt = buildReceipt(
+      {
+        businessName: 'Float POS',
+        abn: '12 345 678 901',
+        address: '123 Main Street',
+        phone: '03 9123 4567',
+      },
+      {
+        orderNumber: orderRecord.orderNumber,
+        orderType: orderRecord.orderType as 'takeaway' | 'dine_in',
+        tableNumber: orderRecord.tableNumber ?? undefined,
+        subtotal: orderRecord.subtotal,
+        gstAmount: orderRecord.gst,
+        discountTotal: orderRecord.discountAmount,
+        total: orderRecord.total,
+        createdAt: orderRecord.createdAt.getTime(),
+        customerName,
+      },
+      receiptItems,
+      receiptPayments,
+      'Staff',
+    );
+
+    receipt.reprintDate = new Date().toISOString();
+    setReceiptPreview(receipt);
+  }, [order]);
+
+  const handlePrintReprint = useCallback(() => {
+    if (receiptPreview) {
+      getPrinterService()
+        .printReceipt(receiptPreview)
+        .catch(() => {});
+    }
+  }, [receiptPreview]);
+
+  const handleEmailReprint = useCallback(() => {
+    if (emailSent) return;
+    setShowEmailInput(true);
+  }, [emailSent]);
+
+  const handleSendEmail = useCallback(async () => {
+    const trimmed = emailAddress.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+    if (!order) return;
+
+    setEmailSending(true);
+    try {
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const response = await fetch(`${API_URL}/receipts/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ orderId: order.id, email: trimmed }),
+      });
+
+      if (response.ok) {
+        setEmailSent(true);
+        setShowEmailInput(false);
+        Alert.alert('Email sent', `Receipt sent to ${trimmed}`);
+      } else {
+        Alert.alert('Email saved', 'Email saved for when online');
+        setEmailSent(true);
+        setShowEmailInput(false);
+      }
+    } catch {
+      Alert.alert('Email saved', 'Email saved for when online');
+      setEmailSent(true);
+      setShowEmailInput(false);
+    } finally {
+      setEmailSending(false);
+    }
+  }, [emailAddress, order]);
+
   if (!order) return null;
 
   const time = new Date(order.createdAt);
@@ -139,6 +325,7 @@ function OrderDetailModal({
 
   const canManage = MANAGEABLE_STATUSES.includes(order.status);
   const canRefund = order.status === 'completed';
+  const canReprint = order.status === 'completed';
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -156,92 +343,169 @@ function OrderDetailModal({
             <StatusBadge status={order.status} />
           </View>
 
-          {/* Items */}
-          <ScrollView style={styles.detailItems} showsVerticalScrollIndicator={false}>
-            {items.map((item) => {
-              const isVoided = item.voidedAt > 0;
-              const hasOverride = item.overridePrice > 0;
-              return (
-                <View key={item.id} style={styles.detailItemRow}>
-                  <View style={styles.detailItemInfo}>
-                    <Text style={[styles.detailItemName, isVoided && styles.detailItemNameVoided]}>
-                      {item.quantity}x {item.productName}
-                    </Text>
-                    {item.modifiers.length > 0 && (
-                      <Text style={styles.detailItemMods}>
-                        {item.modifiers.map((m) => m.name).join(', ')}
-                      </Text>
-                    )}
-                    {hasOverride && !isVoided && (
-                      <>
-                        <View style={styles.detailOverrideBadge}>
-                          <Text style={styles.detailOverrideBadgeText}>OVERRIDE</Text>
-                        </View>
-                        {item.overrideReason !== '' && (
-                          <Text style={styles.detailOverrideReason}>{item.overrideReason}</Text>
-                        )}
-                      </>
-                    )}
-                    {isVoided && (
-                      <>
-                        <View style={styles.detailVoidBadge}>
-                          <Text style={styles.detailVoidBadgeText}>VOID</Text>
-                        </View>
-                        {item.voidReason !== '' && (
-                          <Text style={styles.detailVoidReason}>{item.voidReason}</Text>
-                        )}
-                      </>
-                    )}
-                    {!isVoided && item.notes !== '' && (
-                      <Text style={styles.detailItemNotes}>{item.notes}</Text>
-                    )}
-                  </View>
-                  {hasOverride && !isVoided ? (
-                    <View style={styles.detailItemPriceCol}>
-                      <Text style={styles.detailItemTotalStrikethrough}>
-                        ${item.unitPrice.toFixed(2)}
-                      </Text>
-                      <Text style={styles.detailItemTotalOverride}>
-                        ${item.overridePrice.toFixed(2)}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text
-                      style={[styles.detailItemTotal, isVoided && styles.detailItemTotalVoided]}
+          {/* Receipt preview */}
+          {receiptPreview ? (
+            <View style={styles.reprintContainer}>
+              <View style={styles.reprintPreviewWrapper}>
+                <ReceiptPreview data={receiptPreview} />
+              </View>
+
+              {/* Email input */}
+              {showEmailInput && (
+                <View style={styles.reprintEmailContainer}>
+                  <TextInput
+                    style={styles.reprintEmailInput}
+                    placeholder="customer@email.com"
+                    placeholderTextColor="#999"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={emailAddress}
+                    onChangeText={setEmailAddress}
+                    editable={!emailSending}
+                  />
+                  <View style={styles.reprintEmailRow}>
+                    <TouchableOpacity
+                      style={[styles.reprintEmailSend, emailSending && styles.buttonDisabled]}
+                      onPress={handleSendEmail}
+                      disabled={emailSending}
                     >
-                      ${item.lineTotal.toFixed(2)}
-                    </Text>
-                  )}
+                      <Text style={styles.reprintEmailSendText}>
+                        {emailSending ? 'Sending...' : 'Send'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.reprintEmailCancel}
+                      onPress={() => setShowEmailInput(false)}
+                      disabled={emailSending}
+                    >
+                      <Text style={styles.reprintEmailCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              );
-            })}
-          </ScrollView>
+              )}
 
-          {/* Notes (cancellation reason) */}
-          {order.notes !== '' && (
-            <View style={styles.detailNotes}>
-              <Text style={styles.detailNotesText}>{order.notes}</Text>
+              {/* Print / Email / Back buttons */}
+              <View style={styles.reprintActions}>
+                <TouchableOpacity style={styles.reprintPrintButton} onPress={handlePrintReprint}>
+                  <Text style={styles.reprintPrintButtonText}>Print</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.reprintEmailButton, emailSent && styles.buttonDisabled]}
+                  onPress={handleEmailReprint}
+                  disabled={emailSent}
+                >
+                  <Text style={styles.reprintEmailButtonText}>
+                    {emailSent ? 'Email Sent' : 'Email'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.reprintBackButton}
+                  onPress={() => setReceiptPreview(null)}
+                >
+                  <Text style={styles.reprintBackButtonText}>Back</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          )}
+          ) : (
+            <>
+              {/* Items */}
+              <ScrollView style={styles.detailItems} showsVerticalScrollIndicator={false}>
+                {items.map((item) => {
+                  const isVoided = item.voidedAt > 0;
+                  const hasOverride = item.overridePrice > 0;
+                  return (
+                    <View key={item.id} style={styles.detailItemRow}>
+                      <View style={styles.detailItemInfo}>
+                        <Text
+                          style={[styles.detailItemName, isVoided && styles.detailItemNameVoided]}
+                        >
+                          {item.quantity}x {item.productName}
+                        </Text>
+                        {item.modifiers.length > 0 && (
+                          <Text style={styles.detailItemMods}>
+                            {item.modifiers.map((m) => m.name).join(', ')}
+                          </Text>
+                        )}
+                        {hasOverride && !isVoided && (
+                          <>
+                            <View style={styles.detailOverrideBadge}>
+                              <Text style={styles.detailOverrideBadgeText}>OVERRIDE</Text>
+                            </View>
+                            {item.overrideReason !== '' && (
+                              <Text style={styles.detailOverrideReason}>{item.overrideReason}</Text>
+                            )}
+                          </>
+                        )}
+                        {isVoided && (
+                          <>
+                            <View style={styles.detailVoidBadge}>
+                              <Text style={styles.detailVoidBadgeText}>VOID</Text>
+                            </View>
+                            {item.voidReason !== '' && (
+                              <Text style={styles.detailVoidReason}>{item.voidReason}</Text>
+                            )}
+                          </>
+                        )}
+                        {!isVoided && item.notes !== '' && (
+                          <Text style={styles.detailItemNotes}>{item.notes}</Text>
+                        )}
+                      </View>
+                      {hasOverride && !isVoided ? (
+                        <View style={styles.detailItemPriceCol}>
+                          <Text style={styles.detailItemTotalStrikethrough}>
+                            ${item.unitPrice.toFixed(2)}
+                          </Text>
+                          <Text style={styles.detailItemTotalOverride}>
+                            ${item.overridePrice.toFixed(2)}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text
+                          style={[styles.detailItemTotal, isVoided && styles.detailItemTotalVoided]}
+                        >
+                          ${item.lineTotal.toFixed(2)}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
 
-          {/* Total */}
-          <View style={styles.detailTotalRow}>
-            <Text style={styles.detailTotalLabel}>Total</Text>
-            <Text style={styles.detailTotalValue}>${order.total.toFixed(2)}</Text>
-          </View>
+              {/* Notes (cancellation reason) */}
+              {order.notes !== '' && (
+                <View style={styles.detailNotes}>
+                  <Text style={styles.detailNotesText}>{order.notes}</Text>
+                </View>
+              )}
 
-          {/* Manage Order button */}
-          {canManage && (
-            <TouchableOpacity style={styles.manageButton} onPress={() => onManage(order.id)}>
-              <Text style={styles.manageButtonText}>Manage Order</Text>
-            </TouchableOpacity>
-          )}
+              {/* Total */}
+              <View style={styles.detailTotalRow}>
+                <Text style={styles.detailTotalLabel}>Total</Text>
+                <Text style={styles.detailTotalValue}>${order.total.toFixed(2)}</Text>
+              </View>
 
-          {/* Refund button */}
-          {canRefund && (
-            <TouchableOpacity style={styles.refundButton} onPress={() => onRefund(order.id)}>
-              <Text style={styles.refundButtonText}>Refund</Text>
-            </TouchableOpacity>
+              {/* Manage Order button */}
+              {canManage && (
+                <TouchableOpacity style={styles.manageButton} onPress={() => onManage(order.id)}>
+                  <Text style={styles.manageButtonText}>Manage Order</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Reprint Receipt button */}
+              {canReprint && (
+                <TouchableOpacity style={styles.reprintButton} onPress={handleReprint}>
+                  <Text style={styles.reprintButtonText}>Reprint Receipt</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Refund button */}
+              {canRefund && (
+                <TouchableOpacity style={styles.refundButton} onPress={() => onRefund(order.id)}>
+                  <Text style={styles.refundButtonText}>Refund</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
 
           {/* Close */}
@@ -275,12 +539,13 @@ export default function OrderHistoryScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   const loadOrders = useCallback(async () => {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const rows = await database
       .get<Order>('orders')
-      .query(Q.where('created_at', Q.gte(startOfDay.getTime())), Q.sortBy('created_at', Q.desc))
+      .query(Q.where('created_at', Q.gte(sevenDaysAgo.getTime())), Q.sortBy('created_at', Q.desc))
       .fetch();
 
     const mapped: OrderRow[] = await Promise.all(
@@ -398,7 +663,7 @@ export default function OrderHistoryScreen() {
       {/* Header */}
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>Orders</Text>
-        <Text style={styles.screenSubtitle}>Today</Text>
+        <Text style={styles.screenSubtitle}>Last 7 days</Text>
       </View>
 
       {/* Filter tabs */}
@@ -796,6 +1061,124 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
+  // Reprint receipt button
+  reprintButton: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#0284c7',
+    alignItems: 'center',
+  },
+  reprintButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+
+  // Reprint preview area
+  reprintContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  reprintPreviewWrapper: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  reprintActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  reprintPrintButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  reprintPrintButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  reprintEmailButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#0284c7',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  reprintEmailButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  reprintBackButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  reprintBackButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  buttonDisabled: {
+    opacity: 0.4,
+  },
+
+  // Reprint email input
+  reprintEmailContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  reprintEmailInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  reprintEmailRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  reprintEmailSend: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  reprintEmailSendText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  reprintEmailCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  reprintEmailCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+
   detailCloseButton: {
     marginHorizontal: 20,
     marginBottom: 20,

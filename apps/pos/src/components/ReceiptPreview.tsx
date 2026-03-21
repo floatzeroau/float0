@@ -58,6 +58,13 @@ export function ReceiptPreview({ data }: ReceiptPreviewProps) {
   const lines: string[] = [];
   const isFullTaxInvoice = data.invoiceType === 'full_tax_invoice';
 
+  // Reprint watermark
+  if (data.reprintDate) {
+    lines.push(center('*** REPRINT ***'));
+    lines.push(center(`Reprinted: ${formatDate(data.reprintDate)}`));
+    lines.push('');
+  }
+
   // Header
   lines.push(divider('='));
   if (isFullTaxInvoice) {

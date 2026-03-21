@@ -104,6 +104,7 @@ export interface ReceiptData {
   footerText?: string;
   socialMedia?: string;
   logoUrl?: string;
+  reprintDate?: string; // ISO-8601 — present only on reprints
 }
 
 // ---------------------------------------------------------------------------
