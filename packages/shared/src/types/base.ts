@@ -1,10 +1,21 @@
+export interface OrgReceiptSettings {
+  headerText?: string;
+  footerText?: string;
+  socialMedia?: string;
+  logoUrl?: string;
+  showLoyaltyBalance?: boolean;
+}
+
 export interface Organization {
   id: string;
   name: string;
   abn: string;
   timezone: string;
   currency: string;
-  settings: Record<string, unknown>;
+  settings: {
+    receipt?: OrgReceiptSettings;
+    [key: string]: unknown;
+  };
 }
 
 export interface User {

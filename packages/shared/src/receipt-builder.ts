@@ -1,4 +1,5 @@
 import { ATO_TAX_INVOICE_THRESHOLD } from './constants.js';
+import type { OrgReceiptSettings } from './types/base.js';
 
 // ---------------------------------------------------------------------------
 // Receipt Data Model & Builder
@@ -13,6 +14,7 @@ export interface ReceiptBusinessInfo {
   abn: string;
   address: string;
   phone: string;
+  receiptSettings?: OrgReceiptSettings;
 }
 
 export interface ReceiptOrderInput {
@@ -98,6 +100,10 @@ export interface ReceiptData {
   tipAmount: number;
   customerName?: string;
   invoiceType: InvoiceType;
+  headerText?: string;
+  footerText?: string;
+  socialMedia?: string;
+  logoUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +145,8 @@ export function buildReceipt(
   const invoiceType: InvoiceType =
     order.total >= ATO_TAX_INVOICE_THRESHOLD ? 'full_tax_invoice' : 'simplified';
 
+  const rs = business.receiptSettings;
+
   return {
     businessName: business.businessName,
     abn: business.abn,
@@ -158,5 +166,9 @@ export function buildReceipt(
     tipAmount,
     ...(order.customerName && { customerName: order.customerName }),
     invoiceType,
+    ...(rs?.headerText && { headerText: rs.headerText }),
+    ...(rs?.footerText && { footerText: rs.footerText }),
+    ...(rs?.socialMedia && { socialMedia: rs.socialMedia }),
+    ...(rs?.logoUrl && { logoUrl: rs.logoUrl }),
   };
 }

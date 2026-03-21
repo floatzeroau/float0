@@ -43,7 +43,12 @@ async function seed() {
         currency: 'AUD',
         enabledModules: ['pos', 'inventory', 'loyalty'],
         subscriptionTier: 'professional',
-        settings: {},
+        settings: {
+          receipt: {
+            footerText: 'Thank you for visiting Float0 Demo Cafe!',
+            socialMedia: '@float0cafe',
+          },
+        },
       })
       .returning();
     org = created;

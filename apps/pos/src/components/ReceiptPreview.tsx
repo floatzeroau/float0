@@ -68,6 +68,9 @@ export function ReceiptPreview({ data }: ReceiptPreviewProps) {
   lines.push(center(data.address));
   lines.push(center(`Ph: ${data.phone}`));
   lines.push(center(`ABN: ${data.abn}`));
+  if (data.headerText) {
+    lines.push(center(data.headerText));
+  }
   lines.push(divider('='));
 
   // Order info
@@ -156,7 +159,14 @@ export function ReceiptPreview({ data }: ReceiptPreviewProps) {
 
   // Footer
   lines.push(divider('='));
-  lines.push(center('Thank you!'));
+  if (data.footerText) {
+    lines.push(center(data.footerText));
+  } else {
+    lines.push(center('Thank you!'));
+  }
+  if (data.socialMedia) {
+    lines.push(center(data.socialMedia));
+  }
   lines.push(divider('='));
 
   return (

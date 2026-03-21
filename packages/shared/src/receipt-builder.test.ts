@@ -271,4 +271,93 @@ describe('buildReceipt', () => {
     expect(receipt.invoiceType).toBe('full_tax_invoice');
     expect(receipt.customerName).toBe('Jane Smith');
   });
+
+  // -------------------------------------------------------------------------
+  // Receipt customisation via org settings
+  // -------------------------------------------------------------------------
+
+  it('includes custom header text from receipt settings', () => {
+    const customBusiness = {
+      ...business,
+      receiptSettings: { headerText: 'Best coffee in Melbourne!' },
+    };
+    const items = [makeItem()];
+    const payments = [makeCashPayment()];
+
+    const receipt = buildReceipt(customBusiness, baseOrder, items, payments, 'Alex');
+
+    expect(receipt.headerText).toBe('Best coffee in Melbourne!');
+  });
+
+  it('includes custom footer text from receipt settings', () => {
+    const customBusiness = {
+      ...business,
+      receiptSettings: { footerText: 'Thank you for visiting Float0 Demo Cafe!' },
+    };
+    const items = [makeItem()];
+    const payments = [makeCashPayment()];
+
+    const receipt = buildReceipt(customBusiness, baseOrder, items, payments, 'Alex');
+
+    expect(receipt.footerText).toBe('Thank you for visiting Float0 Demo Cafe!');
+  });
+
+  it('includes social media from receipt settings', () => {
+    const customBusiness = {
+      ...business,
+      receiptSettings: { socialMedia: '@float0cafe' },
+    };
+    const items = [makeItem()];
+    const payments = [makeCashPayment()];
+
+    const receipt = buildReceipt(customBusiness, baseOrder, items, payments, 'Alex');
+
+    expect(receipt.socialMedia).toBe('@float0cafe');
+  });
+
+  it('includes logo URL from receipt settings', () => {
+    const customBusiness = {
+      ...business,
+      receiptSettings: { logoUrl: 'https://example.com/logo.png' },
+    };
+    const items = [makeItem()];
+    const payments = [makeCashPayment()];
+
+    const receipt = buildReceipt(customBusiness, baseOrder, items, payments, 'Alex');
+
+    expect(receipt.logoUrl).toBe('https://example.com/logo.png');
+  });
+
+  it('omits receipt settings fields when not provided', () => {
+    const items = [makeItem()];
+    const payments = [makeCashPayment()];
+
+    const receipt = buildReceipt(business, baseOrder, items, payments, 'Alex');
+
+    expect(receipt.headerText).toBeUndefined();
+    expect(receipt.footerText).toBeUndefined();
+    expect(receipt.socialMedia).toBeUndefined();
+    expect(receipt.logoUrl).toBeUndefined();
+  });
+
+  it('includes all receipt settings together', () => {
+    const customBusiness = {
+      ...business,
+      receiptSettings: {
+        headerText: 'Welcome!',
+        footerText: 'See you again!',
+        socialMedia: '@float0cafe',
+        logoUrl: 'https://example.com/logo.png',
+      },
+    };
+    const items = [makeItem()];
+    const payments = [makeCashPayment()];
+
+    const receipt = buildReceipt(customBusiness, baseOrder, items, payments, 'Alex');
+
+    expect(receipt.headerText).toBe('Welcome!');
+    expect(receipt.footerText).toBe('See you again!');
+    expect(receipt.socialMedia).toBe('@float0cafe');
+    expect(receipt.logoUrl).toBe('https://example.com/logo.png');
+  });
 });
