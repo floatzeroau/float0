@@ -235,5 +235,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 11,
+      steps: [
+        addColumns({
+          table: 'shifts',
+          columns: [{ name: 'variance_notes', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

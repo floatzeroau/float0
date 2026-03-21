@@ -2,6 +2,7 @@ import { Q } from '@nozbe/watermelondb';
 import type { Database } from '@nozbe/watermelondb';
 import type { Product } from './models';
 import type { Order } from './models';
+import type { Payment } from './models';
 import type { Shift } from './models';
 import type { Customer } from './models';
 
@@ -36,6 +37,34 @@ export async function getActiveShift(database: Database, staffId: string): Promi
     .fetch();
 
   return shifts[0] ?? null;
+}
+
+export async function getShiftCashTotal(
+  database: Database,
+  shiftOpenedAt: number,
+): Promise<number> {
+  // Sum cash payment amounts for orders created during this shift
+  const payments = await database
+    .get<Payment>('payments')
+    .query(Q.where('method', 'cash'), Q.where('created_at', Q.gte(shiftOpenedAt)))
+    .fetch();
+
+  let total = 0;
+  for (const p of payments) {
+    if (p.status === 'completed') {
+      total += p.amount;
+    } else if (p.status === 'refunded') {
+      total -= p.amount;
+    }
+  }
+  return total;
+}
+
+export async function getHeldOrderCount(database: Database): Promise<number> {
+  return database
+    .get<Order>('orders')
+    .query(Q.where('held_at', Q.notEq(null)), Q.where('held_at', Q.gt(0)))
+    .fetchCount();
 }
 
 export async function getCustomerByPhone(

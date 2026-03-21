@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import InitialSyncScreen from '../screens/InitialSyncScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OpenShiftScreen from '../screens/OpenShiftScreen';
+import CloseShiftScreen from '../screens/CloseShiftScreen';
 import POSScreen from '../screens/POSScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -23,6 +24,7 @@ export type RootStackParamList = {
   Login: undefined;
   InitialSync: undefined;
   OpenShift: undefined;
+  CloseShift: undefined;
   Main: undefined;
 };
 
@@ -85,6 +87,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="InitialSync" component={InitialSyncScreen} />
       <Stack.Screen name="OpenShift" component={OpenShiftScreen} />
+      <Stack.Screen name="CloseShift" component={CloseShiftScreen} />
       <Stack.Screen name="Main" component={MainTabs} options={{ gestureEnabled: false }} />
     </Stack.Navigator>
   );

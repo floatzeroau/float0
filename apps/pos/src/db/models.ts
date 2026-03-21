@@ -294,6 +294,7 @@ export class Shift extends Model {
   @field('expected_cash') expectedCash?: number;
   @field('actual_cash') actualCash?: number;
   @field('variance') variance?: number;
+  @text('variance_notes') varianceNotes?: string;
   @text('status') status!: string;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

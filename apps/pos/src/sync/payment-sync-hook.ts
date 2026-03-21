@@ -17,3 +17,12 @@ export function onPaymentCompleted(orderId: string, paymentId: string): void {
     { table: 'payments', id: paymentId },
   ]);
 }
+
+export function onShiftClosed(shiftId: string): void {
+  if (!syncManagerRef) {
+    console.warn('SyncManager not initialized, cannot priority sync shift');
+    return;
+  }
+
+  syncManagerRef.syncPriority([{ table: 'shifts', id: shiftId }]);
+}
