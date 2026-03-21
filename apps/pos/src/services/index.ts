@@ -1,7 +1,10 @@
 import type { ITerminalService } from './terminal-service';
 import { MockTerminalService } from './mock-terminal';
+import type { IAudioService } from './audio-service';
+import { ExpoAudioService } from './audio-service';
 
 export type { ITerminalService, TerminalResult, TerminalStatus } from './terminal-service';
+export type { IAudioService } from './audio-service';
 
 // ---------------------------------------------------------------------------
 // Terminal Service Factory
@@ -27,4 +30,17 @@ export function getTerminalService(): ITerminalService {
     }
   }
   return instance;
+}
+
+// ---------------------------------------------------------------------------
+// Audio Service Factory
+// ---------------------------------------------------------------------------
+
+let audioInstance: IAudioService | null = null;
+
+export function getAudioService(): IAudioService {
+  if (!audioInstance) {
+    audioInstance = new ExpoAudioService();
+  }
+  return audioInstance;
 }

@@ -1,10 +1,13 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { calculatePaymentTotal } from '@float0/shared';
 import type { CompletePaymentParams } from '../state/order-store';
 import { getTerminalService } from '../services';
 import { TipPrompt } from './TipPrompt';
 import { SplitPaymentFlow } from './SplitPaymentFlow';
+import { PaymentConfirmationScreen } from '../screens/PaymentConfirmationScreen';
+import type { PaymentConfirmationData } from '../screens/PaymentConfirmationScreen';
+import { PaymentFailureScreen } from './PaymentFailureScreen';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,10 +22,18 @@ interface PaymentScreenProps {
   onCancel: () => void;
 }
 
-type Phase = 'method' | 'tip' | 'cash' | 'card_processing' | 'card_error' | 'split';
+type Phase =
+  | 'method'
+  | 'tip'
+  | 'cash'
+  | 'card_processing'
+  | 'card_error'
+  | 'split'
+  | 'confirmation';
 
 const QUICK_TENDER_VALUES = [5, 10, 20, 50, 100];
 const TIP_ENABLED = true;
+const TERMINAL_TIMEOUT_MS = 30_000;
 
 // ---------------------------------------------------------------------------
 // PaymentScreen
@@ -42,6 +53,11 @@ export function PaymentScreen({
   const [cardError, setCardError] = useState('');
   const [tipAmount, setTipAmount] = useState(0);
   const [selectedMethod, setSelectedMethod] = useState<'cash' | 'card' | null>(null);
+  const [confirmationData, setConfirmationData] = useState<PaymentConfirmationData | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isTimeout, setIsTimeout] = useState(false);
+  const [failedAmount, setFailedAmount] = useState(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const totalWithTip = orderTotal + tipAmount;
   const cashPayment = useMemo(() => calculatePaymentTotal(totalWithTip, 'cash'), [totalWithTip]);
@@ -71,7 +87,25 @@ export function PaymentScreen({
     setCardError('');
     setTipAmount(0);
     setSelectedMethod(null);
+    setRetryCount(0);
+    setIsTimeout(false);
+    setFailedAmount(0);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }, []);
+
+  const showConfirmation = useCallback((data: PaymentConfirmationData) => {
+    setConfirmationData(data);
+    setLoading(false);
+    setPhase('confirmation');
+  }, []);
+
+  const handleConfirmationDone = useCallback(() => {
+    handleReset();
+    onCancel();
+  }, [handleReset, onCancel]);
 
   const handleCancel = useCallback(() => {
     if (phase === 'card_processing') {
@@ -92,17 +126,64 @@ export function PaymentScreen({
     }
   }, []);
 
+  const logFailedAttempt = useCallback(
+    (reason: string, amount: number, attempt: number, timeout: boolean) => {
+      console.warn('[PaymentAudit] Card payment failed', {
+        orderNumber,
+        amount,
+        reason,
+        attempt,
+        isTimeout: timeout,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [orderNumber],
+  );
+
   const processCardPayment = useCallback(
     async (tip: number) => {
       setPhase('card_processing');
       setCardError('');
+      setIsTimeout(false);
 
       const amountToCharge = calculatePaymentTotal(orderTotal + tip, 'card').payableAmount;
+      setFailedAmount(amountToCharge);
       const terminal = getTerminalService();
-      try {
-        const result = await terminal.sendPayment(amountToCharge);
 
+      // Race terminal response against timeout
+      const timeoutPromise = new Promise<{ timedOut: true }>((resolve) => {
+        timeoutRef.current = setTimeout(() => {
+          timeoutRef.current = null;
+          resolve({ timedOut: true });
+        }, TERMINAL_TIMEOUT_MS);
+      });
+
+      try {
+        const raceResult = await Promise.race([
+          terminal.sendPayment(amountToCharge).then((r) => ({ timedOut: false as const, ...r })),
+          timeoutPromise,
+        ]);
+
+        // Clear timeout if terminal responded first
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+
+        if ('timedOut' in raceResult && raceResult.timedOut) {
+          terminal.cancelTransaction();
+          const attempt = retryCount + 1;
+          setRetryCount(attempt);
+          setIsTimeout(true);
+          setCardError('Terminal Timeout');
+          setPhase('card_error');
+          logFailedAttempt('Terminal Timeout', amountToCharge, attempt, true);
+          return;
+        }
+
+        const result = raceResult;
         if (result.success) {
+          setRetryCount(0);
           setLoading(true);
           await onComplete({
             method: 'card',
@@ -112,17 +193,37 @@ export function PaymentScreen({
             cardType: result.cardType ?? '',
             lastFour: result.lastFour ?? '',
           });
-          handleReset();
+          showConfirmation({
+            orderNumber,
+            orderTotal,
+            totalPaid: amountToCharge,
+            tipAmount: tip,
+            paymentMethod: 'card',
+            cardLastFour: result.lastFour ?? '',
+            cardType: result.cardType ?? '',
+            approvalCode: result.approvalCode ?? '',
+          });
         } else {
-          setCardError(result.errorMessage ?? 'Payment declined');
+          const errorMsg = result.errorMessage ?? 'Payment declined';
+          const attempt = retryCount + 1;
+          setRetryCount(attempt);
+          setCardError(errorMsg);
           setPhase('card_error');
+          logFailedAttempt(errorMsg, amountToCharge, attempt, false);
         }
       } catch {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        const attempt = retryCount + 1;
+        setRetryCount(attempt);
         setCardError('Terminal communication error');
         setPhase('card_error');
+        logFailedAttempt('Terminal communication error', amountToCharge, attempt, false);
       }
     },
-    [orderTotal, onComplete, handleReset],
+    [orderTotal, orderNumber, onComplete, showConfirmation, retryCount, logFailedAttempt],
   );
 
   const handleSplitSelect = useCallback(() => {
@@ -197,7 +298,14 @@ export function PaymentScreen({
         changeGiven: changeAmount,
         roundingAmount: cashPayment.roundingAmount,
       });
-      handleReset();
+      showConfirmation({
+        orderNumber,
+        orderTotal,
+        totalPaid: cashPayment.payableAmount,
+        tipAmount,
+        paymentMethod: 'cash',
+        changeGiven: changeAmount,
+      });
     } catch {
       setLoading(false);
     }
@@ -209,7 +317,9 @@ export function PaymentScreen({
     tipAmount,
     tenderedAmount,
     changeAmount,
-    handleReset,
+    showConfirmation,
+    orderNumber,
+    orderTotal,
   ]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
@@ -227,31 +337,33 @@ export function PaymentScreen({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
-            <Text style={styles.backButtonText}>
-              {phase === 'card_processing' ? 'Cancel' : 'Back'}
-            </Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment — {orderNumber}</Text>
-          <View style={styles.headerTotalContainer}>
-            {tipAmount > 0 ? (
-              <>
-                <Text style={styles.headerTotalLabel}>Subtotal</Text>
-                <Text style={styles.headerSubtotalValue}>{formatCurrency(orderTotal)}</Text>
-                <Text style={styles.headerTipLabel}>Tip: {formatCurrency(tipAmount)}</Text>
-                <Text style={styles.headerTotalLabel}>Total</Text>
-                <Text style={styles.headerTotalValue}>{formatCurrency(totalWithTip)}</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.headerTotalLabel}>Total</Text>
-                <Text style={styles.headerTotalValue}>{formatCurrency(orderTotal)}</Text>
-              </>
-            )}
+        {/* Header — hidden during confirmation */}
+        {phase !== 'confirmation' && (
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
+              <Text style={styles.backButtonText}>
+                {phase === 'card_processing' ? 'Cancel' : 'Back'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Payment — {orderNumber}</Text>
+            <View style={styles.headerTotalContainer}>
+              {tipAmount > 0 ? (
+                <>
+                  <Text style={styles.headerTotalLabel}>Subtotal</Text>
+                  <Text style={styles.headerSubtotalValue}>{formatCurrency(orderTotal)}</Text>
+                  <Text style={styles.headerTipLabel}>Tip: {formatCurrency(tipAmount)}</Text>
+                  <Text style={styles.headerTotalLabel}>Total</Text>
+                  <Text style={styles.headerTotalValue}>{formatCurrency(totalWithTip)}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.headerTotalLabel}>Total</Text>
+                  <Text style={styles.headerTotalValue}>{formatCurrency(orderTotal)}</Text>
+                </>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Phase 1: Method Selection */}
         {phase === 'method' && (
@@ -403,29 +515,24 @@ export function PaymentScreen({
 
         {/* Phase 4: Card Error */}
         {phase === 'card_error' && (
-          <View style={styles.cardErrorContainer}>
-            <Text style={styles.cardErrorIcon}>!</Text>
-            <Text style={styles.cardErrorTitle}>Payment Failed</Text>
-            <Text style={styles.cardErrorMessage}>{cardError}</Text>
-            <View style={styles.cardErrorActions}>
-              <TouchableOpacity
-                style={styles.cardRetryButton}
-                onPress={() => processCardPayment(tipAmount)}
-              >
-                <Text style={styles.cardRetryButtonText}>Try Again</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cardBackButton}
-                onPress={() => {
-                  setTipAmount(0);
-                  setSelectedMethod(null);
-                  setPhase('method');
-                }}
-              >
-                <Text style={styles.cardBackButtonText}>Choose Another Method</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <PaymentFailureScreen
+            errorMessage={cardError}
+            amount={failedAmount}
+            retryCount={retryCount}
+            isTimeout={isTimeout}
+            onRetry={() => processCardPayment(tipAmount)}
+            onTryAnotherMethod={() => {
+              setRetryCount(0);
+              setIsTimeout(false);
+              setTipAmount(0);
+              setSelectedMethod(null);
+              setPhase('method');
+            }}
+            onCancelPayment={() => {
+              handleReset();
+              onCancel();
+            }}
+          />
         )}
 
         {/* Phase: Split Payment */}
@@ -435,13 +542,27 @@ export function PaymentScreen({
             orderNumber={orderNumber}
             tipAmount={tipAmount}
             onRecordPartialPayment={onRecordPartialPayment}
-            onComplete={onComplete}
+            onComplete={async (params) => {
+              await onComplete(params);
+              showConfirmation({
+                orderNumber,
+                orderTotal: orderTotal + tipAmount,
+                totalPaid: orderTotal + tipAmount,
+                tipAmount,
+                paymentMethod: 'split',
+              });
+            }}
             onCancel={() => {
               setTipAmount(0);
               setSelectedMethod(null);
               setPhase('method');
             }}
           />
+        )}
+
+        {/* Phase: Confirmation */}
+        {phase === 'confirmation' && confirmationData && (
+          <PaymentConfirmationScreen data={confirmationData} onDone={handleConfirmationDone} />
         )}
       </View>
     </Modal>
@@ -761,64 +882,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     marginTop: 16,
-  },
-
-  // Card error
-  cardErrorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  cardErrorIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#fef2f2',
-    color: '#ef4444',
-    fontSize: 32,
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 64,
-    overflow: 'hidden',
-  },
-  cardErrorTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginTop: 16,
-  },
-  cardErrorMessage: {
-    fontSize: 16,
-    color: '#ef4444',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  cardErrorActions: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 32,
-  },
-  cardRetryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
-  },
-  cardRetryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  cardBackButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-  },
-  cardBackButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
   },
 });

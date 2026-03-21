@@ -3,12 +3,7 @@ import { Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { Order, OrderItem, Product, Customer, AuditLog, Payment } from '../db/models';
-import {
-  calculateLineTotal,
-  calculateCartTotals,
-  calculateItemDiscount,
-  roundToFiveCents,
-} from '@float0/shared';
+import { calculateLineTotal, calculateCartTotals, calculateItemDiscount } from '@float0/shared';
 import type { DiscountType, OrderDiscount } from '@float0/shared';
 import { eventBus } from '@float0/events';
 import { transitionOrder } from './order-lifecycle';
@@ -108,6 +103,16 @@ export interface CardPaymentParams {
 
 export type CompletePaymentParams = CashPaymentParams | CardPaymentParams;
 
+export interface RefundParams {
+  orderId: string;
+  refundAmount: number;
+  reason: string;
+  refundMethod: 'cash' | 'card';
+  managerApprover: string;
+  isFullRefund: boolean;
+  refundedItemIds?: string[];
+}
+
 const MAX_HELD_ORDERS = 20;
 const HELD_ORDER_WARNING_THRESHOLD = 15;
 export const VOID_THRESHOLD_AMOUNT = 10;
@@ -159,6 +164,7 @@ interface OrderStoreValue {
   returnToNewOrder: () => Promise<void>;
   completePayment: (params: CompletePaymentParams) => Promise<void>;
   recordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
+  refundOrder: (params: RefundParams) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -247,6 +253,7 @@ const OrderContext = createContext<OrderStoreValue>({
   returnToNewOrder: async () => {},
   completePayment: async () => {},
   recordPartialPayment: async () => {},
+  refundOrder: async () => {},
 });
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
@@ -407,6 +414,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           customerName,
           itemCount: orderItems.length,
           total: order.total,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           heldAt: (order as any)._raw.held_at as number,
         };
       }),
@@ -1402,6 +1410,79 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   // -------------------------------------------------------------------------
+  // refundOrder
+  // -------------------------------------------------------------------------
+  const refundOrder = useCallback(async (params: RefundParams) => {
+    const {
+      orderId,
+      refundAmount,
+      reason,
+      refundMethod,
+      managerApprover,
+      isFullRefund,
+      refundedItemIds,
+    } = params;
+
+    // Create refund payment record (negative amount)
+    let paymentId = '';
+    const now = Date.now();
+    await database.write(async () => {
+      const payment = await database.get<Payment>('payments').create((p) => {
+        setRaw(p, 'server_id', '');
+        setRaw(p, 'order_id', orderId);
+        setRaw(p, 'method', refundMethod);
+        setRaw(p, 'amount', -refundAmount);
+        setRaw(p, 'tip_amount', 0);
+        setRaw(p, 'reference', reason);
+        setRaw(p, 'status', 'refunded');
+        setRaw(p, 'created_at', now);
+        setRaw(p, 'updated_at', now);
+      });
+      paymentId = payment.id;
+
+      // Audit log
+      await database.get<AuditLog>('audit_logs').create((a) => {
+        setRaw(a, 'server_id', '');
+        setRaw(a, 'action', isFullRefund ? 'refund_full' : 'refund_partial');
+        setRaw(a, 'entity_type', 'order');
+        setRaw(a, 'entity_id', orderId);
+        setRaw(a, 'staff_id', '');
+        setRaw(a, 'manager_approver', managerApprover);
+        setRaw(
+          a,
+          'changes_json',
+          JSON.stringify({
+            refundAmount,
+            reason,
+            refundMethod,
+            isFullRefund,
+            refundedItemIds: refundedItemIds ?? [],
+            paymentId,
+          }),
+        );
+        setRaw(a, 'created_at', now);
+      });
+    });
+
+    // Transition order to refunded (only for full refunds)
+    if (isFullRefund) {
+      await transitionOrder(orderId, 'refunded');
+    }
+
+    // Emit event
+    eventBus.emit('pos.order.refunded', {
+      orderId,
+      organizationId: 'org-1',
+      refundAmount,
+      reason,
+      timestamp: new Date(),
+    });
+
+    // Priority sync
+    onPaymentCompleted(orderId, paymentId);
+  }, []);
+
+  // -------------------------------------------------------------------------
   // Provider value
   // -------------------------------------------------------------------------
   const value: OrderStoreValue = {
@@ -1437,6 +1518,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     returnToNewOrder,
     completePayment,
     recordPartialPayment,
+    refundOrder,
   };
 
   return React.createElement(OrderContext.Provider, { value }, children);

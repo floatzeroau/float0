@@ -4,11 +4,12 @@ import { Q } from '@nozbe/watermelondb';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { database } from '../db/database';
-import type { Order, OrderItem, Product, Customer } from '../db/models';
+import type { Order, OrderItem, Product, Customer, Payment } from '../db/models';
 import { STATUS_LABELS, STATUS_COLOURS } from '../state/order-lifecycle';
 import type { OrderStatusDB } from '../state/order-lifecycle';
 import { useOrder } from '../state/order-store';
 import type { MainTabParamList } from '../navigation/RootNavigator';
+import { RefundScreen } from './RefundScreen';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,11 +71,13 @@ function OrderDetailModal({
   visible,
   onClose,
   onManage,
+  onRefund,
 }: {
   order: OrderRow | null;
   visible: boolean;
   onClose: () => void;
   onManage: (orderId: string) => void;
+  onRefund: (orderId: string) => void;
 }) {
   const [items, setItems] = useState<OrderDetailItem[]>([]);
 
@@ -135,6 +138,7 @@ function OrderDetailModal({
       : 'Takeaway';
 
   const canManage = MANAGEABLE_STATUSES.includes(order.status);
+  const canRefund = order.status === 'completed';
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -233,6 +237,13 @@ function OrderDetailModal({
             </TouchableOpacity>
           )}
 
+          {/* Refund button */}
+          {canRefund && (
+            <TouchableOpacity style={styles.refundButton} onPress={() => onRefund(order.id)}>
+              <Text style={styles.refundButtonText}>Refund</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Close */}
           <TouchableOpacity style={styles.detailCloseButton} onPress={onClose}>
             <Text style={styles.detailCloseText}>Close</Text>
@@ -247,10 +258,18 @@ function OrderDetailModal({
 // OrderHistoryScreen
 // ---------------------------------------------------------------------------
 
+interface RefundOrderData {
+  id: string;
+  orderNumber: string;
+  total: number;
+  originalPaymentMethod: 'cash' | 'card' | 'split';
+}
+
 export default function OrderHistoryScreen() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [refundOrder, setRefundOrder] = useState<RefundOrderData | null>(null);
   const { loadSubmittedOrder } = useOrder();
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
@@ -314,6 +333,44 @@ export default function OrderHistoryScreen() {
     },
     [loadSubmittedOrder, navigation],
   );
+
+  const handleRefund = useCallback(
+    async (orderId: string) => {
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return;
+
+      // Determine original payment method
+      let originalMethod: 'cash' | 'card' | 'split' = 'cash';
+      try {
+        const payments = await database
+          .get<Payment>('payments')
+          .query(Q.where('order_id', orderId), Q.where('status', 'completed'))
+          .fetch();
+
+        if (payments.length > 1) {
+          originalMethod = 'split';
+        } else if (payments.length === 1) {
+          originalMethod = payments[0].method === 'card' ? 'card' : 'cash';
+        }
+      } catch {
+        // default to cash
+      }
+
+      setSelectedOrder(null);
+      setRefundOrder({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        total: order.total,
+        originalPaymentMethod: originalMethod,
+      });
+    },
+    [orders],
+  );
+
+  const handleRefundClose = useCallback(() => {
+    setRefundOrder(null);
+    loadOrders();
+  }, [loadOrders]);
 
   const filtered = orders.filter((o) => {
     if (filter === 'all') return true;
@@ -404,6 +461,14 @@ export default function OrderHistoryScreen() {
         visible={selectedOrder !== null}
         onClose={() => setSelectedOrder(null)}
         onManage={handleManageOrder}
+        onRefund={handleRefund}
+      />
+
+      {/* Refund modal */}
+      <RefundScreen
+        visible={refundOrder !== null}
+        order={refundOrder}
+        onClose={handleRefundClose}
       />
     </View>
   );
@@ -708,6 +773,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   manageButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  refundButton: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#8b5cf6',
+    alignItems: 'center',
+  },
+  refundButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#fff',

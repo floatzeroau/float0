@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { calculatePaymentTotal } from '@float0/shared';
 import type { CompletePaymentParams } from '../state/order-store';
 import { getTerminalService } from '../services';
+import { PaymentFailureScreen } from './PaymentFailureScreen';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,6 +34,7 @@ interface Portion {
 
 const MAX_SPLITS = 4;
 const QUICK_TENDER_VALUES = [5, 10, 20, 50, 100];
+const TERMINAL_TIMEOUT_MS = 30_000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,16 +60,13 @@ function distributeTip(portions: Portion[], totalTip: number, orderTotal: number
 function buildEvenPortions(total: number, count: number, totalTip: number): Portion[] {
   const perPerson = Math.floor((total / count) * 100) / 100;
   const portions: Portion[] = [];
-  let remaining = total;
   for (let i = 0; i < count; i++) {
     if (i === 0) {
       // First person absorbs remainder cents
       const firstAmount = Math.round((total - perPerson * (count - 1)) * 100) / 100;
       portions.push({ amount: firstAmount, tip: 0 });
-      remaining -= firstAmount;
     } else {
       portions.push({ amount: perPerson, tip: 0 });
-      remaining -= perPerson;
     }
   }
   return distributeTip(portions, totalTip, total);
@@ -102,6 +101,12 @@ export function SplitPaymentFlow({
   const [paidTotal, setPaidTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [cardError, setCardError] = useState('');
+
+  // Card failure state
+  const [retryCount, setRetryCount] = useState(0);
+  const [isTimeout, setIsTimeout] = useState(false);
+  const [failedAmount, setFailedAmount] = useState(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cash UI state for portion
   const [tenderedInput, setTenderedInput] = useState('');
@@ -203,11 +208,6 @@ export function SplitPaymentFlow({
   const handlePortionCash = useCallback(() => {
     setTenderedInput('');
     setPhase('portion_cash');
-  }, []);
-
-  const handlePortionCard = useCallback(() => {
-    setPhase('portion_card');
-    setCardError('');
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -316,15 +316,62 @@ export function SplitPaymentFlow({
     [portionTotal],
   );
 
+  const logFailedAttempt = useCallback(
+    (reason: string, amount: number, attempt: number, timeout: boolean) => {
+      console.warn('[PaymentAudit] Split card payment failed', {
+        orderNumber,
+        portionIndex: currentPortionIndex,
+        amount,
+        reason,
+        attempt,
+        isTimeout: timeout,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [orderNumber, currentPortionIndex],
+  );
+
   const processCardPortion = useCallback(async () => {
     setPhase('portion_card');
     setCardError('');
+    setIsTimeout(false);
 
     const amountToCharge = portionCardPayment.payableAmount;
+    setFailedAmount(amountToCharge);
     const terminal = getTerminalService();
+
+    const timeoutPromise = new Promise<{ timedOut: true }>((resolve) => {
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null;
+        resolve({ timedOut: true });
+      }, TERMINAL_TIMEOUT_MS);
+    });
+
     try {
-      const result = await terminal.sendPayment(amountToCharge);
+      const raceResult = await Promise.race([
+        terminal.sendPayment(amountToCharge).then((r) => ({ timedOut: false as const, ...r })),
+        timeoutPromise,
+      ]);
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      if ('timedOut' in raceResult && raceResult.timedOut) {
+        terminal.cancelTransaction();
+        const attempt = retryCount + 1;
+        setRetryCount(attempt);
+        setIsTimeout(true);
+        setCardError('Terminal Timeout');
+        setPhase('portion_card_error');
+        logFailedAttempt('Terminal Timeout', amountToCharge, attempt, true);
+        return;
+      }
+
+      const result = raceResult;
       if (result.success) {
+        setRetryCount(0);
         setLoading(true);
         const params: CompletePaymentParams = {
           method: 'card',
@@ -344,12 +391,23 @@ export function SplitPaymentFlow({
         }
         setLoading(false);
       } else {
-        setCardError(result.errorMessage ?? 'Payment declined');
+        const errorMsg = result.errorMessage ?? 'Payment declined';
+        const attempt = retryCount + 1;
+        setRetryCount(attempt);
+        setCardError(errorMsg);
         setPhase('portion_card_error');
+        logFailedAttempt(errorMsg, amountToCharge, attempt, false);
       }
     } catch {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      const attempt = retryCount + 1;
+      setRetryCount(attempt);
       setCardError('Terminal communication error');
       setPhase('portion_card_error');
+      logFailedAttempt('Terminal communication error', amountToCharge, attempt, false);
     }
   }, [
     portionCardPayment.payableAmount,
@@ -360,6 +418,8 @@ export function SplitPaymentFlow({
     onRecordPartialPayment,
     advanceToNextPortion,
     portionTotal,
+    retryCount,
+    logFailedAttempt,
   ]);
 
   // Start card processing when entering portion_card phase
@@ -735,31 +795,19 @@ export function SplitPaymentFlow({
 
       {/* Card portion — error */}
       {phase === 'portion_card_error' && (
-        <View style={styles.cardErrorContainer}>
-          <Text style={styles.cardErrorIcon}>!</Text>
-          <Text style={styles.cardErrorTitle}>Payment Failed</Text>
-          <Text style={styles.cardErrorMessage}>{cardError}</Text>
-          <View style={styles.cardErrorActions}>
-            <TouchableOpacity style={styles.cardRetryButton} onPress={processCardPortion}>
-              <Text style={styles.cardRetryButtonText}>Try Again</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.useCashButton}
-              onPress={() => {
-                setTenderedInput('');
-                setPhase('portion_cash');
-              }}
-            >
-              <Text style={styles.useCashButtonText}>Use Cash Instead</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cardBackButton}
-              onPress={() => setPhase('portion_method')}
-            >
-              <Text style={styles.cardBackButtonText}>Back</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <PaymentFailureScreen
+          errorMessage={cardError}
+          amount={failedAmount}
+          retryCount={retryCount}
+          isTimeout={isTimeout}
+          onRetry={processCardPortion}
+          onTryAnotherMethod={() => {
+            setRetryCount(0);
+            setIsTimeout(false);
+            setPhase('portion_method');
+          }}
+          onCancelPayment={handleCancelSplit}
+        />
       )}
     </View>
   );
@@ -1271,75 +1319,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     marginTop: 16,
-  },
-
-  // Card error
-  cardErrorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  cardErrorIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#fef2f2',
-    color: '#ef4444',
-    fontSize: 32,
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 64,
-    overflow: 'hidden',
-  },
-  cardErrorTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginTop: 16,
-  },
-  cardErrorMessage: {
-    fontSize: 16,
-    color: '#ef4444',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  cardErrorActions: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 32,
-  },
-  cardRetryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
-  },
-  cardRetryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  useCashButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    backgroundColor: '#10b981',
-    borderRadius: 10,
-  },
-  useCashButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  cardBackButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-  },
-  cardBackButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
   },
 });
