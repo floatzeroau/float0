@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import type { ReceiptData } from '@float0/shared';
+import type { ReceiptData, KitchenDocketData } from '@float0/shared';
 
 // ---------------------------------------------------------------------------
 // Printer Service Interface
@@ -12,6 +12,7 @@ export interface PrinterStatus {
 
 export interface IPrinterService {
   printReceipt(data: ReceiptData): Promise<void>;
+  printDocket(data: KitchenDocketData): Promise<void>;
   openDrawer(): Promise<void>;
   getStatus(): Promise<PrinterStatus>;
 }
@@ -24,6 +25,10 @@ export class MockPrinterService implements IPrinterService {
   async printReceipt(data: ReceiptData): Promise<void> {
     console.log('[MockPrinter] Receipt printed:', data.orderNumber);
     Alert.alert('Receipt Printed', `Receipt for ${data.orderNumber} sent to printer.`);
+  }
+
+  async printDocket(data: KitchenDocketData): Promise<void> {
+    console.log('[MockPrinter] Kitchen docket:', data.orderNumber, data.items);
   }
 
   async openDrawer(): Promise<void> {

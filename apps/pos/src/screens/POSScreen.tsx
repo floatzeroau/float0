@@ -10,6 +10,7 @@ import { ModifierModal } from '../components/ModifierModal';
 import type { ModifierModalResult } from '../components/ModifierModal';
 import { CartSidebar } from '../components/CartSidebar';
 import { PaymentScreen } from '../components/PaymentScreen';
+import { DocketPreview } from '../components/DocketPreview';
 import { database } from '../db/database';
 import type { Product } from '../db/models';
 import { calculateLineTotal } from '@float0/shared';
@@ -138,6 +139,8 @@ export default function POSScreen() {
     completePayment,
     recordPartialPayment,
     cartTotals,
+    lastDocket,
+    clearLastDocket,
   } = useOrder();
   const [initialized, setInitialized] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -311,6 +314,8 @@ export default function POSScreen() {
         onRecordPartialPayment={recordPartialPayment}
         onCancel={handlePaymentCancel}
       />
+
+      {lastDocket && <DocketPreview data={lastDocket} onDismiss={clearLastDocket} />}
     </View>
   );
 }

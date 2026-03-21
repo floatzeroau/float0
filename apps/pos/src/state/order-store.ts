@@ -8,6 +8,8 @@ import {
   calculateCartTotals,
   calculateItemDiscount,
   buildReceipt,
+  buildKitchenDocket,
+  buildModificationDocket,
 } from '@float0/shared';
 import type {
   DiscountType,
@@ -15,9 +17,11 @@ import type {
   ReceiptData,
   ReceiptItemInput,
   ReceiptPaymentInput,
+  KitchenDocketData,
 } from '@float0/shared';
 import { eventBus } from '@float0/events';
 import { transitionOrder } from './order-lifecycle';
+import { getPrinterService } from '../services';
 import { onPaymentCompleted } from '../sync/payment-sync-hook';
 import type { OrderStatusDB } from './order-lifecycle';
 
@@ -179,6 +183,8 @@ interface OrderStoreValue {
   completePayment: (params: CompletePaymentParams) => Promise<ReceiptData | undefined>;
   recordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
   refundOrder: (params: RefundParams) => Promise<void>;
+  lastDocket: KitchenDocketData | null;
+  clearLastDocket: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +274,8 @@ const OrderContext = createContext<OrderStoreValue>({
   completePayment: async () => undefined,
   recordPartialPayment: async () => {},
   refundOrder: async () => {},
+  lastDocket: null,
+  clearLastDocket: () => {},
 });
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
@@ -277,7 +285,13 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [heldOrders, setHeldOrders] = useState<HeldOrderSummary[]>([]);
   const [orderDiscount, setOrderDiscount] = useState<OrderDiscountData | null>(null);
   const [isManagingSubmittedOrder, setIsManagingSubmittedOrder] = useState(false);
+  const [lastDocket, setLastDocket] = useState<KitchenDocketData | null>(null);
   const orderRecordIdRef = useRef<string | null>(null);
+  const submittedItemsSnapshotRef = useRef<{ id: string; voidedAt: number }[]>([]);
+
+  const clearLastDocket = useCallback(() => {
+    setLastDocket(null);
+  }, []);
 
   // -------------------------------------------------------------------------
   // refreshItems — reload items from DB & recalculate totals
@@ -837,6 +851,26 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     await transitionOrder(orderId, 'submitted');
 
+    // Build and print kitchen docket
+    if (currentOrder) {
+      const docketOrder = {
+        orderNumber: currentOrder.orderNumber,
+        orderType: currentOrder.orderType,
+        ...(currentOrder.tableNumber && { tableNumber: currentOrder.tableNumber }),
+        createdAt: Date.now(),
+      };
+      const docketItems = items.map((item) => ({
+        productName: item.productName,
+        modifiers: item.modifiers.map((m) => m.name),
+        quantity: item.quantity,
+        notes: item.notes,
+        isVoided: item.voidedAt > 0,
+      }));
+      const docketData = buildKitchenDocket(docketOrder, docketItems);
+      getPrinterService().printDocket(docketData);
+      setLastDocket(docketData);
+    }
+
     eventBus.emit('pos.order.submitted', {
       orderId,
       organizationId: 'org-1',
@@ -854,7 +888,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => {
       doCreateOrder();
     }, 300);
-  }, [items, cartTotals, doCreateOrder]);
+  }, [items, cartTotals, currentOrder, doCreateOrder]);
 
   // -------------------------------------------------------------------------
   // cancelOrder
@@ -1080,6 +1114,18 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       });
 
       await refreshItems(orderId, restoredDiscount);
+
+      // Snapshot current items for modification docket diffing
+      const snapshotItems = await database
+        .get<OrderItem>('order_items')
+        .query(Q.where('order_id', orderId))
+        .fetch();
+      submittedItemsSnapshotRef.current = snapshotItems.map((oi) => ({
+        id: oi.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        voidedAt: (oi as any)._raw.voided_at ?? 0,
+      }));
+
       await refreshHeldOrders();
     },
     [items.length, refreshItems, refreshHeldOrders],
@@ -1289,10 +1335,54 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   // returnToNewOrder
   // -------------------------------------------------------------------------
   const returnToNewOrder = useCallback(async () => {
+    // Build modification docket if managing a submitted order
+    if (isManagingSubmittedOrder && currentOrder) {
+      const snapshot = submittedItemsSnapshotRef.current;
+      const snapshotIds = new Set(snapshot.map((s) => s.id));
+
+      const newItems = items
+        .filter((item) => !snapshotIds.has(item.id) && item.voidedAt === 0)
+        .map((item) => ({
+          productName: item.productName,
+          modifiers: item.modifiers.map((m) => m.name),
+          quantity: item.quantity,
+          notes: item.notes,
+          isVoided: false,
+        }));
+
+      const newlyVoided = items
+        .filter((item) => {
+          if (item.voidedAt === 0) return false;
+          const snap = snapshot.find((s) => s.id === item.id);
+          return snap && snap.voidedAt === 0;
+        })
+        .map((item) => ({
+          productName: item.productName,
+          modifiers: item.modifiers.map((m) => m.name),
+          quantity: item.quantity,
+          notes: item.notes,
+          isVoided: true,
+        }));
+
+      const docketOrder = {
+        orderNumber: currentOrder.orderNumber,
+        orderType: currentOrder.orderType,
+        ...(currentOrder.tableNumber && { tableNumber: currentOrder.tableNumber }),
+        createdAt: Date.now(),
+      };
+
+      const modDocket = buildModificationDocket(docketOrder, newItems, newlyVoided);
+      if (modDocket) {
+        getPrinterService().printDocket(modDocket);
+        setLastDocket(modDocket);
+      }
+    }
+
+    submittedItemsSnapshotRef.current = [];
     setIsManagingSubmittedOrder(false);
     await doCreateOrder();
     await refreshHeldOrders();
-  }, [doCreateOrder, refreshHeldOrders]);
+  }, [doCreateOrder, refreshHeldOrders, isManagingSubmittedOrder, currentOrder, items]);
 
   // -------------------------------------------------------------------------
   // recordPartialPayment (split payment — records one portion without completing order)
@@ -1604,6 +1694,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     completePayment,
     recordPartialPayment,
     refundOrder,
+    lastDocket,
+    clearLastDocket,
   };
 
   return React.createElement(OrderContext.Provider, { value }, children);
