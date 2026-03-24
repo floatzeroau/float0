@@ -11,6 +11,7 @@ import { modifierGroupRoutes } from './routes/modifier-groups.routes.js';
 import { modifierRoutes } from './routes/modifiers.routes.js';
 import { productRoutes } from './routes/products.routes.js';
 import { receiptRoutes } from './routes/receipts.routes.js';
+import { reportRoutes } from './routes/reports.routes.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requireRole } from './middleware/rbac.js';
 import { registerEventLogger } from './services/event-logger.js';
@@ -40,6 +41,7 @@ await app.register(modifierGroupRoutes);
 await app.register(modifierRoutes);
 await app.register(productRoutes);
 await app.register(receiptRoutes);
+await app.register(reportRoutes);
 
 registerEventLogger();
 
