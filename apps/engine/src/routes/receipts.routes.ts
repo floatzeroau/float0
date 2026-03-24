@@ -121,7 +121,7 @@ export async function receiptRoutes(app: FastifyInstance) {
       abn: org.abn
         ? `${org.abn.slice(0, 2)} ${org.abn.slice(2, 5)} ${org.abn.slice(5, 8)} ${org.abn.slice(8)}`
         : '',
-      address: org.address ?? '',
+      address: typeof org.address === 'string' ? org.address : '',
       phone: org.phone ?? '',
       receiptSettings,
     };
