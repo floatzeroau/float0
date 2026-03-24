@@ -1,6 +1,9 @@
+'use client';
+
 import { CURRENCY, TIMEZONE } from '@float0/shared';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SalesChart } from '@/components/sales-chart';
 
 const stats = [
   { title: 'Revenue Today', value: '$1,284.00', change: '+12%' },
@@ -36,6 +39,8 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <SalesChart />
     </div>
   );
 }
