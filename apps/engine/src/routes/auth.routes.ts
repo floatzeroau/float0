@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
   loginUser,
-  registerUser,
+  registerOrganization,
   refreshAccessToken,
   logoutUser,
   pinLogin,
@@ -22,11 +22,20 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const abnSchema = z
+  .string()
+  .regex(/^\d{11}$/, 'ABN must be exactly 11 digits')
+  .optional();
+
 const registerSchema = z.object({
   email: z.string().email(),
   password: passwordSchema,
   firstName: z.string().min(1),
   lastName: z.string().min(1),
+  phone: z.string().optional(),
+  orgName: z.string().min(1, 'Organization name is required'),
+  abn: abnSchema,
+  timezone: z.string().default('Australia/Melbourne'),
 });
 
 const refreshSchema = z.object({
@@ -74,7 +83,7 @@ export async function authRoutes(app: FastifyInstance) {
       });
     }
 
-    const tokens = await registerUser(app, parsed.data, request.ip);
+    const tokens = await registerOrganization(app, parsed.data, request.ip);
 
     return reply.status(201).send(tokens);
   });
