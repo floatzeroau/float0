@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard,
   Package,
+  Tags,
   Users,
   UserCog,
   BarChart3,
@@ -17,6 +18,7 @@ import { SidebarNavItem } from './sidebar-nav-item';
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/products', label: 'Products', icon: Package },
+  { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/customers', label: 'Customers', icon: Users },
   { href: '/staff', label: 'Staff', icon: UserCog },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
