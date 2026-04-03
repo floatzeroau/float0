@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, gte, lt } from 'drizzle-orm';
+import { eq, and, sql, desc, gte, lt, inArray } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { orders, orderItems, payments, products } from '../db/schema/pos.js';
 
@@ -129,7 +129,7 @@ export async function getDashboardSummary(
   // ── Sales by hour ─────────────────────────────────────
   const salesByHourRows = await db
     .select({
-      hour: sql<number>`cast(extract(hour from "orders"."created_at" AT TIME ZONE ${timezone}) as int)`,
+      hour: sql<number>`cast(extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone}) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orders: sql<number>`cast(count(*) as int)`,
     })
@@ -180,7 +180,7 @@ export async function getDashboardSummary(
       .where(
         and(
           eq(payments.organizationId, orgId),
-          sql`${payments.orderId} = ANY(${orderIds})`,
+          inArray(payments.orderId, orderIds),
           eq(payments.status, 'completed'),
         ),
       );
@@ -234,7 +234,7 @@ async function getHourlySales(
 
   const rows = await db
     .select({
-      hour: sql<number>`cast(extract(hour from "orders"."created_at" AT TIME ZONE ${timezone}) as int)`,
+      hour: sql<number>`cast(extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone}) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orderCount: sql<number>`cast(count(*) as int)`,
     })
@@ -279,7 +279,7 @@ async function getDailySales(
 
   const rows = await db
     .select({
-      dow: sql<number>`cast(extract(isodow from "orders"."created_at" AT TIME ZONE ${timezone}) as int)`,
+      dow: sql<number>`cast(extract(isodow from ${orders.createdAt} AT TIME ZONE ${timezone}) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orderCount: sql<number>`cast(count(*) as int)`,
     })
@@ -322,7 +322,7 @@ async function getWeeklySales(
 
   const rows = await db
     .select({
-      weekNum: sql<number>`cast(ceil(extract(day from "orders"."created_at" AT TIME ZONE ${timezone}) / 7.0) as int)`,
+      weekNum: sql<number>`cast(ceil(extract(day from ${orders.createdAt} AT TIME ZONE ${timezone}) / 7.0) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orderCount: sql<number>`cast(count(*) as int)`,
     })

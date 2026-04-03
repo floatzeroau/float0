@@ -26,6 +26,7 @@ interface UpdateOrgInput {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+  logo?: string | null;
   timezone?: string;
   settings?: Record<string, unknown>;
 }

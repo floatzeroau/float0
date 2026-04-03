@@ -38,6 +38,7 @@ const updateOrgSchema = z.object({
   phone: z.string().max(50).nullable().optional(),
   email: z.string().email().nullable().optional(),
   website: z.string().max(255).nullable().optional(),
+  logo: z.string().nullable().optional(),
   timezone: z
     .string()
     .regex(IANA_TZ_RE, 'Must be a valid IANA timezone (e.g. Australia/Melbourne)')

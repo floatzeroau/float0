@@ -22,7 +22,7 @@ export interface ModifierGroup {
   id: string;
   name: string;
   displayName: string;
-  selectionType: 'required' | 'optional';
+  selectionType: 'single' | 'multiple';
   minSelections: number;
   maxSelections: number;
   modifiers?: Modifier[];
@@ -87,7 +87,7 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
     if (group) {
       setName(group.name);
       setDisplayName(group.displayName);
-      setSelectionType(group.selectionType);
+      setSelectionType(group.selectionType === 'single' ? 'required' : 'optional');
       setMinSelections(String(group.minSelections));
       setMaxSelections(String(group.maxSelections));
     } else {
@@ -128,12 +128,16 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
     setSaving(true);
 
     try {
+      const apiSelectionType = selectionType === 'required' ? 'single' : 'multiple';
+      const apiMinSelections = selectionType === 'required' ? 1 : 0;
+      const apiMaxSelections = selectionType === 'required' ? 1 : parseInt(maxSelections, 10) || 1;
+
       const payload = {
         name: name.trim(),
         displayName: displayName.trim() || name.trim(),
-        selectionType,
-        minSelections: parseInt(minSelections, 10) || 0,
-        maxSelections: parseInt(maxSelections, 10) || 1,
+        selectionType: apiSelectionType,
+        minSelections: apiMinSelections,
+        maxSelections: apiMaxSelections,
         productIds: linkedProductIds.length > 0 ? linkedProductIds : undefined,
       };
 

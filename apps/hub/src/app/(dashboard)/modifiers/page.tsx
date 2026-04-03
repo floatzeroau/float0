@@ -58,7 +58,7 @@ function formatPrice(cents: number): string {
 }
 
 function selectionLabel(group: ModifierGroup): string {
-  if (group.selectionType === 'required') {
+  if (group.selectionType === 'single') {
     if (group.minSelections === group.maxSelections) {
       return `Required, pick ${group.minSelections}`;
     }
@@ -405,7 +405,7 @@ export default function ModifiersPage() {
                   </div>
                 </div>
 
-                <Badge variant={group.selectionType === 'required' ? 'default' : 'secondary'}>
+                <Badge variant={group.selectionType === 'single' ? 'default' : 'secondary'}>
                   {selectionLabel(group)}
                 </Badge>
 

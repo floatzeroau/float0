@@ -34,6 +34,7 @@ export const organizations = pgTable('organizations', {
   phone: varchar({ length: 50 }),
   email: varchar({ length: 255 }),
   website: varchar({ length: 255 }),
+  logo: text(),
   timezone: varchar({ length: 100 }).notNull().default('Australia/Melbourne'),
   currency: varchar({ length: 10 }).notNull().default('AUD'),
   enabledModules: jsonb().notNull().default([]),
