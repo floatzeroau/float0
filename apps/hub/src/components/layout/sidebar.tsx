@@ -22,7 +22,7 @@ const navItems = [
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/modifiers', label: 'Modifiers', icon: Layers },
   { href: '/customers', label: 'Customers', icon: Users },
-  { href: '/staff', label: 'Staff', icon: UserCog },
+  { href: '/settings/team', label: 'Staff', icon: UserCog },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

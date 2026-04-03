@@ -5,7 +5,11 @@
       "Bash(pnpm turbo:*)",
       "Bash(do:*)",
       "Bash(git merge:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(docker exec:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(curl:*)"
     ]
   }
 }

@@ -129,7 +129,7 @@ export async function getDashboardSummary(
   // ── Sales by hour ─────────────────────────────────────
   const salesByHourRows = await db
     .select({
-      hour: sql<number>`cast(extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone}) as int)`,
+      hour: sql<number>`cast(extract(hour from "orders"."created_at" AT TIME ZONE ${timezone}) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orders: sql<number>`cast(count(*) as int)`,
     })
@@ -142,8 +142,8 @@ export async function getDashboardSummary(
         lt(orders.createdAt, end),
       ),
     )
-    .groupBy(sql`extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone})`)
-    .orderBy(sql`extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone})`);
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
 
   // ── Recent orders ─────────────────────────────────────
   const recentOrderRows = await db
@@ -234,7 +234,7 @@ async function getHourlySales(
 
   const rows = await db
     .select({
-      hour: sql<number>`cast(extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone}) as int)`,
+      hour: sql<number>`cast(extract(hour from "orders"."created_at" AT TIME ZONE ${timezone}) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orderCount: sql<number>`cast(count(*) as int)`,
     })
@@ -247,8 +247,8 @@ async function getHourlySales(
         lt(orders.createdAt, end),
       ),
     )
-    .groupBy(sql`extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone})`)
-    .orderBy(sql`extract(hour from ${orders.createdAt} AT TIME ZONE ${timezone})`);
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
 
   // Fill all 24 hours
   const map = new Map(rows.map((r) => [Number(r.hour), r]));
@@ -279,7 +279,7 @@ async function getDailySales(
 
   const rows = await db
     .select({
-      dow: sql<number>`cast(extract(isodow from ${orders.createdAt} AT TIME ZONE ${timezone}) as int)`,
+      dow: sql<number>`cast(extract(isodow from "orders"."created_at" AT TIME ZONE ${timezone}) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orderCount: sql<number>`cast(count(*) as int)`,
     })
@@ -292,8 +292,8 @@ async function getDailySales(
         lt(orders.createdAt, sql`(${weekEnd} AT TIME ZONE ${timezone})`),
       ),
     )
-    .groupBy(sql`extract(isodow from ${orders.createdAt} AT TIME ZONE ${timezone})`)
-    .orderBy(sql`extract(isodow from ${orders.createdAt} AT TIME ZONE ${timezone})`);
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
 
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const map = new Map(rows.map((r) => [Number(r.dow), r]));
@@ -322,7 +322,7 @@ async function getWeeklySales(
 
   const rows = await db
     .select({
-      weekNum: sql<number>`cast(ceil(extract(day from ${orders.createdAt} AT TIME ZONE ${timezone}) / 7.0) as int)`,
+      weekNum: sql<number>`cast(ceil(extract(day from "orders"."created_at" AT TIME ZONE ${timezone}) / 7.0) as int)`,
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       orderCount: sql<number>`cast(count(*) as int)`,
     })
@@ -335,8 +335,8 @@ async function getWeeklySales(
         lt(orders.createdAt, sql`(${monthEnd} AT TIME ZONE ${timezone})`),
       ),
     )
-    .groupBy(sql`ceil(extract(day from ${orders.createdAt} AT TIME ZONE ${timezone}) / 7.0)`)
-    .orderBy(sql`ceil(extract(day from ${orders.createdAt} AT TIME ZONE ${timezone}) / 7.0)`);
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
 
   // Up to 5 weeks in a month
   const map = new Map(rows.map((r) => [Number(r.weekNum), r]));
