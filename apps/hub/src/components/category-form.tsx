@@ -13,6 +13,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ColourPicker } from '@/components/colour-picker';
+import { Utensils } from 'lucide-react';
+import { CategoryIcon, CATEGORY_ICON_NAMES } from '@/components/category-icon';
 import { api, ApiClientError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -30,45 +32,6 @@ export interface Category {
   orgId: string;
   productCount?: number;
 }
-
-// ---------------------------------------------------------------------------
-// Emoji presets — cafe / restaurant relevant
-// ---------------------------------------------------------------------------
-
-const EMOJI_PRESETS = [
-  '☕',
-  '🍵',
-  '🧋',
-  '🥤',
-  '🍺',
-  '🍷',
-  '🧃',
-  '🥛',
-  '🍰',
-  '🎂',
-  '🍩',
-  '🧁',
-  '🥐',
-  '🍞',
-  '🥖',
-  '🍪',
-  '🍔',
-  '🌮',
-  '🥪',
-  '🍕',
-  '🥗',
-  '🍝',
-  '🍜',
-  '🍲',
-  '🍳',
-  '🥞',
-  '🧇',
-  '🥯',
-  '🧀',
-  '🍫',
-  '🥑',
-  '🍎',
-];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -158,10 +121,14 @@ export function CategoryForm({ open, onOpenChange, category, onSaved }: Category
           {/* Preview */}
           <div className="flex items-center justify-center gap-2 rounded-lg border bg-muted/30 p-4">
             <span
-              className="flex h-8 w-8 items-center justify-center rounded-full text-lg"
+              className="flex h-8 w-8 items-center justify-center rounded-full"
               style={{ backgroundColor: colour + '20' }}
             >
-              {icon || '📁'}
+              {icon ? (
+                <CategoryIcon name={icon} className="h-4 w-4" style={{ color: colour }} />
+              ) : (
+                <Utensils className="h-4 w-4 text-muted-foreground" />
+              )}
             </span>
             <span className="font-medium">{name || 'Category name'}</span>
             <span
@@ -192,22 +159,24 @@ export function CategoryForm({ open, onOpenChange, category, onSaved }: Category
             <ColourPicker value={colour} onChange={setColour} disabled={saving} />
           </div>
 
-          {/* Icon / Emoji */}
+          {/* Icon */}
           <div className="space-y-1">
             <label className="text-sm font-medium">Icon</label>
-            <div className="grid grid-cols-8 gap-1.5">
-              {EMOJI_PRESETS.map((emoji) => (
+            <div className="grid grid-cols-10 gap-1.5">
+              {CATEGORY_ICON_NAMES.map((iconName) => (
                 <button
-                  key={emoji}
+                  key={iconName}
                   type="button"
                   disabled={saving}
-                  onClick={() => setIcon(icon === emoji ? '' : emoji)}
+                  onClick={() => setIcon(icon === iconName ? '' : iconName)}
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-md border text-lg transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
-                    icon === emoji ? 'border-primary bg-primary/10' : 'border-transparent',
+                    'flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+                    icon === iconName
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-transparent text-muted-foreground',
                   )}
                 >
-                  {emoji}
+                  <CategoryIcon name={iconName} className="h-5 w-5" />
                 </button>
               ))}
             </div>

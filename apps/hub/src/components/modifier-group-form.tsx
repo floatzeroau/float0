@@ -26,6 +26,7 @@ export interface ModifierGroup {
   minSelections: number;
   maxSelections: number;
   modifiers?: Modifier[];
+  modifierCount?: number;
   productCount?: number;
 }
 

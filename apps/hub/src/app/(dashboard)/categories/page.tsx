@@ -19,7 +19,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, MoreHorizontal, Pencil, Plus, Trash2, Utensils } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { api, ApiClientError } from '@/lib/api';
 import { CategoryForm, type Category } from '@/components/category-form';
+import { CategoryIcon } from '@/components/category-icon';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -93,7 +94,13 @@ function SortableRow({ category, onEdit, onDelete }: SortableRowProps) {
       </TableCell>
 
       {/* Icon */}
-      <TableCell className="w-12 text-center text-lg">{category.icon || '—'}</TableCell>
+      <TableCell className="w-12 text-center">
+        {category.icon ? (
+          <CategoryIcon name={category.icon} className="mx-auto h-4 w-4 text-muted-foreground" />
+        ) : (
+          <Utensils className="mx-auto h-4 w-4 text-muted-foreground/40" />
+        )}
+      </TableCell>
 
       {/* Name */}
       <TableCell>

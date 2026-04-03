@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -19,7 +19,15 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, GripVertical, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  GripVertical,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -162,6 +170,10 @@ export default function ModifiersPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
+  // Per-group modifiers loaded on expand
+  const [groupModifiers, setGroupModifiers] = useState<Record<string, Modifier[]>>({});
+  const [loadingModifiers, setLoadingModifiers] = useState<Set<string>>(new Set());
+
   // Dialogs
   const [groupFormOpen, setGroupFormOpen] = useState(false);
   const [editGroup, setEditGroup] = useState<ModifierGroup | null>(null);
@@ -172,6 +184,7 @@ export default function ModifiersPage() {
   const [editModifier, setEditModifier] = useState<Modifier | null>(null);
   const [modGroupId, setModGroupId] = useState('');
   const [deleteModTarget, setDeleteModTarget] = useState<Modifier | null>(null);
+  const [deleteModGroupId, setDeleteModGroupId] = useState('');
   const [deletingMod, setDeletingMod] = useState(false);
 
   // DnD
@@ -181,7 +194,7 @@ export default function ModifiersPage() {
   );
 
   // -------------------------------------------------------------------------
-  // Fetch
+  // Fetch groups (list only — no modifiers array)
   // -------------------------------------------------------------------------
 
   const fetchGroups = useCallback(async () => {
@@ -202,6 +215,30 @@ export default function ModifiersPage() {
   }, [fetchGroups]);
 
   // -------------------------------------------------------------------------
+  // Fetch modifiers for a specific group
+  // -------------------------------------------------------------------------
+
+  const fetchGroupModifiers = useCallback(async (groupId: string) => {
+    setLoadingModifiers((prev) => new Set(prev).add(groupId));
+    try {
+      const res = await api.get<Modifier[] | { data: Modifier[] }>(
+        `/modifier-groups/${groupId}/modifiers`,
+      );
+      const list = Array.isArray(res) ? res : res.data;
+      list.sort((a, b) => a.sortOrder - b.sortOrder);
+      setGroupModifiers((prev) => ({ ...prev, [groupId]: list }));
+    } catch {
+      toast.error('Failed to load modifiers.');
+    } finally {
+      setLoadingModifiers((prev) => {
+        const next = new Set(prev);
+        next.delete(groupId);
+        return next;
+      });
+    }
+  }, []);
+
+  // -------------------------------------------------------------------------
   // Group handlers
   // -------------------------------------------------------------------------
 
@@ -218,8 +255,15 @@ export default function ModifiersPage() {
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        // Fetch modifiers when expanding if not already loaded
+        if (!groupModifiers[id]) {
+          fetchGroupModifiers(id);
+        }
+      }
       return next;
     });
   }
@@ -231,6 +275,12 @@ export default function ModifiersPage() {
       await api.delete(`/modifier-groups/${deleteGroupTarget.id}`);
       toast.success(`"${deleteGroupTarget.name}" deleted.`);
       setDeleteGroupTarget(null);
+      // Clean up cached modifiers
+      setGroupModifiers((prev) => {
+        const next = { ...prev };
+        delete next[deleteGroupTarget.id];
+        return next;
+      });
       fetchGroups();
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -254,31 +304,39 @@ export default function ModifiersPage() {
     setModFormOpen(true);
   }
 
-  function handleEditModifier(mod: Modifier) {
+  function handleEditModifier(mod: Modifier, groupId: string) {
     setEditModifier(mod);
-    setModGroupId(mod.modifierGroupId);
+    setModGroupId(groupId);
     setModFormOpen(true);
   }
 
-  async function handleToggleDefault(mod: Modifier) {
+  // Called after a modifier is created/edited — re-fetch that group's modifiers + groups list
+  function handleModifierSaved() {
+    if (modGroupId) {
+      fetchGroupModifiers(modGroupId);
+    }
+    fetchGroups(); // refresh modifierCount
+  }
+
+  async function handleToggleDefault(mod: Modifier, groupId: string) {
     const newVal = !mod.isDefault;
     // Optimistic update
-    setGroups((prev) =>
-      prev.map((g) => ({
-        ...g,
-        modifiers: g.modifiers?.map((m) => (m.id === mod.id ? { ...m, isDefault: newVal } : m)),
-      })),
-    );
+    setGroupModifiers((prev) => ({
+      ...prev,
+      [groupId]: (prev[groupId] ?? []).map((m) =>
+        m.id === mod.id ? { ...m, isDefault: newVal } : m,
+      ),
+    }));
     try {
       await api.put(`/modifiers/${mod.id}`, { isDefault: newVal });
     } catch {
       // Revert
-      setGroups((prev) =>
-        prev.map((g) => ({
-          ...g,
-          modifiers: g.modifiers?.map((m) => (m.id === mod.id ? { ...m, isDefault: !newVal } : m)),
-        })),
-      );
+      setGroupModifiers((prev) => ({
+        ...prev,
+        [groupId]: (prev[groupId] ?? []).map((m) =>
+          m.id === mod.id ? { ...m, isDefault: !newVal } : m,
+        ),
+      }));
       toast.error('Failed to update default status.');
     }
   }
@@ -290,6 +348,10 @@ export default function ModifiersPage() {
       await api.delete(`/modifiers/${deleteModTarget.id}`);
       toast.success(`"${deleteModTarget.name}" removed.`);
       setDeleteModTarget(null);
+      // Refresh that group's modifiers + group list
+      if (deleteModGroupId) {
+        fetchGroupModifiers(deleteModGroupId);
+      }
       fetchGroups();
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -307,27 +369,27 @@ export default function ModifiersPage() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const group = groups.find((g) => g.id === groupId);
-    if (!group?.modifiers) return;
+    const modifiers = groupModifiers[groupId];
+    if (!modifiers) return;
 
-    const oldIndex = group.modifiers.findIndex((m) => m.id === active.id);
-    const newIndex = group.modifiers.findIndex((m) => m.id === over.id);
+    const oldIndex = modifiers.findIndex((m) => m.id === active.id);
+    const newIndex = modifiers.findIndex((m) => m.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const reordered = arrayMove(group.modifiers, oldIndex, newIndex).map((m, i) => ({
+    const reordered = arrayMove(modifiers, oldIndex, newIndex).map((m, i) => ({
       ...m,
       sortOrder: i + 1,
     }));
 
     // Optimistic update
-    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, modifiers: reordered } : g)));
+    setGroupModifiers((prev) => ({ ...prev, [groupId]: reordered }));
 
     try {
       await api.patch(`/modifier-groups/${groupId}/modifiers/reorder`, {
         items: reordered.map((m) => ({ id: m.id, sortOrder: m.sortOrder })),
       });
     } catch {
-      fetchGroups();
+      fetchGroupModifiers(groupId);
       toast.error('Failed to save order.');
     }
   }
@@ -377,8 +439,9 @@ export default function ModifiersPage() {
       {!loading &&
         groups.map((group) => {
           const isOpen = expanded.has(group.id);
-          const modifiers = group.modifiers ?? [];
-          const modCount = modifiers.length;
+          const modifiers = groupModifiers[group.id] ?? [];
+          const isLoadingMods = loadingModifiers.has(group.id);
+          const modCount = group.modifierCount ?? modifiers.length;
 
           return (
             <div key={group.id} className="rounded-lg border">
@@ -446,13 +509,20 @@ export default function ModifiersPage() {
               {/* Expanded: modifier list */}
               {isOpen && (
                 <div className="border-t bg-muted/20 px-4 py-3 space-y-2">
-                  {modifiers.length === 0 && (
+                  {isLoadingMods && (
+                    <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">Loading modifiers...</span>
+                    </div>
+                  )}
+
+                  {!isLoadingMods && modifiers.length === 0 && (
                     <p className="py-4 text-center text-sm text-muted-foreground">
                       No modifiers in this group yet.
                     </p>
                   )}
 
-                  {modifiers.length > 0 && (
+                  {!isLoadingMods && modifiers.length > 0 && (
                     <DndContext
                       sensors={sensors}
                       collisionDetection={closestCenter}
@@ -466,9 +536,12 @@ export default function ModifiersPage() {
                           <SortableModifierRow
                             key={mod.id}
                             modifier={mod}
-                            onEdit={() => handleEditModifier(mod)}
-                            onDelete={() => setDeleteModTarget(mod)}
-                            onToggleDefault={() => handleToggleDefault(mod)}
+                            onEdit={() => handleEditModifier(mod, group.id)}
+                            onDelete={() => {
+                              setDeleteModTarget(mod);
+                              setDeleteModGroupId(group.id);
+                            }}
+                            onToggleDefault={() => handleToggleDefault(mod, group.id)}
                           />
                         ))}
                       </SortableContext>
@@ -504,7 +577,7 @@ export default function ModifiersPage() {
         onOpenChange={setModFormOpen}
         modifier={editModifier}
         groupId={modGroupId}
-        onSaved={fetchGroups}
+        onSaved={handleModifierSaved}
       />
 
       {/* Delete group confirmation */}
