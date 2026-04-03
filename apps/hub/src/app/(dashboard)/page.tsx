@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { MetricCard } from '@/components/metric-card';
 import { RecentOrdersTable } from '@/components/recent-orders-table';
+import { SalesChart } from '@/components/sales-chart';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 // ---------------------------------------------------------------------------
@@ -152,7 +153,10 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Sales by Hour Chart */}
+      {/* Sales Chart with Period Toggle (FLO-86) */}
+      <SalesChart />
+
+      {/* Sales by Hour Chart (FLO-85) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Sales by Hour</CardTitle>
