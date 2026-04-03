@@ -5,10 +5,6 @@ import { usePathname } from 'next/navigation';
 import { Building2, Monitor, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ---------------------------------------------------------------------------
-// Settings sub-navigation
-// ---------------------------------------------------------------------------
-
 const settingsNav = [
   { href: '/settings/business', label: 'Business Profile', icon: Building2 },
   { href: '/settings/pos', label: 'POS Config', icon: Monitor },
@@ -26,7 +22,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       </div>
 
       <div className="flex gap-8">
-        {/* Settings sidebar */}
         <nav className="w-48 shrink-0 space-y-1">
           {settingsNav.map((item) => {
             const Icon = item.icon;
@@ -49,7 +44,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           })}
         </nav>
 
-        {/* Page content */}
         <div className="flex-1 min-w-0">{children}</div>
       </div>
     </div>
