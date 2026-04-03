@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   LayoutDashboard,
+  ClipboardList,
   Package,
   Tags,
   Layers,
@@ -18,6 +19,7 @@ import { SidebarNavItem } from './sidebar-nav-item';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/orders', label: 'Orders', icon: ClipboardList },
   { href: '/products', label: 'Products', icon: Package },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/modifiers', label: 'Modifiers', icon: Layers },

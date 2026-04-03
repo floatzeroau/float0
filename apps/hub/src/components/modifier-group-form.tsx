@@ -69,6 +69,7 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
   // Product linking
   const [products, setProducts] = useState<Product[]>([]);
   const [linkedProductIds, setLinkedProductIds] = useState<string[]>([]);
+  const [originalLinkedProductIds, setOriginalLinkedProductIds] = useState<string[]>([]);
 
   // Fetch products for linking
   useEffect(() => {
@@ -99,6 +100,7 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
       setMaxSelections('1');
     }
     setLinkedProductIds([]);
+    setOriginalLinkedProductIds([]);
     setNameError('');
   }, [open, group]);
 
@@ -110,6 +112,7 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
       .then((res) => {
         if (Array.isArray(res.productIds)) {
           setLinkedProductIds(res.productIds);
+          setOriginalLinkedProductIds(res.productIds);
         }
       })
       .catch(() => {});
@@ -142,14 +145,32 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
         maxSelections: apiMaxSelections,
       };
 
+      let groupId: string;
+
       if (isEdit) {
         await api.put(`/modifier-groups/${group.id}`, payload);
-        toast.success('Modifier group updated.');
+        groupId = group.id;
       } else {
-        await api.post('/modifier-groups', payload);
-        toast.success('Modifier group created.');
+        const created = await api.post<{ id: string }>('/modifier-groups', payload);
+        groupId = created.id;
       }
 
+      // Sync product links
+      const toLink = linkedProductIds.filter((pid) => !originalLinkedProductIds.includes(pid));
+      const toUnlink = originalLinkedProductIds.filter((pid) => !linkedProductIds.includes(pid));
+
+      await Promise.all([
+        ...toLink.map((pid) =>
+          api
+            .post(`/products/${pid}/modifier-groups`, { modifierGroupId: groupId })
+            .catch(() => {}),
+        ),
+        ...toUnlink.map((pid) =>
+          api.delete(`/products/${pid}/modifier-groups/${groupId}`).catch(() => {}),
+        ),
+      ]);
+
+      toast.success(isEdit ? 'Modifier group updated.' : 'Modifier group created.');
       onSaved();
       onOpenChange(false);
     } catch (err) {

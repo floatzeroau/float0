@@ -101,7 +101,19 @@ export async function getModifierGroup(orgId: string, id: string) {
     .where(and(eq(modifiers.modifierGroupId, id), isNull(modifiers.deletedAt)))
     .orderBy(asc(modifiers.sortOrder));
 
-  return { ...group, modifiers: mods };
+  // Fetch linked product IDs
+  const links = await db
+    .select({ productId: productModifierGroups.productId })
+    .from(productModifierGroups)
+    .where(
+      and(
+        eq(productModifierGroups.modifierGroupId, id),
+        eq(productModifierGroups.organizationId, orgId),
+        isNull(productModifierGroups.deletedAt),
+      ),
+    );
+
+  return { ...group, modifiers: mods, productIds: links.map((l) => l.productId) };
 }
 
 // ---------------------------------------------------------------------------

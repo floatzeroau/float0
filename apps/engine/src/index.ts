@@ -17,13 +17,14 @@ import { dashboardRoutes } from './routes/dashboard.routes.js';
 import { terminalRoutes } from './routes/terminals.routes.js';
 import { activityRoutes } from './routes/activity.routes.js';
 import { reportRoutes } from './routes/reports.routes.js';
+import { orderRoutes } from './routes/orders.routes.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requireRole } from './middleware/rbac.js';
 import { registerEventLogger } from './services/event-logger.js';
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST ?? '0.0.0.0';
-const corsOrigins = process.env.CORS_ORIGINS?.split(',') ?? [];
+const corsOrigins = process.env.CORS_ORIGINS?.split(',').filter(Boolean) ?? [];
 
 const app = Fastify({
   logger: {
@@ -36,7 +37,14 @@ const app = Fastify({
 
 app.setErrorHandler(errorHandler);
 
-await app.register(cors, { origin: corsOrigins });
+if (corsOrigins.length === 0) {
+  app.log.warn('CORS_ORIGINS not set — allowing all origins (not suitable for production)');
+}
+
+await app.register(cors, {
+  origin: corsOrigins.length > 0 ? corsOrigins : true,
+  credentials: true,
+});
 await app.register(authPlugin);
 await app.register(orgContextPlugin);
 await app.register(authRoutes);
@@ -52,6 +60,7 @@ await app.register(dashboardRoutes);
 await app.register(terminalRoutes);
 await app.register(activityRoutes);
 await app.register(reportRoutes);
+await app.register(orderRoutes);
 
 registerEventLogger();
 
