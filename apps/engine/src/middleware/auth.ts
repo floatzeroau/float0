@@ -7,6 +7,7 @@ export interface JwtPayload {
   orgId: string;
   role: string;
   permissions: string[];
+  purpose?: string;
 }
 
 declare module '@fastify/jwt' {
