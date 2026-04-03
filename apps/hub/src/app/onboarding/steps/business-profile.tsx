@@ -58,12 +58,15 @@ export function BusinessProfile({ org, onNext, onOrgUpdate }: BusinessProfilePro
 
     setSaving(true);
     try {
-      const address = [street, suburb, `${state} ${postcode}`].filter(Boolean).join(', ');
-
       const payload = {
         name: name.trim(),
         abn: abn.replace(/\s/g, '') || undefined,
-        address: address || undefined,
+        address: {
+          street: street.trim() || undefined,
+          suburb: suburb.trim() || undefined,
+          state: state || undefined,
+          postcode: postcode.trim() || undefined,
+        },
         phone: phone || undefined,
         email: email || undefined,
         website: website || undefined,

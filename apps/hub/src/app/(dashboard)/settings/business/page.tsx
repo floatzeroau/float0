@@ -17,7 +17,7 @@ interface OrgData {
   id: string;
   name: string;
   abn?: string;
-  address?: string;
+  address?: string | { street?: string; suburb?: string; state?: string; postcode?: string };
   phone?: string;
   email?: string;
   website?: string;
@@ -112,16 +112,29 @@ export default function BusinessProfilePage() {
         setWebsite(org.website ?? '');
         if (org.logoUrl) setLogoPreview(org.logoUrl);
 
-        // Parse address if it's a string like "123 Main St, Melbourne VIC 3000"
-        if (org.address && typeof org.address === 'string') {
-          const parts = org.address.split(',').map((s) => s.trim());
-          if (parts[0]) setStreet(parts[0]);
-          if (parts[1]) setSuburb(parts[1]);
-          if (parts[2]) {
-            const match = parts[2].match(/^([A-Z]{2,3})\s*(\d{4})$/);
-            if (match) {
-              setState(match[1]);
-              setPostcode(match[2]);
+        // Parse address — supports both object and legacy string format
+        if (org.address) {
+          if (typeof org.address === 'object') {
+            const addr = org.address as {
+              street?: string;
+              suburb?: string;
+              state?: string;
+              postcode?: string;
+            };
+            if (addr.street) setStreet(addr.street);
+            if (addr.suburb) setSuburb(addr.suburb);
+            if (addr.state) setState(addr.state);
+            if (addr.postcode) setPostcode(addr.postcode);
+          } else if (typeof org.address === 'string') {
+            const parts = org.address.split(',').map((s) => s.trim());
+            if (parts[0]) setStreet(parts[0]);
+            if (parts[1]) setSuburb(parts[1]);
+            if (parts[2]) {
+              const match = parts[2].match(/^([A-Z]{2,3})\s*(\d{4})$/);
+              if (match) {
+                setState(match[1]);
+                setPostcode(match[2]);
+              }
             }
           }
         }
@@ -220,15 +233,15 @@ export default function BusinessProfilePage() {
 
     setSaving(true);
     try {
-      const address = [street, suburb, `${state} ${postcode}`]
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .join(', ');
-
       const payload: Record<string, unknown> = {
         name: name.trim(),
         abn: abn.replace(/\s/g, '') || undefined,
-        address: address || undefined,
+        address: {
+          street: street.trim() || undefined,
+          suburb: suburb.trim() || undefined,
+          state: state || undefined,
+          postcode: postcode.trim() || undefined,
+        },
         phone: phone || undefined,
         email: email || undefined,
         website: website || undefined,
@@ -242,11 +255,6 @@ export default function BusinessProfilePage() {
       }
 
       await api.put('/organizations/me', payload);
-
-      // Save operating hours to settings
-      await api.patch('/organizations/me/settings', {
-        operating_hours: hours,
-      });
 
       toast.success('Business profile saved.');
     } catch (err) {

@@ -92,6 +92,7 @@ export function ProductForm({
   const [isGstFree, setIsGstFree] = useState(false);
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [selectedModifierGroups, setSelectedModifierGroups] = useState<string[]>([]);
+  const [originalModifierGroups, setOriginalModifierGroups] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -118,7 +119,18 @@ export function ProductForm({
       setSku(product.sku ?? '');
       setAutoSku(false);
       setIsGstFree(product.isGstFree);
-      setSelectedModifierGroups(product.modifierGroups?.map((mg) => mg.id) ?? []);
+      // Fetch product detail to get linked modifier groups
+      api
+        .get<{ modifierGroups?: { id: string }[] }>(`/products/${product.id}`)
+        .then((detail) => {
+          const ids = detail.modifierGroups?.map((mg) => mg.id) ?? [];
+          setSelectedModifierGroups(ids);
+          setOriginalModifierGroups(ids);
+        })
+        .catch(() => {
+          setSelectedModifierGroups([]);
+          setOriginalModifierGroups([]);
+        });
     } else {
       setName('');
       setDescription('');
@@ -128,6 +140,7 @@ export function ProductForm({
       setAutoSku(true);
       setIsGstFree(false);
       setSelectedModifierGroups([]);
+      setOriginalModifierGroups([]);
     }
     setErrors({});
   }, [open, product, categories]);
@@ -156,6 +169,21 @@ export function ProductForm({
     );
   }
 
+  async function syncModifierGroups(productId: string) {
+    const toLink = selectedModifierGroups.filter((id) => !originalModifierGroups.includes(id));
+    const toUnlink = originalModifierGroups.filter((id) => !selectedModifierGroups.includes(id));
+
+    await Promise.all([
+      ...toLink.map((mgId, i) =>
+        api.post(`/products/${productId}/modifier-groups`, {
+          modifierGroupId: mgId,
+          sortOrder: i,
+        }),
+      ),
+      ...toUnlink.map((mgId) => api.delete(`/products/${productId}/modifier-groups/${mgId}`)),
+    ]);
+  }
+
   async function handleSave() {
     if (!validate()) return;
 
@@ -168,14 +196,24 @@ export function ProductForm({
         basePrice: Math.round(parseFloat(price) * 100),
         sku: sku.trim() || undefined,
         isGstFree,
-        modifierGroupIds: selectedModifierGroups.length > 0 ? selectedModifierGroups : undefined,
       };
 
       if (isEdit) {
         await api.put(`/products/${product.id}`, payload);
+        await syncModifierGroups(product.id);
         toast.success('Product updated.');
       } else {
-        await api.post('/products', payload);
+        const created = await api.post<{ id: string }>('/products', payload);
+        if (selectedModifierGroups.length > 0) {
+          await Promise.all(
+            selectedModifierGroups.map((mgId, i) =>
+              api.post(`/products/${created.id}/modifier-groups`, {
+                modifierGroupId: mgId,
+                sortOrder: i,
+              }),
+            ),
+          );
+        }
         toast.success('Product created.');
       }
 

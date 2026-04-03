@@ -289,6 +289,107 @@ export async function listOrgUsers(orgId: string, options: ListUsersOptions = {}
 }
 
 // ---------------------------------------------------------------------------
+// Update Org Member (role / PIN)
+// ---------------------------------------------------------------------------
+
+interface UpdateMemberInput {
+  role?: 'admin' | 'manager' | 'staff';
+  pin?: string;
+}
+
+export async function updateOrgMember(
+  orgId: string,
+  targetUserId: string,
+  input: UpdateMemberInput,
+  ctx: AuditContext,
+) {
+  const [membership] = await db
+    .select()
+    .from(orgMemberships)
+    .where(and(eq(orgMemberships.userId, targetUserId), eq(orgMemberships.organizationId, orgId)))
+    .limit(1);
+
+  if (!membership) {
+    throw Object.assign(new Error('User not found in this organization'), { statusCode: 404 });
+  }
+
+  if (membership.role === 'owner') {
+    throw Object.assign(new Error('Cannot modify the organization owner'), { statusCode: 403 });
+  }
+
+  const updates: Record<string, unknown> = {};
+
+  if (input.role) {
+    const callerLevel =
+      ROLE_HIERARCHY[
+        (
+          await db
+            .select({ role: orgMemberships.role })
+            .from(orgMemberships)
+            .where(
+              and(eq(orgMemberships.userId, ctx.userId), eq(orgMemberships.organizationId, orgId)),
+            )
+            .limit(1)
+        )[0]?.role as OrgRole
+      ] ?? 0;
+    const targetLevel = ROLE_HIERARCHY[input.role as OrgRole] ?? 0;
+
+    if (targetLevel >= callerLevel) {
+      throw Object.assign(
+        new Error(`Cannot assign ${input.role} role (equal or higher than your own)`),
+        { statusCode: 403 },
+      );
+    }
+
+    updates.role = input.role;
+  }
+
+  if (input.pin) {
+    // Check PIN uniqueness within org
+    const orgMembers = await db
+      .select()
+      .from(orgMemberships)
+      .where(eq(orgMemberships.organizationId, orgId));
+
+    for (const member of orgMembers) {
+      if (!member.pinHash || member.userId === targetUserId) continue;
+      const duplicate = await compare(input.pin, member.pinHash);
+      if (duplicate) {
+        throw Object.assign(new Error('PIN already in use by another staff member'), {
+          statusCode: 409,
+        });
+      }
+    }
+
+    updates.pinHash = await hash(input.pin, SALT_ROUNDS);
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return { message: 'No changes' };
+  }
+
+  await db
+    .update(orgMemberships)
+    .set(updates)
+    .where(and(eq(orgMemberships.userId, targetUserId), eq(orgMemberships.organizationId, orgId)));
+
+  await db
+    .insert(auditLog)
+    .values({
+      organizationId: ctx.orgId,
+      userId: ctx.userId,
+      action: 'user.update',
+      entityType: 'user',
+      entityId: targetUserId,
+      changes: { role: input.role, pinChanged: !!input.pin },
+      ipAddress: ctx.ip,
+    })
+    .catch(() => {});
+
+  return { message: 'Member updated' };
+}
+
+// ---------------------------------------------------------------------------
 // Deactivate User
 // ---------------------------------------------------------------------------
 

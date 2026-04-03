@@ -67,7 +67,7 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         role,
-        ...(pin ? { pin } : {}),
+        ...(pin ? { posPin: pin } : {}),
       });
       toast.success(`Invitation sent to ${email.trim()}`);
       resetForm();

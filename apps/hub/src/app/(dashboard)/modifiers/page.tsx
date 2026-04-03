@@ -323,8 +323,8 @@ export default function ModifiersPage() {
     setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, modifiers: reordered } : g)));
 
     try {
-      await api.post(`/modifier-groups/${groupId}/reorder`, {
-        modifierIds: reordered.map((m) => m.id),
+      await api.patch(`/modifier-groups/${groupId}/modifiers/reorder`, {
+        items: reordered.map((m) => ({ id: m.id, sortOrder: m.sortOrder })),
       });
     } catch {
       fetchGroups();

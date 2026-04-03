@@ -235,8 +235,8 @@ export default function CategoriesPage() {
     setCategories(reordered);
 
     try {
-      await api.post('/categories/reorder', {
-        categoryIds: reordered.map((c) => c.id),
+      await api.patch('/categories/reorder', {
+        items: reordered.map((c) => ({ id: c.id, sortOrder: c.sortOrder })),
       });
       toast.success('Order updated.');
     } catch {

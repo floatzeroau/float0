@@ -53,11 +53,15 @@ export function PosConfig({ org, onNext, onBack }: PosConfigProps) {
     setSaving(true);
     try {
       await api.patch('/organizations/me/settings', {
-        default_order_type: defaultOrderType,
-        tipping_enabled: tippingEnabled,
-        tip_percentages: tipPercentages.map((t) => parseInt(t, 10) || 0),
-        cash_rounding: cashRounding,
-        receipt_footer: receiptFooter,
+        pos: {
+          defaultOrderType,
+          tippingEnabled,
+          tipPercentages: tipPercentages.map((t) => parseInt(t, 10) || 0),
+          cashRoundingEnabled: cashRounding,
+        },
+        receipt: {
+          footerText: receiptFooter,
+        },
       });
       onNext();
     } catch (err) {

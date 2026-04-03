@@ -21,35 +21,31 @@ interface OrgData {
 }
 
 interface PosSettings {
-  default_order_type: 'dine_in' | 'takeaway';
-  tipping_enabled: boolean;
-  tip_percentages: [number, number, number];
-  cash_rounding: boolean;
-  order_prefix: string;
-  order_starting_number: number;
+  defaultOrderType: 'dine_in' | 'takeaway';
+  tippingEnabled: boolean;
+  tipPercentages: [number, number, number];
+  cashRoundingEnabled: boolean;
+  orderNumberPrefix: string;
 }
 
 interface ReceiptSettings {
-  header_text: string;
-  footer_text: string;
-  instagram: string;
-  facebook: string;
+  headerText: string;
+  footerText: string;
+  socialMedia: string;
 }
 
 const DEFAULT_POS: PosSettings = {
-  default_order_type: 'dine_in',
-  tipping_enabled: true,
-  tip_percentages: [10, 15, 20],
-  cash_rounding: true,
-  order_prefix: 'ORD-',
-  order_starting_number: 1,
+  defaultOrderType: 'dine_in',
+  tippingEnabled: true,
+  tipPercentages: [10, 15, 20],
+  cashRoundingEnabled: true,
+  orderNumberPrefix: 'ORD-',
 };
 
 const DEFAULT_RECEIPT: ReceiptSettings = {
-  header_text: '',
-  footer_text: 'Thank you for visiting!',
-  instagram: '',
-  facebook: '',
+  headerText: '',
+  footerText: 'Thank you for visiting!',
+  socialMedia: '',
 };
 
 // ---------------------------------------------------------------------------
@@ -62,20 +58,17 @@ export default function PosConfigPage() {
   const [orgName, setOrgName] = useState('');
 
   // POS settings
-  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>(
-    DEFAULT_POS.default_order_type,
-  );
-  const [tippingEnabled, setTippingEnabled] = useState(DEFAULT_POS.tipping_enabled);
+  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>(DEFAULT_POS.defaultOrderType);
+  const [tippingEnabled, setTippingEnabled] = useState(DEFAULT_POS.tippingEnabled);
   const [tips, setTips] = useState<[string, string, string]>(['10', '15', '20']);
-  const [cashRounding, setCashRounding] = useState(DEFAULT_POS.cash_rounding);
-  const [orderPrefix, setOrderPrefix] = useState(DEFAULT_POS.order_prefix);
-  const [orderStart, setOrderStart] = useState(String(DEFAULT_POS.order_starting_number));
+  const [cashRounding, setCashRounding] = useState(DEFAULT_POS.cashRoundingEnabled);
+  const [orderPrefix, setOrderPrefix] = useState(DEFAULT_POS.orderNumberPrefix);
 
   // Receipt settings
-  const [headerText, setHeaderText] = useState(DEFAULT_RECEIPT.header_text);
-  const [footerText, setFooterText] = useState(DEFAULT_RECEIPT.footer_text);
-  const [instagram, setInstagram] = useState(DEFAULT_RECEIPT.instagram);
-  const [facebook, setFacebook] = useState(DEFAULT_RECEIPT.facebook);
+  const [headerText, setHeaderText] = useState(DEFAULT_RECEIPT.headerText);
+  const [footerText, setFooterText] = useState(DEFAULT_RECEIPT.footerText);
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
 
   // -------------------------------------------------------------------------
   // Fetch
@@ -90,27 +83,28 @@ export default function PosConfigPage() {
 
         // POS
         const pos = (s.pos ?? {}) as Partial<PosSettings>;
-        if (pos.default_order_type) setOrderType(pos.default_order_type);
-        if (typeof pos.tipping_enabled === 'boolean') setTippingEnabled(pos.tipping_enabled);
-        if (Array.isArray(pos.tip_percentages) && pos.tip_percentages.length === 3) {
+        if (pos.defaultOrderType) setOrderType(pos.defaultOrderType);
+        if (typeof pos.tippingEnabled === 'boolean') setTippingEnabled(pos.tippingEnabled);
+        if (Array.isArray(pos.tipPercentages) && pos.tipPercentages.length === 3) {
           setTips([
-            String(pos.tip_percentages[0]),
-            String(pos.tip_percentages[1]),
-            String(pos.tip_percentages[2]),
+            String(pos.tipPercentages[0]),
+            String(pos.tipPercentages[1]),
+            String(pos.tipPercentages[2]),
           ]);
         }
-        if (typeof pos.cash_rounding === 'boolean') setCashRounding(pos.cash_rounding);
-        if (pos.order_prefix) setOrderPrefix(pos.order_prefix);
-        if (typeof pos.order_starting_number === 'number') {
-          setOrderStart(String(pos.order_starting_number));
-        }
+        if (typeof pos.cashRoundingEnabled === 'boolean') setCashRounding(pos.cashRoundingEnabled);
+        if (pos.orderNumberPrefix) setOrderPrefix(pos.orderNumberPrefix);
 
         // Receipt
         const receipt = (s.receipt ?? {}) as Partial<ReceiptSettings>;
-        if (receipt.header_text != null) setHeaderText(receipt.header_text);
-        if (receipt.footer_text != null) setFooterText(receipt.footer_text);
-        if (receipt.instagram != null) setInstagram(receipt.instagram);
-        if (receipt.facebook != null) setFacebook(receipt.facebook);
+        if (receipt.headerText != null) setHeaderText(receipt.headerText);
+        if (receipt.footerText != null) setFooterText(receipt.footerText);
+        if (receipt.socialMedia != null) {
+          // socialMedia may contain comma-separated values like "instagram, facebook"
+          const parts = receipt.socialMedia.split(',').map((p) => p.trim());
+          if (parts[0]) setInstagram(parts[0]);
+          if (parts[1]) setFacebook(parts[1]);
+        }
       })
       .catch(() => {
         toast.error('Failed to load POS settings.');
@@ -127,18 +121,16 @@ export default function PosConfigPage() {
     try {
       await api.patch('/organizations/me/settings', {
         pos: {
-          default_order_type: orderType,
-          tipping_enabled: tippingEnabled,
-          tip_percentages: tips.map((t) => parseInt(t, 10) || 0),
-          cash_rounding: cashRounding,
-          order_prefix: orderPrefix,
-          order_starting_number: parseInt(orderStart, 10) || 1,
+          defaultOrderType: orderType,
+          tippingEnabled,
+          tipPercentages: tips.map((t) => parseInt(t, 10) || 0),
+          cashRoundingEnabled: cashRounding,
+          orderNumberPrefix: orderPrefix,
         },
         receipt: {
-          header_text: headerText,
-          footer_text: footerText,
-          instagram: instagram || undefined,
-          facebook: facebook || undefined,
+          headerText,
+          footerText,
+          socialMedia: [instagram, facebook].filter(Boolean).join(', ') || undefined,
         },
       });
       toast.success('POS settings saved.');
@@ -379,35 +371,21 @@ export default function PosConfigPage() {
           <CardDescription>Configure how order numbers are generated.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label htmlFor="pos-prefix" className="text-sm font-medium">
-                Prefix
-              </label>
-              <Input
-                id="pos-prefix"
-                placeholder="ORD-"
-                value={orderPrefix}
-                onChange={(e) => setOrderPrefix(e.target.value)}
-                disabled={saving}
-              />
-              <p className="text-xs text-muted-foreground">
-                e.g. &quot;{orderPrefix || 'ORD-'}001&quot;
-              </p>
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="pos-start" className="text-sm font-medium">
-                Starting number
-              </label>
-              <Input
-                id="pos-start"
-                type="number"
-                min="1"
-                value={orderStart}
-                onChange={(e) => setOrderStart(e.target.value)}
-                disabled={saving}
-              />
-            </div>
+          <div className="space-y-1">
+            <label htmlFor="pos-prefix" className="text-sm font-medium">
+              Prefix
+            </label>
+            <Input
+              id="pos-prefix"
+              placeholder="ORD-"
+              value={orderPrefix}
+              onChange={(e) => setOrderPrefix(e.target.value)}
+              disabled={saving}
+              className="max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              e.g. &quot;{orderPrefix || 'ORD-'}001&quot;
+            </p>
           </div>
         </CardContent>
       </Card>

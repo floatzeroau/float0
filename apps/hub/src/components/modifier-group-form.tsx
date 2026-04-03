@@ -101,14 +101,15 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
     setNameError('');
   }, [open, group]);
 
-  // Fetch linked products when editing
+  // Fetch linked products when editing — uses the group detail endpoint
   useEffect(() => {
     if (!open || !group) return;
     api
-      .get<string[] | { productIds: string[] }>(`/modifier-groups/${group.id}/products`)
+      .get<ModifierGroup & { productIds?: string[] }>(`/modifier-groups/${group.id}`)
       .then((res) => {
-        const ids = Array.isArray(res) ? res : res.productIds;
-        setLinkedProductIds(ids);
+        if (Array.isArray(res.productIds)) {
+          setLinkedProductIds(res.productIds);
+        }
       })
       .catch(() => {});
   }, [open, group]);
@@ -138,7 +139,6 @@ export function ModifierGroupForm({ open, onOpenChange, group, onSaved }: Modifi
         selectionType: apiSelectionType,
         minSelections: apiMinSelections,
         maxSelections: apiMaxSelections,
-        productIds: linkedProductIds.length > 0 ? linkedProductIds : undefined,
       };
 
       if (isEdit) {

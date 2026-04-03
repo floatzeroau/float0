@@ -46,11 +46,13 @@ export function InviteTeam({ onNext, onBack }: InviteTeamProps) {
   // Form state
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<string>('staff');
   const [pin, setPin] = useState('');
   const [sending, setSending] = useState(false);
 
-  const canInvite = email.trim().length > 0 && firstName.trim().length > 0;
+  const canInvite =
+    email.trim().length > 0 && firstName.trim().length > 0 && lastName.trim().length > 0;
 
   async function handleInvite() {
     if (!canInvite) return;
@@ -60,8 +62,9 @@ export function InviteTeam({ onNext, onBack }: InviteTeamProps) {
       await api.post('/users/invite', {
         email: email.trim(),
         firstName: firstName.trim(),
+        lastName: lastName.trim(),
         role,
-        pin: pin || undefined,
+        posPin: pin || undefined,
       });
 
       setMembers((prev) => [
@@ -78,6 +81,7 @@ export function InviteTeam({ onNext, onBack }: InviteTeamProps) {
       toast.success(`Invite sent to ${email.trim()}`);
       setEmail('');
       setFirstName('');
+      setLastName('');
       setPin('');
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -126,18 +130,30 @@ export function InviteTeam({ onNext, onBack }: InviteTeamProps) {
               />
             </div>
             <div className="space-y-1">
-              <label htmlFor="inv-email" className="text-sm font-medium">
-                Email <span className="text-destructive">*</span>
+              <label htmlFor="inv-last" className="text-sm font-medium">
+                Last name <span className="text-destructive">*</span>
               </label>
               <Input
-                id="inv-email"
-                type="email"
-                placeholder="jane@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="inv-last"
+                placeholder="Smith"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
                 disabled={sending}
               />
             </div>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="inv-email" className="text-sm font-medium">
+              Email <span className="text-destructive">*</span>
+            </label>
+            <Input
+              id="inv-email"
+              type="email"
+              placeholder="jane@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={sending}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">

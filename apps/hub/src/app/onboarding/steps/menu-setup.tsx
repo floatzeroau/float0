@@ -85,7 +85,7 @@ export function MenuSetup({ onNext, onBack }: MenuSetupProps) {
 
       const result = await api.post<{ id: string }>('/products', {
         name: name.trim(),
-        price: Math.round(numericPrice * 100), // cents
+        basePrice: Math.round(numericPrice * 100), // cents
         categoryId: selectedCategory.id,
       });
 

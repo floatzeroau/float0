@@ -22,7 +22,7 @@ export interface OrgData {
   phone?: string;
   email?: string;
   website?: string;
-  address?: string;
+  address?: string | { street?: string; suburb?: string; state?: string; postcode?: string };
   timezone?: string;
   logoUrl?: string;
   settings?: Record<string, unknown>;
@@ -56,9 +56,15 @@ export default function OnboardingPage() {
       .then((data) => {
         setOrg(data);
         // Resume from saved step
-        const savedStep = data.settings?.onboarding_step;
-        if (typeof savedStep === 'number' && savedStep >= 0 && savedStep <= 4) {
-          setCurrentStep(savedStep);
+        const savedStep = data.settings?.onboarding_status;
+        const stepNum =
+          typeof savedStep === 'string'
+            ? parseInt(savedStep, 10)
+            : typeof savedStep === 'number'
+              ? savedStep
+              : NaN;
+        if (!isNaN(stepNum) && stepNum >= 0 && stepNum <= 4) {
+          setCurrentStep(stepNum);
         }
       })
       .catch(() => {
@@ -68,7 +74,7 @@ export default function OnboardingPage() {
   }, [router]);
 
   function persistStep(step: number) {
-    api.patch('/organizations/me/settings', { onboarding_step: step }).catch(() => {});
+    api.patch('/organizations/me/settings', { onboarding_status: String(step) }).catch(() => {});
   }
 
   function handleNext() {

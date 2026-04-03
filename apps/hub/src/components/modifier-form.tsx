@@ -73,14 +73,13 @@ export function ModifierForm({
         name: name.trim(),
         priceAdjustment,
         isDefault,
-        modifierGroupId: groupId,
       };
 
       if (isEdit) {
         await api.put(`/modifiers/${modifier.id}`, payload);
         toast.success('Modifier updated.');
       } else {
-        await api.post('/modifiers', payload);
+        await api.post(`/modifier-groups/${groupId}/modifiers`, payload);
         toast.success('Modifier added.');
       }
 
