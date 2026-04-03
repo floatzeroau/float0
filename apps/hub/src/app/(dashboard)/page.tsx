@@ -9,6 +9,7 @@ import { MetricCard } from '@/components/metric-card';
 import { RecentOrdersTable } from '@/components/recent-orders-table';
 import { SalesChart } from '@/components/sales-chart';
 import { TerminalStatus } from '@/components/terminal-status';
+import { ActivityFeed } from '@/components/activity-feed';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 // ---------------------------------------------------------------------------
@@ -209,6 +210,9 @@ export default function DashboardPage() {
           <RecentOrdersTable orders={data.recentOrders} />
         </CardContent>
       </Card>
+
+      {/* Activity Feed (FLO-88) */}
+      <ActivityFeed />
     </div>
   );
 }
