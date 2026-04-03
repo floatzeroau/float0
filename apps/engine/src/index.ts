@@ -14,6 +14,7 @@ import { receiptRoutes } from './routes/receipts.routes.js';
 import { organizationRoutes } from './routes/organizations.routes.js';
 import { userRoutes } from './routes/users.routes.js';
 import { dashboardRoutes } from './routes/dashboard.routes.js';
+import { terminalRoutes } from './routes/terminals.routes.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requireRole } from './middleware/rbac.js';
 import { registerEventLogger } from './services/event-logger.js';
@@ -46,6 +47,7 @@ await app.register(receiptRoutes);
 await app.register(organizationRoutes);
 await app.register(userRoutes);
 await app.register(dashboardRoutes);
+await app.register(terminalRoutes);
 
 registerEventLogger();
 

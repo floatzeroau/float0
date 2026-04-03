@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { MetricCard } from '@/components/metric-card';
 import { RecentOrdersTable } from '@/components/recent-orders-table';
 import { SalesChart } from '@/components/sales-chart';
+import { TerminalStatus } from '@/components/terminal-status';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 // ---------------------------------------------------------------------------
@@ -155,6 +156,9 @@ export default function DashboardPage() {
 
       {/* Sales Chart with Period Toggle (FLO-86) */}
       <SalesChart />
+
+      {/* Terminal Status (FLO-87) */}
+      <TerminalStatus />
 
       {/* Sales by Hour Chart (FLO-85) */}
       <Card>
