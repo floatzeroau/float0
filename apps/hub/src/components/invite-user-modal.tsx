@@ -23,30 +23,13 @@ import { api, ApiClientError } from '@/lib/api';
 import { toast } from 'sonner';
 import { UserPlus } from 'lucide-react';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface InviteResult {
-  userId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-}
-
 interface InviteUserModalProps {
   onInvited?: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function InviteUserModal({ onInvited }: InviteUserModalProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -66,10 +49,9 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!email.trim()) errs.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Invalid email address';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Invalid email';
     if (!firstName.trim()) errs.firstName = 'First name is required';
     if (!lastName.trim()) errs.lastName = 'Last name is required';
-    if (!role) errs.role = 'Role is required';
     if (pin && !/^\d{4,6}$/.test(pin)) errs.pin = 'PIN must be 4-6 digits';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -78,10 +60,9 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-
     setSubmitting(true);
     try {
-      await api.post<InviteResult>('/users/invite', {
+      await api.post('/users/invite', {
         email: email.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -160,7 +141,6 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
               {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
             </div>
           </div>
-
           <div className="space-y-2">
             <label htmlFor="invite-email" className="text-sm font-medium">
               Email
@@ -174,7 +154,6 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
             />
             {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium">Role</label>
@@ -188,7 +167,6 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
                   <SelectItem value="staff">Staff</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.role && <p className="text-xs text-destructive">{errors.role}</p>}
             </div>
             <div className="space-y-2">
               <label htmlFor="invite-pin" className="text-sm font-medium">
@@ -196,7 +174,6 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
               </label>
               <Input
                 id="invite-pin"
-                type="text"
                 inputMode="numeric"
                 maxLength={6}
                 value={pin}
@@ -206,7 +183,6 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
               {errors.pin && <p className="text-xs text-destructive">{errors.pin}</p>}
             </div>
           </div>
-
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
