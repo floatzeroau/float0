@@ -6,7 +6,7 @@
 | ---------- | ------------------ | -------------- |
 | Engine API | Railway            | api.float0.com |
 | Hub        | Cloudflare Pages   | app.float0.com |
-| Portal     | Cloudflare Pages   | my.float0.com  |
+| Portal     | Cloudflare Pages   | go.float0.com  |
 | Database   | Railway PostgreSQL | (internal)     |
 | DNS        | Cloudflare         | float0.com     |
 
@@ -26,7 +26,7 @@ DNS and security are managed via Cloudflare. The float0.com domain nameservers w
    - `DATABASE_URL` — auto-set by Railway PostgreSQL addon
    - `JWT_SECRET` — generate a strong random secret
    - `PORT` — Railway sets this automatically
-   - `CORS_ORIGINS` — `https://app.float0.com,https://my.float0.com`
+   - `CORS_ORIGINS` — `https://app.float0.com,https://go.float0.com`
    - `MAILERSEND_API_KEY` — from MailerSend dashboard
    - `SENTRY_DSN` — from Sentry project settings
 3. Custom domain: `api.float0.com`
@@ -45,14 +45,14 @@ DNS and security are managed via Cloudflare. The float0.com domain nameservers w
 - Custom domain: `app.float0.com`
 - Preview deployments enabled on PRs
 
-### Portal (my.float0.com)
+### Portal (go.float0.com)
 
 - Connect GitHub repo (`floatzeroau/float0`)
 - Build command: `pnpm install && pnpm turbo run build --filter=@float0/portal`
 - Build output directory: `apps/portal/.next`
 - Root directory: `/`
 - Environment variables: `NODE_VERSION=20`
-- Custom domain: `my.float0.com`
+- Custom domain: `go.float0.com`
 - Preview deployments enabled on PRs
 
 ## Cloudflare DNS Configuration
@@ -61,7 +61,7 @@ DNS and security are managed via Cloudflare. The float0.com domain nameservers w
 | ----- | ---- | ------------------------------ | -------- |
 | CNAME | api  | `<railway-app>.up.railway.app` | Proxied  |
 | CNAME | app  | `<hub-project>.pages.dev`      | DNS only |
-| CNAME | my   | `<portal-project>.pages.dev`   | DNS only |
+| CNAME | go   | `<portal-project>.pages.dev`   | DNS only |
 
 - SSL: Full (Strict), minimum TLS 1.2
 
@@ -87,5 +87,5 @@ Referrer-Policy: strict-origin-when-cross-origin
 
 ### CORS
 
-Allowed origins: `https://app.float0.com`, `https://my.float0.com`, POS app origins.
+Allowed origins: `https://app.float0.com`, `https://go.float0.com`, POS app origins.
 Configured via `CORS_ORIGINS` env var in the engine.
