@@ -45,6 +45,7 @@ if (corsOrigins.length === 0) {
 await app.register(cors, {
   origin: corsOrigins.length > 0 ? corsOrigins : true,
   credentials: true,
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 await app.register(authPlugin);
 await app.register(orgContextPlugin);
