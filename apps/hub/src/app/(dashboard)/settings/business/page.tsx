@@ -235,16 +235,16 @@ export default function BusinessProfilePage() {
     try {
       const payload: Record<string, unknown> = {
         name: name.trim(),
-        abn: abn.replace(/\s/g, '') || undefined,
+        abn: abn.replace(/\s/g, '') || null,
         address: {
           street: street.trim() || undefined,
           suburb: suburb.trim() || undefined,
           state: state || undefined,
           postcode: postcode.trim() || undefined,
         },
-        phone: phone || undefined,
-        email: email || undefined,
-        website: website || undefined,
+        phone: phone.trim() || null,
+        email: email.trim() || null,
+        website: website.trim() || null,
       };
 
       // Logo as base64 if new file selected
@@ -255,6 +255,11 @@ export default function BusinessProfilePage() {
       }
 
       await api.put('/organizations/me', payload);
+
+      // Save operating hours via settings merge endpoint
+      await api.patch('/organizations/me/settings', {
+        operating_hours: hours,
+      });
 
       toast.success('Business profile saved.');
     } catch (err) {

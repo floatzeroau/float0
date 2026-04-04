@@ -88,8 +88,8 @@ const ORDER_TYPE_LABELS: Record<string, string> = {
   delivery: 'Delivery',
 };
 
-function formatCurrency(cents: number) {
-  return `$${cents.toFixed(2)}`;
+function formatCurrency(dollars: number) {
+  return `$${dollars.toFixed(2)}`;
 }
 
 function formatDate(iso: string) {

@@ -64,10 +64,19 @@ const posSettingsSchema = z
   })
   .optional();
 
+const dayHoursSchema = z.object({
+  isOpen: z.boolean(),
+  open: z.string(),
+  close: z.string(),
+});
+
+const operatingHoursSchema = z.record(dayHoursSchema).optional();
+
 const patchSettingsSchema = z.object({
   onboarding_status: z.string().optional(),
   receipt: receiptSettingsSchema,
   pos: posSettingsSchema,
+  operating_hours: operatingHoursSchema,
 });
 
 // ---------------------------------------------------------------------------

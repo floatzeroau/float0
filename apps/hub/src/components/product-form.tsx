@@ -34,14 +34,14 @@ export interface Product {
   orgId: string;
   createdAt: string;
   updatedAt: string;
-  category?: { id: string; name: string; color?: string | null } | null;
+  category?: { id: string; name: string; colour?: string | null } | null;
   modifierGroups?: { id: string; name: string }[];
 }
 
 export interface Category {
   id: string;
   name: string;
-  color?: string | null;
+  colour?: string | null;
 }
 
 interface ModifierGroup {

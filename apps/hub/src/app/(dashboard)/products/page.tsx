@@ -256,7 +256,7 @@ export default function ProductsPage() {
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by name or SKU..."
+            placeholder="Search by name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -363,7 +363,7 @@ export default function ProductsPage() {
                         <div className="flex items-center gap-1.5">
                           <span
                             className="inline-block h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: cat.color ?? '#94a3b8' }}
+                            style={{ backgroundColor: cat.colour ?? '#94a3b8' }}
                           />
                           <span className="text-sm">{cat.name}</span>
                         </div>
