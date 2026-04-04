@@ -25,7 +25,7 @@ export interface Product {
   name: string;
   description?: string | null;
   categoryId?: string | null;
-  basePrice: number; // cents
+  basePrice: number; // dollars
   sku?: string | null;
   barcode?: string | null;
   isAvailable: boolean;
@@ -115,7 +115,7 @@ export function ProductForm({
       setName(product.name);
       setDescription(product.description ?? '');
       setCategoryId(product.categoryId ?? '');
-      setPrice((product.basePrice / 100).toFixed(2));
+      setPrice(product.basePrice.toFixed(2));
       setSku(product.sku ?? '');
       setAutoSku(false);
       setIsGstFree(product.isGstFree);
@@ -155,6 +155,7 @@ export function ProductForm({
   function validate(): boolean {
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = 'Name is required';
+    if (!categoryId) next.category = 'Category is required';
     const numPrice = parseFloat(price);
     if (!price.trim() || isNaN(numPrice) || numPrice < 0) {
       next.price = 'Enter a valid price';
@@ -193,7 +194,7 @@ export function ProductForm({
         name: name.trim(),
         description: description.trim() || undefined,
         categoryId: categoryId || undefined,
-        basePrice: Math.round(parseFloat(price) * 100),
+        basePrice: parseFloat(price),
         sku: sku.trim() || undefined,
         isGstFree,
       };
@@ -278,7 +279,7 @@ export function ProductForm({
           {/* Category */}
           <div className="space-y-1">
             <label htmlFor="pf-cat" className="text-sm font-medium">
-              Category
+              Category <span className="text-destructive">*</span>
             </label>
             <select
               id="pf-cat"
@@ -294,6 +295,7 @@ export function ProductForm({
                 </option>
               ))}
             </select>
+            {errors.category && <p className="text-xs text-destructive">{errors.category}</p>}
           </div>
 
           {/* Price */}

@@ -49,7 +49,7 @@ import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 
-type SortField = 'name' | 'basePrice' | 'category' | 'createdAt';
+type SortField = 'name' | 'basePrice' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
 type AvailabilityFilter = 'all' | 'available' | 'unavailable';
 
@@ -103,8 +103,8 @@ export default function ProductsPage() {
       if (availabilityFilter === 'available') params.set('isAvailable', 'true');
       if (availabilityFilter === 'unavailable') params.set('isAvailable', 'false');
       params.set('sortBy', sortField);
-      params.set('sortOrder', sortOrder);
-      params.set('page', String(page));
+      params.set('sortDir', sortOrder);
+      params.set('offset', String((page - 1) * PAGE_SIZE));
       params.set('limit', String(PAGE_SIZE));
 
       const qs = params.toString();
@@ -165,7 +165,7 @@ export default function ProductsPage() {
       prev.map((p) => (p.id === product.id ? { ...p, isAvailable: newVal } : p)),
     );
     try {
-      await api.put(`/products/${product.id}`, { isAvailable: newVal });
+      await api.patch(`/products/${product.id}/availability`);
       toast.success(`${product.name} ${newVal ? 'available' : "86'd"}.`);
     } catch {
       // Revert
@@ -178,13 +178,7 @@ export default function ProductsPage() {
 
   async function handleDuplicate(product: Product) {
     try {
-      await api.post('/products', {
-        name: `${product.name} (Copy)`,
-        description: product.description ?? undefined,
-        categoryId: product.categoryId ?? undefined,
-        basePrice: product.basePrice,
-        isGstFree: product.isGstFree,
-      });
+      await api.post(`/products/${product.id}/duplicate`);
       toast.success(`"${product.name}" duplicated.`);
       fetchProducts();
     } catch {
@@ -219,8 +213,8 @@ export default function ProductsPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
-  function formatPrice(cents: number): string {
-    return `$${(cents / 100).toFixed(2)}`;
+  function formatPrice(dollars: number): string {
+    return `$${dollars.toFixed(2)}`;
   }
 
   function SortButton({ field, children }: { field: SortField; children: React.ReactNode }) {
@@ -299,9 +293,7 @@ export default function ProductsPage() {
               <TableHead>
                 <SortButton field="name">Name</SortButton>
               </TableHead>
-              <TableHead>
-                <SortButton field="category">Category</SortButton>
-              </TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>
                 <SortButton field="basePrice">Price</SortButton>
               </TableHead>

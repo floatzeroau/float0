@@ -21,7 +21,7 @@ interface OrgData {
   phone?: string;
   email?: string;
   website?: string;
-  logoUrl?: string;
+  logo?: string;
   timezone?: string;
   settings?: Record<string, unknown>;
 }
@@ -110,7 +110,7 @@ export default function BusinessProfilePage() {
         setPhone(org.phone ?? '');
         setEmail(org.email ?? '');
         setWebsite(org.website ?? '');
-        if (org.logoUrl) setLogoPreview(org.logoUrl);
+        if (org.logo) setLogoPreview(org.logo);
 
         // Parse address — supports both object and legacy string format
         if (org.address) {
