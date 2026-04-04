@@ -33,6 +33,7 @@ const app = Fastify({
         ? { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss Z' } }
         : undefined,
   },
+  bodyLimit: 5 * 1024 * 1024, // 5 MB — supports base64 logo uploads
 });
 
 app.setErrorHandler(errorHandler);

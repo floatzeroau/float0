@@ -475,6 +475,130 @@ export async function duplicateProduct(orgId: string, id: string, ctx: AuditCont
   return created;
 }
 
+// ---------------------------------------------------------------------------
+// Product ↔ Modifier Group linking
+// ---------------------------------------------------------------------------
+
+export async function linkModifierGroup(
+  orgId: string,
+  productId: string,
+  modifierGroupId: string,
+  sortOrder: number,
+  ctx: AuditContext,
+) {
+  // Verify product belongs to org
+  const [product] = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(
+      and(
+        eq(products.id, productId),
+        eq(products.organizationId, orgId),
+        isNull(products.deletedAt),
+      ),
+    );
+  if (!product) throw Object.assign(new Error('Product not found'), { statusCode: 404 });
+
+  // Verify modifier group exists
+  const [mg] = await db
+    .select({ id: modifierGroups.id })
+    .from(modifierGroups)
+    .where(
+      and(
+        eq(modifierGroups.id, modifierGroupId),
+        eq(modifierGroups.organizationId, orgId),
+        isNull(modifierGroups.deletedAt),
+      ),
+    );
+  if (!mg) throw Object.assign(new Error('Modifier group not found'), { statusCode: 404 });
+
+  // Check for existing (non-deleted) link
+  const [existing] = await db
+    .select({ id: productModifierGroups.id })
+    .from(productModifierGroups)
+    .where(
+      and(
+        eq(productModifierGroups.productId, productId),
+        eq(productModifierGroups.modifierGroupId, modifierGroupId),
+        isNull(productModifierGroups.deletedAt),
+      ),
+    );
+
+  if (existing) {
+    // Already linked — just return
+    return existing;
+  }
+
+  const [created] = await db
+    .insert(productModifierGroups)
+    .values({
+      organizationId: orgId,
+      productId,
+      modifierGroupId,
+      sortOrder,
+    })
+    .returning();
+
+  await db
+    .insert(auditLog)
+    .values({
+      organizationId: ctx.orgId,
+      userId: ctx.userId,
+      action: 'product.link_modifier_group',
+      entityType: 'product_modifier_group',
+      entityId: created.id,
+      changes: { productId, modifierGroupId },
+      ipAddress: ctx.ip,
+    })
+    .catch(() => {});
+
+  return created;
+}
+
+export async function unlinkModifierGroup(
+  orgId: string,
+  productId: string,
+  modifierGroupId: string,
+  ctx: AuditContext,
+) {
+  const [existing] = await db
+    .select()
+    .from(productModifierGroups)
+    .where(
+      and(
+        eq(productModifierGroups.productId, productId),
+        eq(productModifierGroups.modifierGroupId, modifierGroupId),
+        eq(productModifierGroups.organizationId, orgId),
+        isNull(productModifierGroups.deletedAt),
+      ),
+    );
+
+  if (!existing) {
+    throw Object.assign(new Error('Link not found'), { statusCode: 404 });
+  }
+
+  const [deleted] = await db
+    .update(productModifierGroups)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(eq(productModifierGroups.id, existing.id))
+    .returning();
+
+  await db
+    .insert(auditLog)
+    .values({
+      organizationId: ctx.orgId,
+      userId: ctx.userId,
+      action: 'product.unlink_modifier_group',
+      entityType: 'product_modifier_group',
+      entityId: existing.id,
+      changes: { productId, modifierGroupId },
+      ipAddress: ctx.ip,
+    })
+    .catch(() => {});
+
+  return deleted;
+}
+
 export async function toggleAvailability(orgId: string, id: string, ctx: AuditContext) {
   const [existing] = await db
     .select()

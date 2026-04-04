@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { api, ApiClientError } from '@/lib/api';
+import { api, ApiClientError, setTokens } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -116,8 +116,7 @@ export default function RegisterPage() {
         abn: abn.replace(/\s/g, '') || undefined,
       });
 
-      localStorage.setItem('auth_token', accessToken);
-      localStorage.setItem('refresh_token', refreshToken);
+      setTokens(accessToken, refreshToken);
 
       router.push('/onboarding');
     } catch (err) {

@@ -16,7 +16,7 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -88,7 +88,7 @@ export default function ReportsPage() {
   }, [fetchReport]);
 
   const handleExport = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const token = getAccessToken();
     const url = `${BASE_URL}/reports/sales/export?from=${range.from}&to=${range.to}&timezone=${encodeURIComponent(TIMEZONE)}`;
     const a = document.createElement('a');
     // Use fetch to add auth header, then trigger download

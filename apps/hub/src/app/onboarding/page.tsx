@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 import { OnboardingStepper } from '@/components/onboarding-stepper';
 import { BusinessProfile } from './steps/business-profile';
 import { MenuSetup } from './steps/menu-setup';
@@ -24,7 +24,7 @@ export interface OrgData {
   website?: string;
   address?: string | { street?: string; suburb?: string; state?: string; postcode?: string };
   timezone?: string;
-  logoUrl?: string;
+  logo?: string;
   settings?: Record<string, unknown>;
 }
 
@@ -45,7 +45,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
+    const token = getAccessToken();
     if (!token) {
       router.push('/login');
       return;

@@ -10,7 +10,9 @@
       "Bash(pkill:*)",
       "Bash(lsof:*)",
       "Bash(curl:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)"
     ]
   }
 }

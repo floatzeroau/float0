@@ -22,23 +22,27 @@ interface PosConfigProps {
 
 export function PosConfig({ org, onNext, onBack }: PosConfigProps) {
   const settings = (org?.settings ?? {}) as Record<string, unknown>;
+  const posSettings = (settings.pos as Record<string, unknown>) ?? {};
+  const receiptSettings = (settings.receipt as Record<string, unknown>) ?? {};
 
   const [saving, setSaving] = useState(false);
   const [defaultOrderType, setDefaultOrderType] = useState<'dine_in' | 'takeaway'>(
-    (settings.default_order_type as 'dine_in' | 'takeaway') ?? 'dine_in',
+    (posSettings.defaultOrderType as 'dine_in' | 'takeaway') ?? 'dine_in',
   );
   const [tippingEnabled, setTippingEnabled] = useState(
-    (settings.tipping_enabled as boolean) ?? true,
+    (posSettings.tippingEnabled as boolean) ?? true,
   );
   const [tipPercentages, setTipPercentages] = useState<[string, string, string]>(() => {
-    const saved = settings.tip_percentages as number[] | undefined;
+    const saved = posSettings.tipPercentages as number[] | undefined;
     return saved && saved.length === 3
       ? [String(saved[0]), String(saved[1]), String(saved[2])]
       : ['10', '15', '20'];
   });
-  const [cashRounding, setCashRounding] = useState((settings.cash_rounding as boolean) ?? true);
+  const [cashRounding, setCashRounding] = useState(
+    (posSettings.cashRoundingEnabled as boolean) ?? true,
+  );
   const [receiptFooter, setReceiptFooter] = useState(
-    (settings.receipt_footer as string) ?? 'Thank you for visiting!',
+    (receiptSettings.footerText as string) ?? 'Thank you for visiting!',
   );
 
   function handleTipChange(index: number, value: string) {

@@ -226,4 +226,8 @@ export async function productRoutes(app: FastifyInstance) {
       return reply.send(updated);
     },
   );
+
+  // NOTE: Product ↔ Modifier Group link/unlink routes are in modifier-groups.routes.ts
+  // POST /products/:productId/modifier-groups
+  // DELETE /products/:productId/modifier-groups/:groupId
 }
