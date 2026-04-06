@@ -46,13 +46,18 @@ export async function syncRoutes(app: FastifyInstance) {
     }
 
     const { changes, lastPulledAt } = parsed.data;
-    const { rejected } = await pushAllChanges(
-      request.user.orgId,
-      request.user.userId,
-      changes,
-      lastPulledAt,
-    );
-    return reply.send({ ok: true, rejected });
+    try {
+      const { rejected } = await pushAllChanges(
+        request.user.orgId,
+        request.user.userId,
+        changes,
+        lastPulledAt,
+      );
+      return reply.send({ ok: true, rejected });
+    } catch (err) {
+      request.log.error({ err, body: request.body }, 'Sync push failed');
+      throw err;
+    }
   });
 
   app.get('/sync/status', { preHandler: [requireAuth] }, async (request, reply) => {

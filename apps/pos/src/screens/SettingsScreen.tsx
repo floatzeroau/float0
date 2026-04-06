@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  Alert,
   ActivityIndicator,
   Animated,
 } from 'react-native';
@@ -14,6 +15,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useShift } from '../state/ShiftProvider';
 import { API_URL } from '../config';
+import { database } from '../db/database';
+import { resetInitialSync } from '../sync/initial-sync';
 
 const PIN_LENGTH = 4;
 const ORG_ID_KEY = 'float0_org_id';
@@ -106,6 +109,33 @@ export default function SettingsScreen() {
     setPinModalVisible(true);
   };
 
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetData = useCallback(() => {
+    Alert.alert(
+      'Reset All Data?',
+      'This will clear the local database and re-sync from the server. You will be logged out.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            setResetting(true);
+            try {
+              await resetInitialSync(database);
+              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            } catch (e) {
+              Alert.alert('Reset failed', String(e));
+            } finally {
+              setResetting(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [navigation]);
+
   const pinDigits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '\u232B'];
 
   return (
@@ -144,6 +174,20 @@ export default function SettingsScreen() {
           <Text style={styles.closeShiftText}>Close Shift</Text>
         </TouchableOpacity>
       )}
+
+      {/* Data Management */}
+      <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Data Management</Text>
+
+      <TouchableOpacity
+        style={[styles.reportButton, styles.resetButton]}
+        onPress={handleResetData}
+        disabled={resetting}
+      >
+        <Text style={styles.resetButtonTitle}>
+          {resetting ? 'Resetting...' : 'Reset Local Data'}
+        </Text>
+        <Text style={styles.reportButtonSubtitle}>Clear database and re-sync from server</Text>
+      </TouchableOpacity>
 
       {/* Manager PIN Modal for Z Report */}
       <Modal visible={pinModalVisible} animationType="slide" transparent>
@@ -244,6 +288,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     marginTop: 2,
+  },
+
+  // Reset button
+  resetButton: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  resetButtonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#dc2626',
   },
 
   // Close shift

@@ -20,11 +20,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     isTabletOnly: true,
     requireFullScreen: true,
     infoPlist: {
+      // Allow all orientations in Info.plist so React Native modals don't crash
+      // with "presented with 0x2 orientations mask but app only supports 0x18".
+      // Actual landscape lock is enforced at runtime via expo-screen-orientation.
       UISupportedInterfaceOrientations: [
+        'UIInterfaceOrientationPortrait',
         'UIInterfaceOrientationLandscapeLeft',
         'UIInterfaceOrientationLandscapeRight',
       ],
       'UISupportedInterfaceOrientations~ipad': [
+        'UIInterfaceOrientationPortrait',
+        'UIInterfaceOrientationPortraitUpsideDown',
         'UIInterfaceOrientationLandscapeLeft',
         'UIInterfaceOrientationLandscapeRight',
       ],
@@ -36,7 +42,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#635BFF',
     },
   },
-  plugins: ['expo-dev-client'],
+  plugins: ['expo-dev-client', 'expo-screen-orientation'],
   experiments: {
     tsconfigPaths: true,
   },
