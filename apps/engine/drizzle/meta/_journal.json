@@ -57,6 +57,13 @@
       "when": 1773748877377,
       "tag": "0007_flippant_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775439036143,
+      "tag": "0008_plain_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }
