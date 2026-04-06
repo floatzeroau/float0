@@ -19,6 +19,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     isTabletOnly: true,
     requireFullScreen: true,
+    infoPlist: {
+      UISupportedInterfaceOrientations: [
+        'UIInterfaceOrientationLandscapeLeft',
+        'UIInterfaceOrientationLandscapeRight',
+      ],
+      'UISupportedInterfaceOrientations~ipad': [
+        'UIInterfaceOrientationLandscapeLeft',
+        'UIInterfaceOrientationLandscapeRight',
+      ],
+    },
   },
   android: {
     adaptiveIcon: {

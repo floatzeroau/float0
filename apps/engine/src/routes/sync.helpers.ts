@@ -367,7 +367,9 @@ function wmRawToServer(raw: Record<string, unknown>, orgId: string): Record<stri
       (camelKey === 'createdAt' ||
         camelKey === 'updatedAt' ||
         camelKey === 'openedAt' ||
-        camelKey === 'closedAt') &&
+        camelKey === 'closedAt' ||
+        camelKey === 'voidedAt' ||
+        camelKey === 'heldAt') &&
       typeof value === 'number'
     ) {
       record[camelKey] = fromMs(value);

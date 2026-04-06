@@ -64,6 +64,13 @@
       "when": 1775439036143,
       "tag": "0008_plain_mikhail_rasputin",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775443263919,
+      "tag": "0009_optimal_susan_delgado",
+      "breakpoints": true
     }
   ]
 }
