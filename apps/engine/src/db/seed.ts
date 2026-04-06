@@ -55,60 +55,112 @@ async function seed() {
     console.log(`Created organization: ${org.name} (${org.id})`);
   }
 
-  // ── User (upsert by email) ────────────────────────────
-  const passwordHash = await hash('admin123', SALT_ROUNDS);
-  const pinHash = await hash('1234', SALT_ROUNDS);
+  // ── Owner user ──────────────────────────────────────────
+  const ownerPasswordHash = await hash('password123', SALT_ROUNDS);
+  const ownerPinHash = await hash('1234', SALT_ROUNDS);
 
-  const [user] = await db
+  const [ownerUser] = await db
     .insert(users)
     .values({
-      email: 'admin@float0.com',
-      passwordHash,
-      firstName: 'Admin',
-      lastName: 'User',
+      email: 'owner@demo.float0.com',
+      passwordHash: ownerPasswordHash,
+      firstName: 'Demo',
+      lastName: 'Owner',
       phone: '+61 400 000 000',
       isActive: true,
     })
     .onConflictDoUpdate({
       target: users.email,
-      set: { firstName: 'Admin', lastName: 'User', passwordHash },
+      set: {
+        firstName: 'Demo',
+        lastName: 'Owner',
+        passwordHash: ownerPasswordHash,
+        isActive: true,
+      },
     })
     .returning();
 
-  console.log(`Upserted user: ${user.email} (${user.id})`);
+  console.log(`Upserted owner: ${ownerUser.email} (${ownerUser.id})`);
 
-  // ── Org Membership (upsert by userId + organizationId) ─
-  const [existingMembership] = await db
+  // Owner membership
+  const [existingOwnerMembership] = await db
     .select()
     .from(orgMemberships)
-    .where(and(eq(orgMemberships.userId, user.id), eq(orgMemberships.organizationId, org.id)))
+    .where(and(eq(orgMemberships.userId, ownerUser.id), eq(orgMemberships.organizationId, org.id)))
     .limit(1);
 
-  if (existingMembership) {
-    // Always ensure PIN hash is set
-    if (!existingMembership.pinHash) {
-      await db
-        .update(orgMemberships)
-        .set({ pinHash })
-        .where(eq(orgMemberships.id, existingMembership.id));
-      console.log(`Updated membership PIN: ${existingMembership.id}`);
-    } else {
-      console.log(
-        `Membership already exists: ${existingMembership.id} (role: ${existingMembership.role})`,
-      );
-    }
+  if (existingOwnerMembership) {
+    await db
+      .update(orgMemberships)
+      .set({ pinHash: ownerPinHash, role: 'owner' })
+      .where(eq(orgMemberships.id, existingOwnerMembership.id));
+    console.log(`Updated owner membership: ${existingOwnerMembership.id}`);
   } else {
     const [membership] = await db
       .insert(orgMemberships)
       .values({
-        userId: user.id,
+        userId: ownerUser.id,
         organizationId: org.id,
         role: 'owner',
-        pinHash,
+        pinHash: ownerPinHash,
         permissions: [],
       })
       .returning();
-    console.log(`Created membership: ${membership.id} (role: ${membership.role})`);
+    console.log(`Created owner membership: ${membership.id} (role: ${membership.role})`);
+  }
+
+  // ── Staff user ──────────────────────────────────────────
+  const staffPasswordHash = await hash('password123', SALT_ROUNDS);
+  const staffPinHash = await hash('5678', SALT_ROUNDS);
+
+  const [staffUser] = await db
+    .insert(users)
+    .values({
+      email: 'staff@demo.float0.com',
+      passwordHash: staffPasswordHash,
+      firstName: 'Demo',
+      lastName: 'Staff',
+      phone: '+61 400 000 001',
+      isActive: true,
+    })
+    .onConflictDoUpdate({
+      target: users.email,
+      set: {
+        firstName: 'Demo',
+        lastName: 'Staff',
+        passwordHash: staffPasswordHash,
+        isActive: true,
+      },
+    })
+    .returning();
+
+  console.log(`Upserted staff: ${staffUser.email} (${staffUser.id})`);
+
+  // Staff membership
+  const [existingStaffMembership] = await db
+    .select()
+    .from(orgMemberships)
+    .where(and(eq(orgMemberships.userId, staffUser.id), eq(orgMemberships.organizationId, org.id)))
+    .limit(1);
+
+  if (existingStaffMembership) {
+    await db
+      .update(orgMemberships)
+      .set({ pinHash: staffPinHash, role: 'staff' })
+      .where(eq(orgMemberships.id, existingStaffMembership.id));
+    console.log(`Updated staff membership: ${existingStaffMembership.id}`);
+  } else {
+    const [membership] = await db
+      .insert(orgMemberships)
+      .values({
+        userId: staffUser.id,
+        organizationId: org.id,
+        role: 'staff',
+        pinHash: staffPinHash,
+        permissions: [],
+      })
+      .returning();
+    console.log(`Created staff membership: ${membership.id} (role: ${membership.role})`);
   }
 
   // ── POS Seed Data (skip if already seeded) ─────────────
@@ -120,7 +172,7 @@ async function seed() {
 
   if (existingCategories.length > 0) {
     console.log('POS data already seeded, skipping...');
-    console.log('Seed complete.');
+    printSummary(org.id);
     process.exit(0);
   }
 
@@ -445,8 +497,30 @@ async function seed() {
 
   console.log('Created customers: Jane Smith, Bob Jones');
 
-  console.log('Seed complete.');
+  printSummary(org.id);
   process.exit(0);
+}
+
+function printSummary(orgId: string) {
+  console.log('\n════════════════════════════════════════════════════════');
+  console.log('  Seed complete!');
+  console.log('════════════════════════════════════════════════════════');
+  console.log('');
+  console.log('  Organization ID: ' + orgId);
+  console.log('');
+  console.log('  Hub login (owner):');
+  console.log('    Email:    owner@demo.float0.com');
+  console.log('    Password: password123');
+  console.log('    POS PIN:  1234');
+  console.log('');
+  console.log('  Hub login (staff):');
+  console.log('    Email:    staff@demo.float0.com');
+  console.log('    Password: password123');
+  console.log('    POS PIN:  5678');
+  console.log('');
+  console.log('  POS setup:');
+  console.log(`    Set EXPO_PUBLIC_ORG_ID=${orgId} in apps/pos/.env`);
+  console.log('════════════════════════════════════════════════════════\n');
 }
 
 seed().catch((err) => {

@@ -27,6 +27,7 @@ interface InviteInput {
   lastName: string;
   role: 'admin' | 'manager' | 'staff';
   posPin?: string;
+  password?: string;
 }
 
 interface ListUsersOptions {
@@ -102,8 +103,11 @@ export async function inviteUser(
     }
   }
 
-  // Create user with placeholder password hash (invited users set password via setup link)
-  const placeholderHash = await hash(randomBytes(32).toString('hex'), SALT_ROUNDS);
+  // If password provided, hash it and user is immediately active; otherwise placeholder
+  const directCreate = !!input.password;
+  const passwordHash = directCreate
+    ? await hash(input.password!, SALT_ROUNDS)
+    : await hash(randomBytes(32).toString('hex'), SALT_ROUNDS);
   const pinHash = input.posPin ? await hash(input.posPin, SALT_ROUNDS) : null;
 
   const { user, membership } = await db.transaction(async (tx) => {
@@ -112,15 +116,22 @@ export async function inviteUser(
     if (existingUser) {
       // User exists in another org, reuse account
       newUser = existingUser;
+      // If direct-creating, activate and set their password
+      if (directCreate) {
+        await tx
+          .update(users)
+          .set({ passwordHash, isActive: true, updatedAt: new Date() })
+          .where(eq(users.id, existingUser.id));
+      }
     } else {
       [newUser] = await tx
         .insert(users)
         .values({
           email: input.email,
-          passwordHash: placeholderHash,
+          passwordHash,
           firstName: input.firstName,
           lastName: input.lastName,
-          isActive: false,
+          isActive: directCreate,
         })
         .returning();
     }
@@ -138,7 +149,7 @@ export async function inviteUser(
     await tx.insert(auditLog).values({
       organizationId: ctx.orgId,
       userId: ctx.userId,
-      action: 'user.invite',
+      action: directCreate ? 'user.create' : 'user.invite',
       entityType: 'user',
       entityId: newUser.id,
       changes: { email: input.email, role: input.role },
@@ -148,13 +159,22 @@ export async function inviteUser(
     return { user: newUser, membership: newMembership };
   });
 
-  // Generate setup token
+  // If direct creation, skip email invite — user can log in immediately
+  if (directCreate) {
+    return {
+      userId: user.id,
+      membershipId: membership.id,
+      email: user.email,
+      role: membership.role,
+    };
+  }
+
+  // Invite flow: generate setup token and send email
   const setupToken = app.jwt.sign(
     { userId: user.id, orgId, role: membership.role, permissions: [], purpose: 'account-setup' },
     { expiresIn: SETUP_TOKEN_EXPIRY },
   );
 
-  // Send invite email
   const [org] = await db
     .select({ name: organizations.name })
     .from(organizations)
@@ -283,7 +303,7 @@ export async function listOrgUsers(orgId: string, options: ListUsersOptions = {}
     phone: row.phone,
     isActive: row.isActive,
     role: row.role,
-    hasPosPin: !!row.hasPosPin,
+    hasPinSet: !!row.hasPosPin,
     createdAt: row.createdAt,
   }));
 }

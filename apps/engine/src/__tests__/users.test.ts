@@ -408,7 +408,7 @@ describe('listOrgUsers service', () => {
 
     const result = await listOrgUsers('org-1');
     expect(result).toHaveLength(1);
-    expect(result[0].hasPosPin).toBe(true);
+    expect(result[0].hasPinSet).toBe(true);
     expect(result[0].email).toBe('staff@test.com');
   });
 

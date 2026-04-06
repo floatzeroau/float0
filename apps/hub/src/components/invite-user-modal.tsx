@@ -27,12 +27,16 @@ interface InviteUserModalProps {
   onInvited?: () => void;
 }
 
+type CreateMode = 'invite' | 'direct';
+
 export function InviteUserModal({ onInvited }: InviteUserModalProps) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<CreateMode>('direct');
   const [submitting, setSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<string>('staff');
   const [pin, setPin] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,6 +45,7 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
     setEmail('');
     setFirstName('');
     setLastName('');
+    setPassword('');
     setRole('staff');
     setPin('');
     setErrors({});
@@ -52,6 +57,12 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Invalid email';
     if (!firstName.trim()) errs.firstName = 'First name is required';
     if (!lastName.trim()) errs.lastName = 'Last name is required';
+    if (mode === 'direct') {
+      if (!password) errs.password = 'Password is required';
+      else if (password.length < 8) errs.password = 'Must be at least 8 characters';
+      else if (!/[a-zA-Z]/.test(password)) errs.password = 'Must contain a letter';
+      else if (!/[0-9]/.test(password)) errs.password = 'Must contain a number';
+    }
     if (pin && !/^\d{4,6}$/.test(pin)) errs.pin = 'PIN must be 4-6 digits';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -62,14 +73,22 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      await api.post('/users/invite', {
+      const payload: Record<string, string> = {
         email: email.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         role,
-        ...(pin ? { posPin: pin } : {}),
-      });
-      toast.success(`Invitation sent to ${email.trim()}`);
+      };
+      if (pin) payload.posPin = pin;
+      if (mode === 'direct') payload.password = password;
+
+      await api.post('/users/invite', payload);
+
+      if (mode === 'direct') {
+        toast.success(`${firstName.trim()} ${lastName.trim()} created successfully`);
+      } else {
+        toast.success(`Invitation sent to ${email.trim()}`);
+      }
       resetForm();
       setOpen(false);
       onInvited?.();
@@ -83,10 +102,10 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
           }
           setErrors(fieldErrors);
         } else {
-          toast.error(body?.error ?? 'Failed to send invitation');
+          toast.error(body?.error ?? 'Failed to create staff member');
         }
       } else {
-        toast.error('Failed to send invitation');
+        toast.error('Failed to create staff member');
       }
     } finally {
       setSubmitting(false);
@@ -104,16 +123,43 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
       <DialogTrigger asChild>
         <Button>
           <UserPlus className="mr-2 h-4 w-4" />
-          Invite User
+          Add Staff
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invite Team Member</DialogTitle>
+          <DialogTitle>Add Team Member</DialogTitle>
           <DialogDescription>
-            Send an invitation to add a new staff member to your organization.
+            Create a new staff member or send an email invitation.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Mode toggle */}
+        <div className="flex rounded-lg border p-1">
+          <button
+            type="button"
+            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              mode === 'direct'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setMode('direct')}
+          >
+            Create directly
+          </button>
+          <button
+            type="button"
+            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              mode === 'invite'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setMode('invite')}
+          >
+            Invite by email
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -154,6 +200,24 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
             />
             {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
+
+          {/* Password — only in direct mode */}
+          {mode === 'direct' && (
+            <div className="space-y-2">
+              <label htmlFor="invite-password" className="text-sm font-medium">
+                Password
+              </label>
+              <Input
+                id="invite-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min 8 chars, letter + number"
+              />
+              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium">Role</label>
@@ -183,12 +247,23 @@ export function InviteUserModal({ onInvited }: InviteUserModalProps) {
               {errors.pin && <p className="text-xs text-destructive">{errors.pin}</p>}
             </div>
           </div>
+
+          {mode === 'invite' && (
+            <p className="text-xs text-muted-foreground">
+              An email will be sent with a setup link. The staff member will set their own password.
+            </p>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Sending...' : 'Send Invitation'}
+              {submitting
+                ? 'Saving...'
+                : mode === 'direct'
+                  ? 'Create Staff Member'
+                  : 'Send Invitation'}
             </Button>
           </DialogFooter>
         </form>

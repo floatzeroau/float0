@@ -29,6 +29,7 @@ const inviteSchema = z.object({
     .string()
     .regex(/^\d{4,6}$/, 'PIN must be 4-6 digits')
     .optional(),
+  password: passwordSchema.optional(),
 });
 
 const setupAccountSchema = z.object({

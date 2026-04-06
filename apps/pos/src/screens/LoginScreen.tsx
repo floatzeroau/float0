@@ -80,8 +80,8 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       // Use stored orgId or fall back to a default for development
       const orgId = (await SecureStore.getItemAsync(ORG_ID_KEY)) ?? process.env.EXPO_PUBLIC_ORG_ID;
-      if (!orgId) {
-        setError('No organization configured');
+      if (!orgId || !orgId.trim()) {
+        setError('No organization configured. Set EXPO_PUBLIC_ORG_ID in .env');
         setLoading(false);
         return;
       }
@@ -115,6 +115,9 @@ export default function LoginScreen({ navigation }: Props) {
         setPin('');
         shake();
         setError('Too many attempts');
+      } else if (res.status === 404) {
+        setPin('');
+        setError('Organization not found. Check EXPO_PUBLIC_ORG_ID');
       } else {
         setPin('');
         shake();
