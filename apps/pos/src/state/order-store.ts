@@ -548,15 +548,17 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (orderRecordIdRef.current) {
-      database.write(async () => {
-        const record = await database.get<Order>('orders').find(orderRecordIdRef.current!);
-        await record.update((o) => {
-          setRaw(o, 'order_type', type);
-          if (type === 'takeaway') {
-            setRaw(o, 'table_number', '');
-          }
-        });
-      });
+      database
+        .write(async () => {
+          const record = await database.get<Order>('orders').find(orderRecordIdRef.current!);
+          await record.update((o) => {
+            setRaw(o, 'order_type', type);
+            if (type === 'takeaway') {
+              setRaw(o, 'table_number', '');
+            }
+          });
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -570,12 +572,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (orderRecordIdRef.current) {
-      database.write(async () => {
-        const record = await database.get<Order>('orders').find(orderRecordIdRef.current!);
-        await record.update((o) => {
-          setRaw(o, 'table_number', num ?? '');
-        });
-      });
+      database
+        .write(async () => {
+          const record = await database.get<Order>('orders').find(orderRecordIdRef.current!);
+          await record.update((o) => {
+            setRaw(o, 'table_number', num ?? '');
+          });
+        })
+        .catch(() => {});
     }
   }, []);
 

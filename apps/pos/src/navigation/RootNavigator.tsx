@@ -15,6 +15,7 @@ import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { SyncProvider } from '../sync/SyncProvider';
 import { SyncStatusBar } from '../components/SyncStatusBar';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { OrderProvider } from '../state/order-store';
 import { ShiftProvider } from '../state/ShiftProvider';
 
@@ -46,20 +47,22 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabs() {
   return (
-    <SyncProvider>
-      <OrderProvider>
-        <ShiftProvider>
-          <SafeAreaView style={styles.container} edges={['top']}>
-            <SyncStatusBar />
-            <Tab.Navigator screenOptions={{ headerShown: false }}>
-              <Tab.Screen name="POS" component={POSScreen} />
-              <Tab.Screen name="Orders" component={OrderHistoryScreen} />
-              <Tab.Screen name="Settings" component={SettingsScreen} />
-            </Tab.Navigator>
-          </SafeAreaView>
-        </ShiftProvider>
-      </OrderProvider>
-    </SyncProvider>
+    <ErrorBoundary>
+      <SyncProvider>
+        <OrderProvider>
+          <ShiftProvider>
+            <SafeAreaView style={styles.container} edges={['top']}>
+              <SyncStatusBar />
+              <Tab.Navigator screenOptions={{ headerShown: false }}>
+                <Tab.Screen name="POS" component={POSScreen} />
+                <Tab.Screen name="Orders" component={OrderHistoryScreen} />
+                <Tab.Screen name="Settings" component={SettingsScreen} />
+              </Tab.Navigator>
+            </SafeAreaView>
+          </ShiftProvider>
+        </OrderProvider>
+      </SyncProvider>
+    </ErrorBoundary>
   );
 }
 
