@@ -357,7 +357,12 @@ export function PaymentScreen({
   // ---------------------------------------------------------------------------
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      supportedOrientations={['landscape-left', 'landscape-right']}
+    >
       <View style={styles.container}>
         {/* Header — hidden during confirmation */}
         {phase !== 'confirmation' && (

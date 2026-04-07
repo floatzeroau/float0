@@ -190,7 +190,12 @@ export default function SettingsScreen() {
       </TouchableOpacity>
 
       {/* Manager PIN Modal for Z Report */}
-      <Modal visible={pinModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={pinModalVisible}
+        animationType="slide"
+        transparent
+        supportedOrientations={['landscape-left', 'landscape-right']}
+      >
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Manager PIN Required</Text>

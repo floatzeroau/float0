@@ -187,7 +187,12 @@ export function PriceOverrideModal({
   const pinDigits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '\u232B'];
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      supportedOrientations={['landscape-left', 'landscape-right']}
+    >
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* Header */}

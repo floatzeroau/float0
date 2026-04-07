@@ -149,7 +149,12 @@ export function HeldOrdersDrawer({ visible, onClose }: HeldOrdersDrawerProps) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      supportedOrientations={['landscape-left', 'landscape-right']}
+    >
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Held Orders</Text>

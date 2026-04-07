@@ -246,7 +246,12 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      supportedOrientations={['landscape-left', 'landscape-right']}
+    >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           {showQuickAdd ? (

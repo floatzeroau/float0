@@ -71,53 +71,64 @@ export function ModifierModal({
     if (!productId || !visible) return;
 
     (async () => {
-      const pmgRows = await database
-        .get<ProductModifierGroup>('product_modifier_groups')
-        .query()
-        .fetch();
+      try {
+        const pmgRows = await database
+          .get<ProductModifierGroup>('product_modifier_groups')
+          .query()
+          .fetch();
 
-      const productPmgs = pmgRows
-        .filter((pmg) => pmg.productId === productId)
-        .sort((a, b) => a.sortOrder - b.sortOrder);
+        const productPmgs = pmgRows
+          .filter((pmg) => pmg.productId === productId)
+          .sort((a, b) => a.sortOrder - b.sortOrder);
 
-      const loaded: ModifierGroupData[] = await Promise.all(
-        productPmgs.map(async (pmg) => {
-          const mg = await database.get<ModifierGroup>('modifier_groups').find(pmg.modifierGroupId);
+        const loaded: ModifierGroupData[] = [];
+        for (const pmg of productPmgs) {
+          try {
+            const mg = await database
+              .get<ModifierGroup>('modifier_groups')
+              .find(pmg.modifierGroupId);
 
-          const modRows = await database.get<Modifier>('modifiers').query().fetch();
+            const modRows = await database.get<Modifier>('modifiers').query().fetch();
 
-          const groupModifiers = modRows
-            .filter((m) => m.modifierGroupId === mg.id)
-            .sort((a, b) => a.sortOrder - b.sortOrder);
+            const groupModifiers = modRows
+              .filter((m) => m.modifierGroupId === mg.id)
+              .sort((a, b) => a.sortOrder - b.sortOrder);
 
-          return {
-            id: mg.id,
-            name: mg.name,
-            displayName: mg.displayName ?? null,
-            minSelections: mg.minSelections,
-            maxSelections: mg.maxSelections,
-            sortOrder: pmg.sortOrder,
-            modifiers: groupModifiers.map((m) => ({
-              id: m.id,
-              name: m.name,
-              priceAdjustment: m.priceAdjustment,
-              isDefault: m.isDefault,
-              isAvailable: m.isAvailable,
-              sortOrder: m.sortOrder,
-            })),
-          };
-        }),
-      );
+            loaded.push({
+              id: mg.id,
+              name: mg.name,
+              displayName: mg.displayName ?? null,
+              minSelections: mg.minSelections,
+              maxSelections: mg.maxSelections,
+              sortOrder: pmg.sortOrder,
+              modifiers: groupModifiers.map((m) => ({
+                id: m.id,
+                name: m.name,
+                priceAdjustment: m.priceAdjustment,
+                isDefault: m.isDefault,
+                isAvailable: m.isAvailable,
+                sortOrder: m.sortOrder,
+              })),
+            });
+          } catch {
+            console.warn(
+              `[ModifierModal] Modifier group ${pmg.modifierGroupId} not found, skipping`,
+            );
+          }
+        }
 
-      setGroups(loaded);
+        setGroups(loaded);
 
-      // Pre-select defaults
-      const initial: Record<string, Set<string>> = {};
-      for (const g of loaded) {
-        const defaults = g.modifiers.filter((m) => m.isDefault && m.isAvailable).map((m) => m.id);
-        initial[g.id] = new Set(defaults);
+        // Pre-select defaults
+        const initial: Record<string, Set<string>> = {};
+        for (const g of loaded) {
+          const defaults = g.modifiers.filter((m) => m.isDefault && m.isAvailable).map((m) => m.id);
+          initial[g.id] = new Set(defaults);
+        }
+        setSelections(initial);
+      } catch (e) {
+        console.warn('[ModifierModal] Failed to load modifiers:', e);
       }
-      setSelections(initial);
     })();
   }, [productId, visible]);
 
@@ -214,7 +225,12 @@ export function ModifierModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      supportedOrientations={['landscape-left', 'landscape-right']}
+    >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           {/* Header */}
