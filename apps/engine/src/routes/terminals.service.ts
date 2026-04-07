@@ -1,7 +1,7 @@
-import { eq, and, sql, desc, gte, isNull } from 'drizzle-orm';
+import { eq, and, sql, desc, gte, isNull, inArray } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { shifts, orders } from '../db/schema/pos.js';
-import { users } from '../db/schema/core.js';
+import { orgMemberships, users } from '../db/schema/core.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,18 +88,19 @@ export async function listTerminals(orgId: string): Promise<TerminalStatus[]> {
     ]),
   );
 
-  // Get staff names
+  // Get staff names — staffId references orgMemberships.id, join to users for names
   const staffIds = [...new Set([...terminalMap.values()].map((t) => t.staffId))];
   const staffRows =
     staffIds.length > 0
       ? await db
           .select({
-            id: users.id,
+            id: orgMemberships.id,
             firstName: users.firstName,
             lastName: users.lastName,
           })
-          .from(users)
-          .where(sql`${users.id} = ANY(${staffIds})`)
+          .from(orgMemberships)
+          .innerJoin(users, eq(orgMemberships.userId, users.id))
+          .where(inArray(orgMemberships.id, staffIds))
       : [];
 
   const staffMap = new Map(staffRows.map((s) => [s.id, `${s.firstName} ${s.lastName}`]));

@@ -1,4 +1,4 @@
-import { eq, and, gt, lte, isNull, isNotNull, desc, sql } from 'drizzle-orm';
+import { eq, and, gt, lte, isNull, isNotNull, desc, sql, inArray } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import {
   categories,
@@ -232,13 +232,22 @@ export async function pullAllChanges(
 
 // ── Push tables config ─────────────────────────────────
 
-const pushTableMap = {
-  orders: orders,
-  order_items: orderItems,
-  payments: payments,
-  shifts: shifts,
-  cash_movements: cashMovements,
-} as const;
+// Explicit dependency order: parents before children
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const PUSH_TABLE_ORDER: { name: string; table: any }[] = [
+  { name: 'orders', table: orders },
+  { name: 'shifts', table: shifts },
+  { name: 'order_items', table: orderItems },
+  { name: 'payments', table: payments },
+  { name: 'cash_movements', table: cashMovements },
+];
+
+// FK fields that may reference WatermelonDB local IDs needing remapping
+const FK_REMAP_FIELDS: Record<string, string[]> = {
+  order_items: ['order_id'],
+  payments: ['order_id'],
+  cash_movements: ['shift_id'],
+};
 
 // Tables where server data is authoritative (catalog data)
 const SERVER_WINS_TABLES = new Set([
@@ -273,19 +282,44 @@ export async function pushAllChanges(
     fallbackStaffId = membership.id;
   }
 
+  // Map of WatermelonDB local IDs → server UUIDs for FK remapping
+  const idRemap = new Map<string, string>();
+
   await db.transaction(async (tx) => {
     let spIdx = 0;
 
-    for (const [tableName, tableRef] of Object.entries(pushTableMap)) {
+    for (const { name: tableName, table: tableRef } of PUSH_TABLE_ORDER) {
       const tableChanges = changes[tableName];
       if (!tableChanges) continue;
 
       const isServerWins = SERVER_WINS_TABLES.has(tableName);
+      const fkFields = FK_REMAP_FIELDS[tableName];
 
       // Handle created records
       if (tableChanges.created.length > 0) {
         for (const raw of tableChanges.created) {
-          const record = wmRawToServer(raw as Record<string, unknown>, orgId, fallbackStaffId);
+          const rawObj = raw as Record<string, unknown>;
+
+          // Remap FK fields that reference WM local IDs before conversion
+          if (fkFields) {
+            for (const fk of fkFields) {
+              const fkVal = rawObj[fk];
+              if (typeof fkVal === 'string' && idRemap.has(fkVal)) {
+                rawObj[fk] = idRemap.get(fkVal)!;
+              }
+            }
+          }
+
+          // Capture the WM local ID before conversion
+          const wmLocalId = typeof rawObj['id'] === 'string' ? rawObj['id'] : null;
+
+          const record = wmRawToServer(rawObj, orgId, fallbackStaffId);
+          const newServerId = record.id as string;
+
+          // If the server generated a new UUID, add to remap
+          if (wmLocalId && wmLocalId !== newServerId) {
+            idRemap.set(wmLocalId, newServerId);
+          }
 
           // Validate before insert
           const err = validateRecord(tableName, record);
@@ -311,7 +345,19 @@ export async function pushAllChanges(
       // Handle updated records — with conflict detection
       if (tableChanges.updated.length > 0) {
         for (const raw of tableChanges.updated) {
-          const record = wmRawToServer(raw as Record<string, unknown>, orgId, fallbackStaffId);
+          const rawObj = raw as Record<string, unknown>;
+
+          // Remap FK fields for updates too
+          if (fkFields) {
+            for (const fk of fkFields) {
+              const fkVal = rawObj[fk];
+              if (typeof fkVal === 'string' && idRemap.has(fkVal)) {
+                rawObj[fk] = idRemap.get(fkVal)!;
+              }
+            }
+          }
+
+          const record = wmRawToServer(rawObj, orgId, fallbackStaffId);
           const id = record.id as string;
           delete record.id;
 
