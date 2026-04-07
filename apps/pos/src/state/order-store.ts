@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
+import * as SecureStore from 'expo-secure-store';
 import { database } from '../db/database';
 import type { Order, OrderItem, Product, Customer, AuditLog, Payment } from '../db/models';
+import { STAFF_ID_KEY } from '../config';
 import {
   calculateLineTotal,
   calculateCartTotals,
@@ -457,6 +459,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   // -------------------------------------------------------------------------
   const doCreateOrder = useCallback(async () => {
     const orderNumber = await getNextOrderNumber();
+    const staffId = (await SecureStore.getItemAsync(STAFF_ID_KEY)) ?? '';
 
     await database.write(async () => {
       const created = await database.get<Order>('orders').create((o) => {
@@ -466,7 +469,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         setRaw(o, 'status', 'draft');
         setRaw(o, 'table_number', '');
         setRaw(o, 'customer_id', '');
-        setRaw(o, 'staff_id', 'pos-terminal');
+        setRaw(o, 'staff_id', staffId);
         setRaw(o, 'terminal_id', 'terminal-1');
         setRaw(o, 'subtotal', 0);
         setRaw(o, 'gst', 0);
@@ -1190,6 +1193,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (item.voidedAt && item.voidedAt > 0) return;
 
       const now = Date.now();
+      const currentStaffId = (await SecureStore.getItemAsync(STAFF_ID_KEY)) ?? '';
 
       await database.write(async () => {
         // Update the order item
@@ -1205,7 +1209,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(log, 'action', 'void_item');
           setRaw(log, 'entity_type', 'order_item');
           setRaw(log, 'entity_id', itemId);
-          setRaw(log, 'staff_id', 'pos-terminal');
+          setRaw(log, 'staff_id', currentStaffId);
           setRaw(log, 'manager_approver', managerApprover ?? '');
           setRaw(
             log,
@@ -1258,6 +1262,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const newLineTotal = calculateLineTotal(newPrice, modifierAdjustments, item.quantity);
 
       const now = Date.now();
+      const currentStaffId = (await SecureStore.getItemAsync(STAFF_ID_KEY)) ?? '';
 
       await database.write(async () => {
         const record = await database.get<OrderItem>('order_items').find(itemId);
@@ -1273,7 +1278,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(log, 'action', 'price_override');
           setRaw(log, 'entity_type', 'order_item');
           setRaw(log, 'entity_id', itemId);
-          setRaw(log, 'staff_id', 'pos-terminal');
+          setRaw(log, 'staff_id', currentStaffId);
           setRaw(log, 'manager_approver', managerApprover);
           setRaw(
             log,

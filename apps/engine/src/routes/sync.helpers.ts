@@ -354,6 +354,29 @@ export async function pushAllChanges(
   return { rejected };
 }
 
+// UUID fields that must be null (not empty/invalid string) when absent
+const UUID_FIELDS = new Set([
+  'id',
+  'customerId',
+  'orderId',
+  'productId',
+  'shiftId',
+  'staffId',
+  'managerApproverId',
+]);
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Timestamp fields that should be converted from ms to Date
+const TIMESTAMP_FIELDS = new Set([
+  'createdAt',
+  'updatedAt',
+  'openedAt',
+  'closedAt',
+  'voidedAt',
+  'heldAt',
+]);
+
 // Convert WatermelonDB snake_case raw to server camelCase record
 function wmRawToServer(raw: Record<string, unknown>, orgId: string): Record<string, unknown> {
   const record: Record<string, unknown> = { organizationId: orgId };
@@ -363,16 +386,21 @@ function wmRawToServer(raw: Record<string, unknown>, orgId: string): Record<stri
     // Convert snake_case to camelCase
     const camelKey = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
     // Convert timestamp ms fields to Date objects
-    if (
-      (camelKey === 'createdAt' ||
-        camelKey === 'updatedAt' ||
-        camelKey === 'openedAt' ||
-        camelKey === 'closedAt' ||
-        camelKey === 'voidedAt' ||
-        camelKey === 'heldAt') &&
-      typeof value === 'number'
-    ) {
+    if (TIMESTAMP_FIELDS.has(camelKey) && typeof value === 'number') {
       record[camelKey] = fromMs(value);
+    } else if (
+      UUID_FIELDS.has(camelKey) &&
+      (value === '' || value === null || (typeof value === 'string' && !UUID_RE.test(value)))
+    ) {
+      // PostgreSQL uuid columns reject empty/invalid strings — use null instead
+      record[camelKey] = null;
+    } else if (camelKey === 'modifiersJson' && typeof value === 'string') {
+      // jsonb column expects parsed JSON, not a string
+      try {
+        record[camelKey] = JSON.parse(value);
+      } catch {
+        record[camelKey] = value;
+      }
     } else {
       record[camelKey] = value;
     }

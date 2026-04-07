@@ -109,7 +109,7 @@ export class SyncManager {
   // ── Core sync ────────────────────────────────────────
 
   private async executeSync(): Promise<boolean> {
-    if (this._isSyncing || !this._isOnline) return false;
+    if (this._isSyncing || !this._isOnline || this._hasError) return false;
 
     this._isSyncing = true;
     this.emitState();
