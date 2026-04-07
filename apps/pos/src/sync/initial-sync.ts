@@ -76,6 +76,9 @@ export async function performInitialSync(
   const completedEntities = await getCompletedEntities();
   const entityCount = SYNC_ENTITIES.length;
 
+  // Track the latest server timestamp so we can set WM's lastPulledAt
+  let latestServerTimestamp = 0;
+
   for (let i = 0; i < entityCount; i++) {
     const entity = SYNC_ENTITIES[i];
 
@@ -102,7 +105,13 @@ export async function performInitialSync(
       throw new Error(`Failed to sync ${entity}: ${response.status}`);
     }
 
-    const { changes } = await response.json();
+    const { changes, timestamp } = await response.json();
+
+    // Keep the most recent server timestamp
+    if (typeof timestamp === 'number' && timestamp > latestServerTimestamp) {
+      latestServerTimestamp = timestamp;
+    }
+
     const created: Record<string, unknown>[] = changes[entity]?.created ?? [];
     const total = created.length;
 
@@ -136,6 +145,12 @@ export async function performInitialSync(
     }
 
     await markEntityComplete(entity);
+  }
+
+  // Set WatermelonDB's internal lastPulledAt so the first synchronize() call
+  // does an incremental sync instead of re-pulling everything.
+  if (latestServerTimestamp > 0) {
+    await database.adapter.setLocal('__watermelon_last_pulled_at', String(latestServerTimestamp));
   }
 
   // Clean up progress tracker and mark complete
