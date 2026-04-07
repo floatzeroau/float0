@@ -1,4 +1,4 @@
-import { eq, and, gt, lte, isNull, isNotNull, desc } from 'drizzle-orm';
+import { eq, and, gt, lte, isNull, isNotNull, desc, sql } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import {
   categories,
@@ -261,7 +261,21 @@ export async function pushAllChanges(
   const rejected: RejectedRecord[] = [];
   const since = fromMs(lastPulledAt);
 
+  // Look up the org membership ID for the pushing user to use as fallback staffId.
+  // staffId in the POS schema references orgMemberships.id, not users.id.
+  let fallbackStaffId: string | undefined;
+  const [membership] = await db
+    .select({ id: orgMemberships.id })
+    .from(orgMemberships)
+    .where(and(eq(orgMemberships.userId, userId), eq(orgMemberships.organizationId, orgId)))
+    .limit(1);
+  if (membership) {
+    fallbackStaffId = membership.id;
+  }
+
   await db.transaction(async (tx) => {
+    let spIdx = 0;
+
     for (const [tableName, tableRef] of Object.entries(pushTableMap)) {
       const tableChanges = changes[tableName];
       if (!tableChanges) continue;
@@ -271,20 +285,40 @@ export async function pushAllChanges(
       // Handle created records
       if (tableChanges.created.length > 0) {
         for (const raw of tableChanges.created) {
-          const record = wmRawToServer(raw as Record<string, unknown>, orgId);
-          await tx
-            .insert(tableRef)
-            .values({ ...record, _version: 1 } as any)
-            .onConflictDoNothing();
+          const record = wmRawToServer(raw as Record<string, unknown>, orgId, fallbackStaffId);
+
+          // Validate before insert
+          const err = validateRecord(tableName, record);
+          if (err) {
+            console.warn(`Sync push: skipping ${tableName} create — ${err}`, record.id);
+            continue;
+          }
+
+          const sp = `sp_${spIdx++}`;
+          await tx.execute(sql.raw(`SAVEPOINT ${sp}`));
+          try {
+            await tx
+              .insert(tableRef)
+              .values({ ...record, _version: 1 } as any)
+              .onConflictDoNothing();
+          } catch (insertErr) {
+            console.error(`Sync push: failed to insert ${tableName} record:`, insertErr);
+            await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${sp}`));
+          }
         }
       }
 
       // Handle updated records — with conflict detection
       if (tableChanges.updated.length > 0) {
         for (const raw of tableChanges.updated) {
-          const record = wmRawToServer(raw as Record<string, unknown>, orgId);
+          const record = wmRawToServer(raw as Record<string, unknown>, orgId, fallbackStaffId);
           const id = record.id as string;
           delete record.id;
+
+          if (!id || !UUID_RE.test(id)) {
+            console.warn(`Sync push: skipping ${tableName} update — invalid id`);
+            continue;
+          }
 
           // Fetch current server state
           const [existing] = await tx
@@ -321,20 +355,29 @@ export async function pushAllChanges(
             // Device wins — fall through to apply the update
           }
 
-          await tx
-            .update(tableRef)
-            .set({
-              ...record,
-              updatedAt: new Date(),
-              _version: serverVersion + 1,
-            } as any)
-            .where(and(eq(tableRef.id, id), eq(tableRef.organizationId, orgId)));
+          const sp = `sp_${spIdx++}`;
+          await tx.execute(sql.raw(`SAVEPOINT ${sp}`));
+          try {
+            await tx
+              .update(tableRef)
+              .set({
+                ...record,
+                updatedAt: new Date(),
+                _version: serverVersion + 1,
+              } as any)
+              .where(and(eq(tableRef.id, id), eq(tableRef.organizationId, orgId)));
+          } catch (updateErr) {
+            console.error(`Sync push: failed to update ${tableName} record ${id}:`, updateErr);
+            await tx.execute(sql.raw(`ROLLBACK TO SAVEPOINT ${sp}`));
+          }
         }
       }
 
       // Handle deleted records — increment version
       if (tableChanges.deleted.length > 0) {
         for (const id of tableChanges.deleted) {
+          if (!id || !UUID_RE.test(id)) continue;
+
           const [existing] = await tx
             .select({ _version: tableRef._version })
             .from(tableRef)
@@ -355,13 +398,11 @@ export async function pushAllChanges(
 }
 
 // UUID fields that must be null (not empty/invalid string) when absent
-const UUID_FIELDS = new Set([
-  'id',
+const NULLABLE_UUID_FIELDS = new Set([
   'customerId',
   'orderId',
   'productId',
   'shiftId',
-  'staffId',
   'managerApproverId',
 ]);
 
@@ -377,23 +418,53 @@ const TIMESTAMP_FIELDS = new Set([
   'heldAt',
 ]);
 
-// Convert WatermelonDB snake_case raw to server camelCase record
-function wmRawToServer(raw: Record<string, unknown>, orgId: string): Record<string, unknown> {
+// NOT NULL UUID fields that need a fallback value from auth context
+const NOT_NULL_UUID_FIELDS = new Set(['staffId']);
+
+// Convert WatermelonDB snake_case raw to server camelCase record.
+// - Resolves `id` from server_id or generates a new UUID for POS-created records.
+// - Uses fallbackStaffId for invalid staffId values (e.g. old "pos-terminal" records).
+function wmRawToServer(
+  raw: Record<string, unknown>,
+  orgId: string,
+  fallbackStaffId?: string,
+): Record<string, unknown> {
   const record: Record<string, unknown> = { organizationId: orgId };
 
+  // Resolve the server ID for this record:
+  // 1. If server_id is a valid UUID, use it (record was pulled from server previously)
+  // 2. If the WM id is a valid UUID, use it
+  // 3. Otherwise, generate a new UUID (POS-created record with local WM id)
+  const serverId = raw['server_id'];
+  const wmId = raw['id'];
+  if (typeof serverId === 'string' && UUID_RE.test(serverId)) {
+    record.id = serverId;
+  } else if (typeof wmId === 'string' && UUID_RE.test(wmId)) {
+    record.id = wmId;
+  } else {
+    record.id = crypto.randomUUID();
+  }
+
   for (const [key, value] of Object.entries(raw)) {
-    if (key === 'server_id' || key === '_status' || key === '_changed') continue;
+    // Skip WM internal fields and id (already resolved above)
+    if (key === 'id' || key === 'server_id' || key === '_status' || key === '_changed') continue;
     // Convert snake_case to camelCase
     const camelKey = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
     // Convert timestamp ms fields to Date objects
     if (TIMESTAMP_FIELDS.has(camelKey) && typeof value === 'number') {
       record[camelKey] = fromMs(value);
     } else if (
-      UUID_FIELDS.has(camelKey) &&
+      NULLABLE_UUID_FIELDS.has(camelKey) &&
       (value === '' || value === null || (typeof value === 'string' && !UUID_RE.test(value)))
     ) {
-      // PostgreSQL uuid columns reject empty/invalid strings — use null instead
+      // Nullable UUID columns: invalid values become null
       record[camelKey] = null;
+    } else if (
+      NOT_NULL_UUID_FIELDS.has(camelKey) &&
+      (value === '' || value === null || (typeof value === 'string' && !UUID_RE.test(value)))
+    ) {
+      // NOT NULL UUID columns: use fallback from auth context
+      record[camelKey] = fallbackStaffId ?? null;
     } else if (camelKey === 'modifiersJson' && typeof value === 'string') {
       // jsonb column expects parsed JSON, not a string
       try {
@@ -407,6 +478,31 @@ function wmRawToServer(raw: Record<string, unknown>, orgId: string): Record<stri
   }
 
   return record;
+}
+
+// Required fields per push table — records missing these are skipped
+const REQUIRED_FIELDS: Record<string, string[]> = {
+  orders: ['id', 'staffId', 'terminalId'],
+  order_items: ['id', 'orderId'],
+  payments: ['id', 'orderId'],
+  shifts: ['id', 'staffId'],
+  cash_movements: ['id', 'shiftId', 'staffId'],
+};
+
+function validateRecord(tableName: string, record: Record<string, unknown>): string | null {
+  const required = REQUIRED_FIELDS[tableName];
+  if (!required) return null;
+  for (const field of required) {
+    const val = record[field];
+    if (val === null || val === undefined || val === '') {
+      return `missing required field "${field}"`;
+    }
+  }
+  // Validate that id is a proper UUID
+  if (typeof record.id === 'string' && !UUID_RE.test(record.id)) {
+    return `invalid UUID for id: "${record.id}"`;
+  }
+  return null;
 }
 
 // ── Sync Status ────────────────────────────────────────
