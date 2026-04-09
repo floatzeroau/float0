@@ -30,6 +30,8 @@ import { RefundScreen } from './RefundScreen';
 // Types
 // ---------------------------------------------------------------------------
 
+type SyncStatus = 'synced' | 'created' | 'updated';
+
 interface OrderRow {
   id: string;
   orderNumber: string;
@@ -41,6 +43,7 @@ interface OrderRow {
   customerName: string | null;
   createdAt: number;
   notes: string;
+  syncStatus: SyncStatus;
 }
 
 interface OrderDetailItem {
@@ -582,6 +585,7 @@ export default function OrderHistoryScreen() {
           customerName,
           createdAt: o.createdAt.getTime(),
           notes: o.notes ?? '',
+          syncStatus: (o._raw as any)._status as SyncStatus,
         };
       }),
     );
@@ -720,7 +724,19 @@ export default function OrderHistoryScreen() {
                   )}
                 </View>
                 <View style={styles.orderRowRight}>
-                  <Text style={styles.orderRowTotal}>${order.total.toFixed(2)}</Text>
+                  <View style={styles.orderRowTotalRow}>
+                    <Text style={styles.orderRowTotal}>${order.total.toFixed(2)}</Text>
+                    <Text
+                      style={[
+                        styles.syncBadge,
+                        order.syncStatus === 'synced'
+                          ? styles.syncBadgeSynced
+                          : styles.syncBadgePending,
+                      ]}
+                    >
+                      {order.syncStatus === 'synced' ? '\u2713' : '\u23F3'}
+                    </Text>
+                  </View>
                   <Text style={styles.orderRowItems}>
                     {order.itemCount} item{order.itemCount !== 1 ? 's' : ''}
                   </Text>
@@ -861,10 +877,26 @@ const styles = StyleSheet.create({
   orderRowRight: {
     alignItems: 'flex-end',
   },
+  orderRowTotalRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+  },
   orderRowTotal: {
     fontSize: 15,
     fontWeight: '700',
     color: '#1a1a1a',
+  },
+  syncBadge: {
+    fontSize: 12,
+    width: 20,
+    textAlign: 'center' as const,
+  },
+  syncBadgeSynced: {
+    color: '#16a34a',
+  },
+  syncBadgePending: {
+    color: '#d97706',
   },
   orderRowItems: {
     fontSize: 12,

@@ -463,7 +463,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     await database.write(async () => {
       const created = await database.get<Order>('orders').create((o) => {
-        setRaw(o, 'server_id', '');
+        setRaw(o, 'server_id', crypto.randomUUID());
         setRaw(o, 'order_number', orderNumber);
         setRaw(o, 'order_type', 'takeaway');
         setRaw(o, 'status', 'draft');
@@ -593,7 +593,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       await database.write(async () => {
         await database.get<OrderItem>('order_items').create((oi) => {
-          setRaw(oi, 'server_id', '');
+          setRaw(oi, 'server_id', crypto.randomUUID());
           setRaw(oi, 'order_id', orderId);
           setRaw(oi, 'product_id', params.productId);
           setRaw(oi, 'quantity', params.quantity);
@@ -1158,7 +1158,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       await database.write(async () => {
         await database.get<OrderItem>('order_items').create((oi) => {
-          setRaw(oi, 'server_id', '');
+          setRaw(oi, 'server_id', crypto.randomUUID());
           setRaw(oi, 'order_id', orderId);
           setRaw(oi, 'product_id', params.productId);
           setRaw(oi, 'quantity', params.quantity);
@@ -1209,7 +1209,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
         // Create audit log
         await database.get<AuditLog>('audit_logs').create((log) => {
-          setRaw(log, 'server_id', '');
+          setRaw(log, 'server_id', crypto.randomUUID());
           setRaw(log, 'action', 'void_item');
           setRaw(log, 'entity_type', 'order_item');
           setRaw(log, 'entity_id', itemId);
@@ -1278,7 +1278,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
         // Create audit log
         await database.get<AuditLog>('audit_logs').create((log) => {
-          setRaw(log, 'server_id', '');
+          setRaw(log, 'server_id', crypto.randomUUID());
           setRaw(log, 'action', 'price_override');
           setRaw(log, 'entity_type', 'order_item');
           setRaw(log, 'entity_id', itemId);
@@ -1427,7 +1427,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       await database.write(async () => {
         const payment = await database.get<Payment>('payments').create((p) => {
-          setRaw(p, 'server_id', '');
+          setRaw(p, 'server_id', crypto.randomUUID());
           setRaw(p, 'order_id', orderId);
           setRaw(p, 'method', params.method);
           setRaw(p, 'amount', params.amount);
@@ -1480,7 +1480,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       await database.write(async () => {
         const payment = await database.get<Payment>('payments').create((p) => {
-          setRaw(p, 'server_id', '');
+          setRaw(p, 'server_id', crypto.randomUUID());
           setRaw(p, 'order_id', orderId);
           setRaw(p, 'method', params.method);
           setRaw(p, 'amount', params.amount);
@@ -1619,7 +1619,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const now = Date.now();
     await database.write(async () => {
       const payment = await database.get<Payment>('payments').create((p) => {
-        setRaw(p, 'server_id', '');
+        setRaw(p, 'server_id', crypto.randomUUID());
         setRaw(p, 'order_id', orderId);
         setRaw(p, 'method', refundMethod);
         setRaw(p, 'amount', -refundAmount);
@@ -1633,7 +1633,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       // Audit log
       await database.get<AuditLog>('audit_logs').create((a) => {
-        setRaw(a, 'server_id', '');
+        setRaw(a, 'server_id', crypto.randomUUID());
         setRaw(a, 'action', isFullRefund ? 'refund_full' : 'refund_partial');
         setRaw(a, 'entity_type', 'order');
         setRaw(a, 'entity_id', orderId);

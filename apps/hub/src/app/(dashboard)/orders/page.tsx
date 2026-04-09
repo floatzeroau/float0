@@ -127,6 +127,8 @@ export default function OrdersPage() {
   // Detail modal
   const [detailOrder, setDetailOrder] = useState<OrderDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [voidConfirm, setVoidConfirm] = useState(false);
+  const [voiding, setVoiding] = useState(false);
 
   // -------------------------------------------------------------------------
   // Fetch
@@ -173,6 +175,22 @@ export default function OrdersPage() {
       toast.error('Failed to load order details.');
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  async function handleVoidOrder() {
+    if (!detailOrder) return;
+    setVoiding(true);
+    try {
+      await api.post(`/orders/${detailOrder.id}/void`, {});
+      toast.success(`Order ${detailOrder.orderNumber} voided.`);
+      setDetailOrder(null);
+      setVoidConfirm(false);
+      fetchOrders(pagination.page);
+    } catch {
+      toast.error('Failed to void order.');
+    } finally {
+      setVoiding(false);
     }
   }
 
@@ -359,7 +377,12 @@ export default function OrdersPage() {
       {/* Detail modal */}
       <Dialog
         open={!!detailOrder || detailLoading}
-        onOpenChange={(open) => !open && setDetailOrder(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailOrder(null);
+            setVoidConfirm(false);
+          }
+        }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
@@ -505,6 +528,42 @@ export default function OrdersPage() {
                 <div>
                   <h4 className="mb-1 text-sm font-medium">Notes</h4>
                   <p className="text-sm text-muted-foreground">{detailOrder.notes}</p>
+                </div>
+              )}
+
+              {/* Void action */}
+              {detailOrder.status !== 'voided' && detailOrder.status !== 'cancelled' && (
+                <div className="border-t pt-4">
+                  {!voidConfirm ? (
+                    <Button variant="destructive" size="sm" onClick={() => setVoidConfirm(true)}>
+                      Void Order
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-destructive font-medium">
+                        Are you sure you want to void order {detailOrder.orderNumber}? This cannot
+                        be undone.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={voiding}
+                          onClick={handleVoidOrder}
+                        >
+                          {voiding ? 'Voiding...' : 'Yes, Void Order'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={voiding}
+                          onClick={() => setVoidConfirm(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

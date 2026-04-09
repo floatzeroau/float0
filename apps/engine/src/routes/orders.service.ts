@@ -1,7 +1,7 @@
-import { eq, and, sql, desc, isNull, gte, lt, ilike, or } from 'drizzle-orm';
+import { eq, and, sql, desc, isNull, gte, lt, ilike, or, inArray } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { orders, orderItems, payments, products, customers } from '../db/schema/pos.js';
-import { users } from '../db/schema/core.js';
+import { orgMemberships, users } from '../db/schema/core.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -121,9 +121,14 @@ export async function listOrders(params: ListOrdersParams) {
 
   if (staffIds.length > 0) {
     const staffRows = await db
-      .select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
-      .from(users)
-      .where(sql`${users.id} in ${staffIds}`);
+      .select({
+        id: orgMemberships.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      })
+      .from(orgMemberships)
+      .innerJoin(users, eq(orgMemberships.userId, users.id))
+      .where(inArray(orgMemberships.id, staffIds));
     for (const s of staffRows) {
       staffMap.set(s.id, `${s.firstName} ${s.lastName}`.trim());
     }
@@ -227,13 +232,14 @@ export async function getOrder(orgId: string, id: string) {
     .innerJoin(products, eq(orderItems.productId, products.id))
     .where(and(eq(orderItems.orderId, id), isNull(orderItems.deletedAt)));
 
-  // Staff name
+  // Staff name (staffId references orgMemberships.id, not users.id)
   let staffName: string | null = null;
   if (order.staffId) {
     const [staff] = await db
       .select({ firstName: users.firstName, lastName: users.lastName })
-      .from(users)
-      .where(eq(users.id, order.staffId));
+      .from(orgMemberships)
+      .innerJoin(users, eq(orgMemberships.userId, users.id))
+      .where(eq(orgMemberships.id, order.staffId));
     if (staff) staffName = `${staff.firstName} ${staff.lastName}`.trim();
   }
 
@@ -264,4 +270,38 @@ export async function getOrder(orgId: string, id: string) {
     items,
     payments: paymentRows,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Void an order (soft-delete: sets status to 'voided')
+// ---------------------------------------------------------------------------
+
+export async function voidOrder(
+  orgId: string,
+  id: string,
+  reason?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const [order] = await db
+    .select({ id: orders.id, status: orders.status })
+    .from(orders)
+    .where(and(eq(orders.id, id), eq(orders.organizationId, orgId), isNull(orders.deletedAt)));
+
+  if (!order) {
+    return { success: false, error: 'Order not found' };
+  }
+
+  if (order.status === 'voided' || order.status === 'cancelled') {
+    return { success: false, error: 'Order is already voided or cancelled' };
+  }
+
+  await db
+    .update(orders)
+    .set({
+      status: 'voided' as any,
+      notes: reason || null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(orders.id, id), eq(orders.organizationId, orgId)));
+
+  return { success: true };
 }

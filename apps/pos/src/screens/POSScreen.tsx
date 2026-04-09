@@ -322,7 +322,7 @@ export default function POSScreen() {
 
       await database.write(async () => {
         const movement = await database.get<CashMovement>('cash_movements').create((m) => {
-          setRaw(m, 'server_id', '');
+          setRaw(m, 'server_id', crypto.randomUUID());
           setRaw(m, 'shift_id', shiftId);
           setRaw(m, 'direction', data.direction);
           setRaw(m, 'amount', data.amount);
@@ -338,7 +338,7 @@ export default function POSScreen() {
 
         // Audit log
         await database.get<AuditLog>('audit_logs').create((log) => {
-          setRaw(log, 'server_id', '');
+          setRaw(log, 'server_id', crypto.randomUUID());
           setRaw(log, 'action', `cash_${data.direction}`);
           setRaw(log, 'entity_type', 'cash_movement');
           setRaw(log, 'entity_id', movement.id);
@@ -388,7 +388,7 @@ export default function POSScreen() {
     const now = Date.now();
     await database.write(async () => {
       await database.get<AuditLog>('audit_logs').create((log) => {
-        setRaw(log, 'server_id', '');
+        setRaw(log, 'server_id', crypto.randomUUID());
         setRaw(log, 'action', 'no_sale');
         setRaw(log, 'entity_type', 'terminal');
         setRaw(log, 'entity_id', 'terminal-1');
