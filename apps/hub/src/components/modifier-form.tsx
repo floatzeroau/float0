@@ -48,7 +48,7 @@ export function ModifierForm({
     if (!open) return;
     if (modifier) {
       setName(modifier.name);
-      setPriceStr((modifier.priceAdjustment / 100).toFixed(2));
+      setPriceStr(modifier.priceAdjustment.toFixed(2));
       setIsDefault(modifier.isDefault);
     } else {
       setName('');
@@ -67,7 +67,7 @@ export function ModifierForm({
     setSaving(true);
 
     try {
-      const priceAdjustment = Math.round(parseFloat(priceStr) * 100) || 0;
+      const priceAdjustment = parseFloat(priceStr) || 0;
 
       const payload = {
         name: name.trim(),

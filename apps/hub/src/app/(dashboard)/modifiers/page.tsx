@@ -58,11 +58,11 @@ import { cn } from '@/lib/utils';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatPrice(cents: number): string {
-  if (cents === 0) return '$0.00';
-  const abs = Math.abs(cents);
-  const str = `$${(abs / 100).toFixed(2)}`;
-  return cents > 0 ? `+${str}` : `-${str}`;
+function formatPrice(dollars: number): string {
+  if (dollars === 0) return '$0.00';
+  const abs = Math.abs(dollars);
+  const str = `$${abs.toFixed(2)}`;
+  return dollars > 0 ? `+${str}` : `-${str}`;
 }
 
 function selectionLabel(group: ModifierGroup): string {
