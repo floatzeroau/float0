@@ -26,6 +26,7 @@ import { transitionOrder } from './order-lifecycle';
 import { getPrinterService } from '../services';
 import { onPaymentCompleted } from '../sync/payment-sync-hook';
 import type { OrderStatusDB } from './order-lifecycle';
+import { generateUUID } from '../utils/uuid';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -461,9 +462,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const orderNumber = await getNextOrderNumber();
     const staffId = (await SecureStore.getItemAsync(STAFF_ID_KEY)) ?? '';
 
+    const now = Date.now();
     await database.write(async () => {
       const created = await database.get<Order>('orders').create((o) => {
-        setRaw(o, 'server_id', crypto.randomUUID());
+        setRaw(o, 'server_id', generateUUID());
         setRaw(o, 'order_number', orderNumber);
         setRaw(o, 'order_type', 'takeaway');
         setRaw(o, 'status', 'draft');
@@ -479,6 +481,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         setRaw(o, 'discount_value', 0);
         setRaw(o, 'discount_reason', '');
         setRaw(o, 'notes', '');
+        setRaw(o, 'created_at', now);
+        setRaw(o, 'updated_at', now);
       });
 
       orderRecordIdRef.current = created.id;
@@ -591,9 +595,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const orderId = orderRecordIdRef.current;
       if (!orderId) return;
 
+      const now = Date.now();
       await database.write(async () => {
         await database.get<OrderItem>('order_items').create((oi) => {
-          setRaw(oi, 'server_id', crypto.randomUUID());
+          setRaw(oi, 'server_id', generateUUID());
           setRaw(oi, 'order_id', orderId);
           setRaw(oi, 'product_id', params.productId);
           setRaw(oi, 'quantity', params.quantity);
@@ -609,6 +614,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(oi, 'void_reason', '');
           setRaw(oi, 'override_price', 0);
           setRaw(oi, 'override_reason', '');
+          setRaw(oi, 'is_gst_free', 0);
+          setRaw(oi, 'created_at', now);
+          setRaw(oi, 'updated_at', now);
         });
       });
 
@@ -1156,9 +1164,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const orderId = orderRecordIdRef.current;
       if (!orderId) return;
 
+      const now = Date.now();
       await database.write(async () => {
         await database.get<OrderItem>('order_items').create((oi) => {
-          setRaw(oi, 'server_id', crypto.randomUUID());
+          setRaw(oi, 'server_id', generateUUID());
           setRaw(oi, 'order_id', orderId);
           setRaw(oi, 'product_id', params.productId);
           setRaw(oi, 'quantity', params.quantity);
@@ -1174,6 +1183,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(oi, 'void_reason', '');
           setRaw(oi, 'override_price', 0);
           setRaw(oi, 'override_reason', '');
+          setRaw(oi, 'is_gst_free', 0);
+          setRaw(oi, 'created_at', now);
+          setRaw(oi, 'updated_at', now);
         });
       });
 
@@ -1209,7 +1221,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
         // Create audit log
         await database.get<AuditLog>('audit_logs').create((log) => {
-          setRaw(log, 'server_id', crypto.randomUUID());
+          setRaw(log, 'server_id', generateUUID());
           setRaw(log, 'action', 'void_item');
           setRaw(log, 'entity_type', 'order_item');
           setRaw(log, 'entity_id', itemId);
@@ -1278,7 +1290,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
         // Create audit log
         await database.get<AuditLog>('audit_logs').create((log) => {
-          setRaw(log, 'server_id', crypto.randomUUID());
+          setRaw(log, 'server_id', generateUUID());
           setRaw(log, 'action', 'price_override');
           setRaw(log, 'entity_type', 'order_item');
           setRaw(log, 'entity_id', itemId);
@@ -1427,7 +1439,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       await database.write(async () => {
         const payment = await database.get<Payment>('payments').create((p) => {
-          setRaw(p, 'server_id', crypto.randomUUID());
+          setRaw(p, 'server_id', generateUUID());
           setRaw(p, 'order_id', orderId);
           setRaw(p, 'method', params.method);
           setRaw(p, 'amount', params.amount);
@@ -1480,7 +1492,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       await database.write(async () => {
         const payment = await database.get<Payment>('payments').create((p) => {
-          setRaw(p, 'server_id', crypto.randomUUID());
+          setRaw(p, 'server_id', generateUUID());
           setRaw(p, 'order_id', orderId);
           setRaw(p, 'method', params.method);
           setRaw(p, 'amount', params.amount);
@@ -1619,7 +1631,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const now = Date.now();
     await database.write(async () => {
       const payment = await database.get<Payment>('payments').create((p) => {
-        setRaw(p, 'server_id', crypto.randomUUID());
+        setRaw(p, 'server_id', generateUUID());
         setRaw(p, 'order_id', orderId);
         setRaw(p, 'method', refundMethod);
         setRaw(p, 'amount', -refundAmount);
@@ -1633,7 +1645,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       // Audit log
       await database.get<AuditLog>('audit_logs').create((a) => {
-        setRaw(a, 'server_id', crypto.randomUUID());
+        setRaw(a, 'server_id', generateUUID());
         setRaw(a, 'action', isFullRefund ? 'refund_full' : 'refund_partial');
         setRaw(a, 'entity_type', 'order');
         setRaw(a, 'entity_id', orderId);

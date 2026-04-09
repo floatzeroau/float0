@@ -6,6 +6,7 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { database } from '../db/database';
 import type { Shift } from '../db/models';
 import { STAFF_ID_KEY, STAFF_NAME_KEY } from '../config';
+import { generateUUID } from '../utils/uuid';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setRaw(record: any, field: string, value: string | number) {
@@ -83,7 +84,7 @@ export default function OpenShiftScreen({ navigation }: Props) {
       const now = Date.now();
       await database.write(async () => {
         await database.get<Shift>('shifts').create((s) => {
-          setRaw(s, 'server_id', crypto.randomUUID());
+          setRaw(s, 'server_id', generateUUID());
           setRaw(s, 'staff_id', staffId);
           setRaw(s, 'terminal_id', 'terminal-1');
           setRaw(s, 'opened_at', now);

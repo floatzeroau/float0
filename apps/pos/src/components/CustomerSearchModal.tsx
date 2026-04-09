@@ -12,6 +12,7 @@ import {
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { Customer } from '../db/models';
+import { generateUUID } from '../utils/uuid';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -67,7 +68,7 @@ function QuickAddForm({
     try {
       await database.write(async () => {
         const created = await database.get<Customer>('customers').create((c) => {
-          setRaw(c, 'server_id', crypto.randomUUID());
+          setRaw(c, 'server_id', generateUUID());
           setRaw(c, 'first_name', firstName.trim());
           setRaw(c, 'last_name', lastName.trim());
           setRaw(c, 'phone', phone.trim());
