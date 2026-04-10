@@ -448,25 +448,46 @@ export default function OrdersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {detailOrder.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <span className="font-medium">{item.productName}</span>
-                            {item.notes && (
-                              <p className="text-xs text-muted-foreground">{item.notes}</p>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center tabular-nums">
-                            {item.quantity}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCurrency(item.unitPrice)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCurrency(item.lineTotal)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {detailOrder.items.map((item) => {
+                        const modifiers = Array.isArray(item.modifiersJson)
+                          ? (item.modifiersJson as { name?: string; priceAdjustment?: number }[])
+                          : [];
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <span className="font-medium">{item.productName}</span>
+                              {modifiers.length > 0 && (
+                                <div className="mt-0.5 space-y-0">
+                                  {modifiers.map((m, i) => (
+                                    <p key={i} className="text-xs text-muted-foreground">
+                                      + {m.name ?? 'Modifier'}
+                                      {typeof m.priceAdjustment === 'number' &&
+                                        m.priceAdjustment !== 0 && (
+                                          <span className="ml-1 tabular-nums">
+                                            {m.priceAdjustment > 0 ? '+' : ''}
+                                            {formatCurrency(m.priceAdjustment)}
+                                          </span>
+                                        )}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                              {item.notes && (
+                                <p className="text-xs text-muted-foreground italic">{item.notes}</p>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center tabular-nums">
+                              {item.quantity}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(item.unitPrice)}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(item.lineTotal)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

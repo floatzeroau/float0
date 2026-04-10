@@ -556,39 +556,41 @@ export default function OrderHistoryScreen() {
       .query(Q.where('created_at', Q.gte(sevenDaysAgo.getTime())), Q.sortBy('created_at', Q.desc))
       .fetch();
 
-    const mapped: OrderRow[] = await Promise.all(
-      rows.map(async (o) => {
-        // Count items
-        const itemRows = await database
-          .get<OrderItem>('order_items')
-          .query(Q.where('order_id', o.id))
-          .fetch();
+    const mapped: OrderRow[] = [];
+    for (const o of rows) {
+      // Count items
+      const itemRows = await database
+        .get<OrderItem>('order_items')
+        .query(Q.where('order_id', o.id))
+        .fetch();
 
-        let customerName: string | null = null;
-        if (o.customerId) {
-          try {
-            const c = await database.get<Customer>('customers').find(o.customerId);
-            customerName = [c.firstName, c.lastName].filter(Boolean).join(' ') || null;
-          } catch {
-            // deleted customer
-          }
+      // Skip empty draft orders ($0 with no items)
+      if (o.status === 'draft' && o.total === 0 && itemRows.length === 0) continue;
+
+      let customerName: string | null = null;
+      if (o.customerId) {
+        try {
+          const c = await database.get<Customer>('customers').find(o.customerId);
+          customerName = [c.firstName, c.lastName].filter(Boolean).join(' ') || null;
+        } catch {
+          // deleted customer
         }
+      }
 
-        return {
-          id: o.id,
-          orderNumber: o.orderNumber,
-          status: o.status as OrderStatusDB,
-          orderType: o.orderType,
-          tableNumber: o.tableNumber ?? '',
-          total: o.total,
-          itemCount: itemRows.length,
-          customerName,
-          createdAt: o.createdAt.getTime(),
-          notes: o.notes ?? '',
-          syncStatus: (o._raw as any)._status as SyncStatus,
-        };
-      }),
-    );
+      mapped.push({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        status: o.status as OrderStatusDB,
+        orderType: o.orderType,
+        tableNumber: o.tableNumber ?? '',
+        total: o.total,
+        itemCount: itemRows.length,
+        customerName,
+        createdAt: o.createdAt.getTime(),
+        notes: o.notes ?? '',
+        syncStatus: (o._raw as any)._status as SyncStatus,
+      });
+    }
 
     setOrders(mapped);
   }, []);

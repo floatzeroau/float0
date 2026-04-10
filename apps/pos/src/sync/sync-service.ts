@@ -136,6 +136,13 @@ export async function performSync(database: Database): Promise<SyncResult> {
       // Remap FK fields to server UUIDs before pushing
       const remappedChanges = await remapForeignKeys(database, changes as any);
 
+      // Filter out empty draft orders ($0 total, no items) to avoid flooding the server
+      if (remappedChanges.orders?.created) {
+        remappedChanges.orders.created = remappedChanges.orders.created.filter(
+          (o: Record<string, unknown>) => o.status !== 'draft' || (o.total as number) > 0,
+        );
+      }
+
       const response = await fetch(`${API_URL}/sync/push`, {
         method: 'POST',
         headers: {

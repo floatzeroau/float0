@@ -47,6 +47,11 @@ export async function listOrders(params: ListOrdersParams) {
   // Build WHERE conditions
   const conditions = [eq(orders.organizationId, orgId), isNull(orders.deletedAt)];
 
+  // Exclude empty draft orders ($0 total) unless explicitly filtering for drafts
+  if (status !== 'draft') {
+    conditions.push(sql`NOT (${orders.status} = 'draft' AND ${orders.total} = 0)`);
+  }
+
   if (status) {
     conditions.push(eq(orders.status, status as any));
   }

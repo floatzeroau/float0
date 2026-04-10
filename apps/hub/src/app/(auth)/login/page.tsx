@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +19,6 @@ interface OrgResponse {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,19 +35,21 @@ export default function LoginPage() {
 
       setTokens(accessToken, refreshToken);
 
-      // Fetch org to decide where to redirect
+      // Fetch org to decide where to redirect.
+      // Use window.location.href for a full page load so AuthProvider
+      // re-hydrates with the newly stored tokens.
       try {
         const org = await api.get<OrgResponse>('/organizations/me');
         const onboardingStatus = org.settings?.onboarding_status;
 
         if (onboardingStatus && onboardingStatus !== 'completed') {
-          router.push('/onboarding');
+          window.location.href = '/onboarding';
         } else {
-          router.push('/');
+          window.location.href = '/';
         }
       } catch {
         // If org fetch fails, go to dashboard anyway
-        router.push('/');
+        window.location.href = '/';
       }
     } catch (err) {
       if (err instanceof ApiClientError) {

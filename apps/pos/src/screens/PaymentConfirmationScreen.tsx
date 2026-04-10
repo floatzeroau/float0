@@ -43,8 +43,6 @@ interface PaymentConfirmationScreenProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const AUTO_ADVANCE_MS = 5000;
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -53,16 +51,8 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
   const checkScale = useRef(new Animated.Value(0)).current;
   const checkOpacity = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
-  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const doneCalledRef = useRef(false);
 
   const handleDone = useCallback(() => {
-    if (doneCalledRef.current) return;
-    doneCalledRef.current = true;
-    if (autoAdvanceTimer.current) {
-      clearTimeout(autoAdvanceTimer.current);
-      autoAdvanceTimer.current = null;
-    }
     onDone();
   }, [onDone]);
 
@@ -89,20 +79,9 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
-      }).start(() => {
-        // Start auto-advance timer after buttons are visible
-        autoAdvanceTimer.current = setTimeout(() => {
-          handleDone();
-        }, AUTO_ADVANCE_MS);
-      });
+      }).start();
     });
-
-    return () => {
-      if (autoAdvanceTimer.current) {
-        clearTimeout(autoAdvanceTimer.current);
-      }
-    };
-  }, [checkScale, checkOpacity, contentOpacity, handleDone]);
+  }, [checkScale, checkOpacity, contentOpacity]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
 

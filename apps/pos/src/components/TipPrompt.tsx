@@ -89,20 +89,28 @@ export function TipPrompt({ orderTotal, onSelectTip, onCancel }: TipPromptProps)
       <Text style={styles.title}>Add a Tip?</Text>
       <Text style={styles.orderTotalLabel}>Order Total: {formatCurrency(orderTotal)}</Text>
 
-      <View style={styles.presetRow}>
-        {TIP_PERCENTAGES.map((pct) => {
-          const tipValue = Math.round(orderTotal * pct) / 100;
-          return (
-            <TouchableOpacity
-              key={pct}
-              style={styles.presetButton}
-              onPress={() => onSelectTip(tipValue)}
-            >
-              <Text style={styles.presetPercent}>{pct}%</Text>
-              <Text style={styles.presetAmount}>({formatCurrency(tipValue)})</Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.mainRow}>
+        {/* No Tip — prominent, left side */}
+        <TouchableOpacity style={styles.noTipButton} onPress={() => onSelectTip(0)}>
+          <Text style={styles.noTipButtonText}>No Tip</Text>
+        </TouchableOpacity>
+
+        {/* Tip percentages — right side */}
+        <View style={styles.tipColumn}>
+          {TIP_PERCENTAGES.map((pct) => {
+            const tipValue = Math.round(orderTotal * pct) / 100;
+            return (
+              <TouchableOpacity
+                key={pct}
+                style={styles.presetButton}
+                onPress={() => onSelectTip(tipValue)}
+              >
+                <Text style={styles.presetPercent}>{pct}%</Text>
+                <Text style={styles.presetAmount}>({formatCurrency(tipValue)})</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       <TouchableOpacity
@@ -113,10 +121,6 @@ export function TipPrompt({ orderTotal, onSelectTip, onCancel }: TipPromptProps)
         }}
       >
         <Text style={styles.customButtonText}>Custom Amount</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.noTipButton} onPress={() => onSelectTip(0)}>
-        <Text style={styles.noTipButtonText}>No Tip</Text>
       </TouchableOpacity>
     </View>
   );
@@ -142,32 +146,51 @@ const styles = StyleSheet.create({
   orderTotalLabel: {
     fontSize: 18,
     color: '#666',
-    marginBottom: 40,
+    marginBottom: 32,
   },
 
-  // Preset buttons
-  presetRow: {
+  // Main layout: No Tip on left, percentages on right
+  mainRow: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: 16,
     marginBottom: 24,
   },
+  noTipButton: {
+    width: 160,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  noTipButtonText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  tipColumn: {
+    gap: 10,
+  },
   presetButton: {
     width: 160,
-    height: 100,
+    paddingVertical: 14,
     backgroundColor: '#2563eb',
-    borderRadius: 16,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   presetPercent: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#fff',
   },
   presetAmount: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 4,
+    marginTop: 2,
   },
 
   // Custom button
@@ -176,23 +199,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: '#f0f0f0',
     borderRadius: 10,
-    marginBottom: 12,
   },
   customButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
-  },
-
-  // No tip button
-  noTipButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-  },
-  noTipButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#999',
   },
 
   // Custom mode
