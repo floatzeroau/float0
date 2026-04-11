@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -229,6 +230,9 @@ export const customers = pgTable(
     lastName: varchar({ length: 100 }).notNull(),
     email: varchar({ length: 255 }),
     phone: varchar({ length: 50 }),
+    passwordHash: text(),
+    emailVerified: boolean().notNull().default(false),
+    lastLoginAt: timestamp({ withTimezone: true }),
     loyaltyTier: varchar({ length: 50 }),
     loyaltyBalance: doublePrecision().notNull().default(0),
     _version: integer().notNull().default(1),
@@ -239,7 +243,25 @@ export const customers = pgTable(
   (t) => [
     index('customers_organization_id_idx').on(t.organizationId),
     index('customers_updated_at_idx').on(t.updatedAt),
+    unique('customers_org_email_unique').on(t.organizationId, t.email),
   ],
+);
+
+// ── Customer Refresh Tokens ──────────────────────────
+
+export const customerRefreshTokens = pgTable(
+  'customer_refresh_tokens',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id),
+    tokenHash: varchar({ length: 255 }).notNull(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index('customer_refresh_tokens_customer_id_idx').on(t.customerId)],
 );
 
 // ── Orders ─────────────────────────────────────────────

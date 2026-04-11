@@ -4,11 +4,13 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 declare module 'fastify' {
   interface FastifyRequest {
     orgId?: string;
+    customerId?: string;
   }
 }
 
 export const orgContextPlugin = fp(async (app: FastifyInstance) => {
   app.decorateRequest('orgId', undefined);
+  app.decorateRequest('customerId', undefined);
 
   app.addHook('onRequest', async (request: FastifyRequest) => {
     // Stub — will extract orgId from verified JWT claims once auth is wired up.
