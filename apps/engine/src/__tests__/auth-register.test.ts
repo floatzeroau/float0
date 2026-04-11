@@ -167,6 +167,8 @@ vi.mock('bcrypt', () => ({
 
 vi.mock('@float0/shared', () => ({
   getEffectivePermissions: vi.fn().mockReturnValue(['billing.manage', 'org.manage']),
+  slugify: vi.fn().mockReturnValue('test-org'),
+  RESERVED_SLUGS: new Set(),
 }));
 
 describe('registerOrganization service', () => {
@@ -201,7 +203,8 @@ describe('registerOrganization service', () => {
   });
 
   it('creates org, user, and membership in a transaction', async () => {
-    // No existing user
+    // No existing user, no existing slug
+    mockSelectLimit.mockResolvedValueOnce([]);
     mockSelectLimit.mockResolvedValueOnce([]);
 
     const mockOrg = { id: 'org-1', name: 'Test Org' };
@@ -249,6 +252,8 @@ describe('registerOrganization service', () => {
   });
 
   it('rolls back transaction on failure', async () => {
+    // No existing user, no existing slug
+    mockSelectLimit.mockResolvedValueOnce([]);
     mockSelectLimit.mockResolvedValueOnce([]);
 
     mockTransaction.mockImplementationOnce(async (cb: (...args: unknown[]) => unknown) => {
