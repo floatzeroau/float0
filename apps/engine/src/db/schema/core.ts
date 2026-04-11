@@ -29,6 +29,7 @@ export const eventStatusEnum = pgEnum('event_status', ['pending', 'processed', '
 export const organizations = pgTable('organizations', {
   id: uuid().primaryKey().defaultRandom(),
   name: varchar({ length: 255 }).notNull(),
+  slug: varchar({ length: 100 }).notNull().unique(),
   abn: varchar({ length: 11 }),
   address: jsonb(),
   phone: varchar({ length: 50 }),

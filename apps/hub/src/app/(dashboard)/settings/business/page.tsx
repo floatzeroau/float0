@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Upload, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { api, ApiClientError } from '@/lib/api';
 interface OrgData {
   id: string;
   name: string;
+  slug?: string;
   abn?: string;
   address?: string | { street?: string; suburb?: string; state?: string; postcode?: string };
   phone?: string;
@@ -82,6 +83,12 @@ export default function BusinessProfilePage() {
 
   // Form fields
   const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugStatus, setSlugStatus] = useState<
+    'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+  >('idle');
+  const slugTimer = useRef<ReturnType<typeof setTimeout>>();
+  const originalSlug = useRef('');
   const [abn, setAbn] = useState('');
   const [street, setStreet] = useState('');
   const [suburb, setSuburb] = useState('');
@@ -106,6 +113,8 @@ export default function BusinessProfilePage() {
       .get<OrgData>('/organizations/me')
       .then((org) => {
         setName(org.name ?? '');
+        setSlug(org.slug ?? '');
+        originalSlug.current = org.slug ?? '';
         setAbn(org.abn ?? '');
         setPhone(org.phone ?? '');
         setEmail(org.email ?? '');
@@ -152,6 +161,30 @@ export default function BusinessProfilePage() {
   }, []);
 
   // -------------------------------------------------------------------------
+  // Slug availability check
+  // -------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!slug || slug.length < 3 || slug === originalSlug.current) {
+      setSlugStatus('idle');
+      return;
+    }
+    setSlugStatus('checking');
+    clearTimeout(slugTimer.current);
+    slugTimer.current = setTimeout(async () => {
+      try {
+        const res = await api.get<{ available: boolean; error?: string }>(
+          `/organizations/slug-check/${slug}`,
+        );
+        setSlugStatus(res.available ? 'available' : res.error ? 'invalid' : 'taken');
+      } catch {
+        setSlugStatus('idle');
+      }
+    }, 400);
+    return () => clearTimeout(slugTimer.current);
+  }, [slug]);
+
+  // -------------------------------------------------------------------------
   // Validation
   // -------------------------------------------------------------------------
 
@@ -175,6 +208,9 @@ export default function BusinessProfilePage() {
   function validate(): boolean {
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = 'Business name is required';
+    if (slug && slug.length < 3) next.slug = 'Slug must be at least 3 characters';
+    if (slugStatus === 'taken') next.slug = 'This slug is already taken';
+    if (slugStatus === 'invalid') next.slug = 'Invalid slug format';
     const abnErr = validateAbn(abn);
     if (abnErr) next.abn = abnErr;
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -235,6 +271,7 @@ export default function BusinessProfilePage() {
     try {
       const payload: Record<string, unknown> = {
         name: name.trim(),
+        slug: slug.trim() || undefined,
         abn: abn.replace(/\s/g, '') || null,
         address: {
           street: street.trim() || undefined,
@@ -309,6 +346,37 @@ export default function BusinessProfilePage() {
               aria-invalid={!!errors.name}
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="bp-slug" className="text-sm font-medium">
+              Portal URL
+            </label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">portal/</span>
+              <Input
+                id="bp-slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                disabled={saving}
+                placeholder="my-cafe"
+                aria-invalid={!!errors.slug}
+              />
+            </div>
+            {slugStatus === 'checking' && (
+              <p className="text-xs text-muted-foreground">Checking availability...</p>
+            )}
+            {slugStatus === 'available' && <p className="text-xs text-green-600">Available</p>}
+            {slugStatus === 'taken' && (
+              <p className="text-xs text-destructive">This slug is already taken</p>
+            )}
+            {slugStatus === 'invalid' && (
+              <p className="text-xs text-destructive">Invalid slug format</p>
+            )}
+            {!errors.slug && slugStatus === 'idle' && slug === originalSlug.current && slug && (
+              <p className="text-xs text-muted-foreground">Your portal: portal/{slug}</p>
+            )}
+            {errors.slug && <p className="text-xs text-destructive">{errors.slug}</p>}
           </div>
 
           <div className="space-y-1">

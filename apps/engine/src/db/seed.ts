@@ -35,6 +35,7 @@ async function seed() {
       .insert(organizations)
       .values({
         name: 'Float0 Demo Cafe',
+        slug: 'float0-demo-cafe',
         abn: '12345678901',
         address: '123 Collins St, Melbourne VIC 3000',
         phone: '+61 3 9000 0000',

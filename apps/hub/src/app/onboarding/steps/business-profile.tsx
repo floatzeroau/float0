@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,11 +35,27 @@ interface BusinessProfileProps {
   onOrgUpdate: (data: Partial<OrgData>) => void;
 }
 
+function slugify(input: string): string {
+  return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+}
+
 export function BusinessProfile({ org, onNext, onOrgUpdate }: BusinessProfileProps) {
   const [saving, setSaving] = useState(false);
 
   // Form state — pre-fill from org data
   const [name, setName] = useState(org?.name ?? '');
+  const [slug, setSlug] = useState(org?.slug ?? '');
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<
+    'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+  >('idle');
+  const slugTimer = useRef<ReturnType<typeof setTimeout>>();
   const [abn, setAbn] = useState(org?.abn ?? '');
   const [street, setStreet] = useState('');
   const [suburb, setSuburb] = useState('');
@@ -50,7 +66,39 @@ export function BusinessProfile({ org, onNext, onOrgUpdate }: BusinessProfilePro
   const [website, setWebsite] = useState(org?.website ?? '');
   const [timezone, setTimezone] = useState(org?.timezone ?? 'Australia/Melbourne');
 
-  const canSubmit = name.trim().length > 0;
+  // Auto-fill slug from business name if not manually edited
+  useEffect(() => {
+    if (!slugTouched && name) {
+      setSlug(slugify(name));
+    }
+  }, [name, slugTouched]);
+
+  // Debounced slug availability check
+  useEffect(() => {
+    if (!slug || slug.length < 3) {
+      setSlugStatus('idle');
+      return;
+    }
+    setSlugStatus('checking');
+    clearTimeout(slugTimer.current);
+    slugTimer.current = setTimeout(async () => {
+      try {
+        const res = await api.get<{ available: boolean; error?: string }>(
+          `/organizations/slug-check/${slug}`,
+        );
+        setSlugStatus(res.available ? 'available' : res.error ? 'invalid' : 'taken');
+      } catch {
+        setSlugStatus('idle');
+      }
+    }, 400);
+    return () => clearTimeout(slugTimer.current);
+  }, [slug]);
+
+  const canSubmit =
+    name.trim().length > 0 &&
+    slug.length >= 3 &&
+    slugStatus !== 'taken' &&
+    slugStatus !== 'invalid';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +108,7 @@ export function BusinessProfile({ org, onNext, onOrgUpdate }: BusinessProfilePro
     try {
       const payload = {
         name: name.trim(),
+        slug: slug.trim(),
         abn: abn.replace(/\s/g, '') || undefined,
         address: {
           street: street.trim() || undefined,
@@ -107,6 +156,36 @@ export function BusinessProfile({ org, onNext, onOrgUpdate }: BusinessProfilePro
               onChange={(e) => setName(e.target.value)}
               disabled={saving}
             />
+          </div>
+
+          {/* Slug */}
+          <div className="space-y-1">
+            <label htmlFor="bp-slug" className="text-sm font-medium">
+              Portal URL
+            </label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">portal/</span>
+              <Input
+                id="bp-slug"
+                value={slug}
+                onChange={(e) => {
+                  setSlugTouched(true);
+                  setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+                }}
+                disabled={saving}
+                placeholder="my-cafe"
+              />
+            </div>
+            {slugStatus === 'checking' && (
+              <p className="text-xs text-muted-foreground">Checking availability...</p>
+            )}
+            {slugStatus === 'available' && <p className="text-xs text-green-600">Available</p>}
+            {slugStatus === 'taken' && (
+              <p className="text-xs text-destructive">This slug is already taken</p>
+            )}
+            {slugStatus === 'invalid' && (
+              <p className="text-xs text-destructive">Invalid slug format</p>
+            )}
           </div>
 
           {/* ABN */}

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validateSlug } from '@float0/shared';
 import { requireAuth } from '../middleware/require-auth.js';
 import { requireRole } from '../middleware/rbac.js';
 import {
@@ -7,6 +8,7 @@ import {
   getOrganizationSettings,
   updateOrganization,
   mergeOrganizationSettings,
+  isSlugTaken,
 } from './organizations.service.js';
 
 // ---------------------------------------------------------------------------
@@ -33,6 +35,12 @@ const IANA_TZ_RE = /^[A-Za-z_]+\/[A-Za-z_/]+$/;
 
 const updateOrgSchema = z.object({
   name: z.string().min(1).max(255).optional(),
+  slug: z
+    .string()
+    .min(3)
+    .max(50)
+    .regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, 'Lowercase letters, numbers, and hyphens only')
+    .optional(),
   abn: abnSchema,
   address: addressSchema,
   phone: z.string().max(50).nullable().optional(),
@@ -109,6 +117,18 @@ export async function organizationRoutes(app: FastifyInstance) {
         });
       }
 
+      // Validate slug if provided
+      if (parsed.data.slug) {
+        const slugErr = validateSlug(parsed.data.slug);
+        if (slugErr) {
+          return reply.status(400).send({ error: slugErr, statusCode: 400 });
+        }
+        const taken = await isSlugTaken(parsed.data.slug, request.user.orgId);
+        if (taken) {
+          return reply.status(409).send({ error: 'Slug is already taken', statusCode: 409 });
+        }
+      }
+
       const updated = await updateOrganization(request.user.orgId, parsed.data, {
         orgId: request.user.orgId,
         userId: request.user.userId,
@@ -116,6 +136,21 @@ export async function organizationRoutes(app: FastifyInstance) {
       });
 
       return reply.send(updated);
+    },
+  );
+
+  // GET /organizations/slug-check/:slug — check slug availability
+  app.get(
+    '/organizations/slug-check/:slug',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      const { slug } = request.params as { slug: string };
+      const err = validateSlug(slug);
+      if (err) {
+        return reply.send({ available: false, error: err });
+      }
+      const taken = await isSlugTaken(slug, request.user.orgId);
+      return reply.send({ available: !taken });
     },
   );
 

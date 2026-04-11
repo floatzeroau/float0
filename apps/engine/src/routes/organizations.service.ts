@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { organizations, auditLog } from '../db/schema/core.js';
 
@@ -21,6 +21,7 @@ interface AddressInput {
 
 interface UpdateOrgInput {
   name?: string;
+  slug?: string;
   abn?: string | null;
   address?: AddressInput | null;
   phone?: string | null;
@@ -41,6 +42,19 @@ export async function getOrganization(orgId: string) {
   const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
 
   return org ?? null;
+}
+
+export async function isSlugTaken(slug: string, excludeOrgId?: string): Promise<boolean> {
+  const conditions = [eq(organizations.slug, slug)];
+  if (excludeOrgId) {
+    conditions.push(ne(organizations.id, excludeOrgId));
+  }
+  const [existing] = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(and(...conditions))
+    .limit(1);
+  return !!existing;
 }
 
 export async function getOrganizationSettings(orgId: string) {

@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { compare, hash } from 'bcrypt';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { getEffectivePermissions } from '@float0/shared';
+import { getEffectivePermissions, slugify, RESERVED_SLUGS } from '@float0/shared';
 import { db } from '../db/connection.js';
 import {
   users,
@@ -122,11 +122,27 @@ export async function registerOrganization(
 
   const passwordHash = await hash(data.password, SALT_ROUNDS);
 
+  // Generate a unique slug from the org name
+  let slug = slugify(data.orgName);
+  if (slug.length < 3) slug = `org-${slug || 'new'}`;
+  if (RESERVED_SLUGS.has(slug)) slug = `${slug}-biz`;
+
+  // Check uniqueness and append random suffix if taken
+  const [existingSlug] = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(eq(organizations.slug, slug))
+    .limit(1);
+  if (existingSlug) {
+    slug = `${slug}-${randomBytes(2).toString('hex')}`;
+  }
+
   const { user, org, membership } = await db.transaction(async (tx) => {
     const [newOrg] = await tx
       .insert(organizations)
       .values({
         name: data.orgName,
+        slug,
         abn: data.abn ?? null,
         timezone: data.timezone,
         currency: 'AUD',

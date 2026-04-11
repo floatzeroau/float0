@@ -18,6 +18,7 @@ import { Ready } from './steps/ready';
 export interface OrgData {
   id: string;
   name: string;
+  slug?: string;
   abn?: string;
   phone?: string;
   email?: string;

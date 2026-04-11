@@ -6,3 +6,4 @@ export * from './config.js';
 export * from './permissions.js';
 export * from './receipt-builder.js';
 export * from './docket-builder.js';
+export * from './slug.js';
