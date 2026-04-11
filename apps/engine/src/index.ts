@@ -21,6 +21,8 @@ import { orderRoutes } from './routes/orders.routes.js';
 import { portalRoutes } from './routes/portal.routes.js';
 import { portalAuthRoutes } from './routes/portal-auth.routes.js';
 import { portalProfileRoutes } from './routes/portal-profile.routes.js';
+import { prepaidPackRoutes } from './routes/prepaid-packs.routes.js';
+import { customerBalanceRoutes } from './routes/customer-balances.routes.js';
 import { requireAuth } from './middleware/require-auth.js';
 import { requireRole } from './middleware/rbac.js';
 import { registerEventLogger } from './services/event-logger.js';
@@ -69,6 +71,8 @@ await app.register(orderRoutes);
 await app.register(portalRoutes);
 await app.register(portalAuthRoutes);
 await app.register(portalProfileRoutes);
+await app.register(prepaidPackRoutes);
+await app.register(customerBalanceRoutes);
 
 registerEventLogger();
 

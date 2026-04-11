@@ -264,6 +264,81 @@ export const customerRefreshTokens = pgTable(
   (t) => [index('customer_refresh_tokens_customer_id_idx').on(t.customerId)],
 );
 
+// ── Prepaid Packs ────────────────────────────────────
+
+export const prepaidPacks = pgTable(
+  'prepaid_packs',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    name: varchar({ length: 255 }).notNull(),
+    description: text(),
+    packSize: integer().notNull(),
+    price: doublePrecision().notNull(),
+    perItemValue: doublePrecision().notNull(),
+    eligibleProductIds: jsonb(),
+    isActive: boolean().notNull().default(true),
+    allowCustomSize: boolean().notNull().default(false),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index('prepaid_packs_organization_id_idx').on(t.organizationId)],
+);
+
+// ── Customer Balances ────────────────────────────────
+
+export const customerBalances = pgTable(
+  'customer_balances',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
+    packId: uuid()
+      .notNull()
+      .references(() => prepaidPacks.id),
+    remainingCount: integer().notNull(),
+    originalCount: integer().notNull(),
+    pricePaid: doublePrecision().notNull(),
+    discountType: varchar({ length: 50 }),
+    discountValue: doublePrecision(),
+    purchasedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('customer_balances_customer_id_idx').on(t.customerId),
+    index('customer_balances_organization_id_idx').on(t.organizationId),
+  ],
+);
+
+// ── Balance Transactions ─────────────────────────────
+
+export const balanceTransactions = pgTable(
+  'balance_transactions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    customerBalanceId: uuid()
+      .notNull()
+      .references(() => customerBalances.id),
+    type: varchar({ length: 50 }).notNull(),
+    quantity: integer().notNull(),
+    orderId: uuid().references(() => orders.id),
+    staffId: uuid(),
+    notes: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('balance_transactions_customer_balance_id_idx').on(t.customerBalanceId),
+    index('balance_transactions_order_id_idx').on(t.orderId),
+  ],
+);
+
 // ── Orders ─────────────────────────────────────────────
 
 export const orders = pgTable(

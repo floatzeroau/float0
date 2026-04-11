@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { organizations } from '../db/schema/core.js';
+import { resolveOrgBySlug } from './portal-auth.service.js';
+import { listActivePacksForOrg } from './prepaid-packs.service.js';
 
 // ---------------------------------------------------------------------------
 // Public portal endpoint — NO auth required
@@ -41,5 +43,28 @@ export async function portalRoutes(app: FastifyInstance) {
       operatingHours: settings.operating_hours ?? null,
       socialMedia: settings.social_media ?? null,
     });
+  });
+
+  /**
+   * GET /portal/:slug/packs
+   * Public endpoint — list active prepaid packs for this org.
+   */
+  app.get('/portal/:slug/packs', async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const org = await resolveOrgBySlug(slug);
+    const packs = await listActivePacksForOrg(org.id);
+
+    const result = packs.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      packSize: p.packSize,
+      price: p.price,
+      perItemValue: p.perItemValue,
+      savings: p.perItemValue * p.packSize - p.price,
+      allowCustomSize: p.allowCustomSize,
+    }));
+
+    return reply.send(result);
   });
 }
