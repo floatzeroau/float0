@@ -105,7 +105,7 @@ export async function listOrders(params: ListOrdersParams) {
       createdAt: orders.createdAt,
       customerId: orders.customerId,
       staffId: orders.staffId,
-      itemCount: sql<number>`(select cast(count(*) as int) from order_items oi where oi.order_id = ${orders.id} and oi.deleted_at is null)`,
+      itemCount: sql<number>`(select cast(count(*) as int) from order_items oi where oi.order_id = "orders"."id" and oi.deleted_at is null)`,
     })
     .from(orders)
     .where(where)
