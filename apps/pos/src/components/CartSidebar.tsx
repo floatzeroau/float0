@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useOrder } from '../state/order-store';
 import type { CartItemData } from '../state/order-store';
 import { CustomerSearchModal } from './CustomerSearchModal';
@@ -16,6 +17,10 @@ import { HeldOrdersDrawer } from './HeldOrdersDrawer';
 import { DiscountModal } from './DiscountModal';
 import { VoidItemModal } from './VoidItemModal';
 import { PriceOverrideModal } from './PriceOverrideModal';
+import { SellPackModal } from './SellPackModal';
+import { database } from '../db/database';
+import type { Customer } from '../db/models';
+import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import type { DiscountType } from '@float0/shared';
 
 // ---------------------------------------------------------------------------
@@ -289,6 +294,44 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
+  const [showSellPack, setShowSellPack] = useState(false);
+  const [customerBalances, setCustomerBalances] = useState<
+    { id: string; packName: string; remainingCount: number; originalCount: number }[]
+  >([]);
+
+  // Fetch prepaid balances when customer is attached
+  useEffect(() => {
+    if (!currentOrder?.customerId) {
+      setCustomerBalances([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const cust = await database.get<Customer>('customers').find(currentOrder.customerId!);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const serverId = (cust._raw as any).server_id as string;
+        const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+
+        const res = await fetch(`${API_URL}/customers/${serverId}/balances`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setCustomerBalances(data);
+        }
+      } catch {
+        // silently fail — balances are informational
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentOrder?.customerId]);
 
   // Discount modal state
   const [discountModalVisible, setDiscountModalVisible] = useState(false);
@@ -557,14 +600,38 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         {currentOrder && !isManagingSubmittedOrder && (
           <View style={styles.customerRow}>
             {currentOrder.customerName ? (
-              <View style={styles.customerAssigned}>
-                <Text style={styles.customerName} numberOfLines={1}>
-                  {currentOrder.customerName}
-                </Text>
-                <TouchableOpacity onPress={handleRemoveCustomer} style={styles.customerRemove}>
-                  <Text style={styles.customerRemoveText}>X</Text>
-                </TouchableOpacity>
-              </View>
+              <>
+                <View style={styles.customerAssigned}>
+                  <Text style={styles.customerName} numberOfLines={1}>
+                    {currentOrder.customerName}
+                  </Text>
+                  <TouchableOpacity onPress={handleRemoveCustomer} style={styles.customerRemove}>
+                    <Text style={styles.customerRemoveText}>X</Text>
+                  </TouchableOpacity>
+                </View>
+                {customerBalances.length > 0 && (
+                  <View style={styles.balanceRow}>
+                    {customerBalances.map((b) => (
+                      <View key={b.id} style={styles.balanceBadge}>
+                        <Text style={styles.balanceBadgeText}>
+                          {b.packName}: {b.remainingCount}/{b.originalCount}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {currentOrder.customerId && (
+                  <TouchableOpacity
+                    style={styles.sellPackButton}
+                    onPress={() => {
+                      setShowMenu(false);
+                      setShowSellPack(true);
+                    }}
+                  >
+                    <Text style={styles.sellPackText}>Sell Pack</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             ) : (
               <TouchableOpacity
                 style={styles.addCustomerButton}
@@ -709,6 +776,37 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         onConfirm={handlePriceOverrideConfirm}
         onCancel={handlePriceOverrideCancel}
       />
+
+      {currentOrder?.customerId && (
+        <SellPackModal
+          visible={showSellPack}
+          customerId={currentOrder.customerId}
+          customerName={currentOrder.customerName ?? ''}
+          onComplete={() => {
+            setShowSellPack(false);
+            // Refresh balances
+            (async () => {
+              try {
+                const cust = await database
+                  .get<Customer>('customers')
+                  .find(currentOrder.customerId!);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const serverId = (cust._raw as any).server_id as string;
+                const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+                const res = await fetch(`${API_URL}/customers/${serverId}/balances`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                  setCustomerBalances(await res.json());
+                }
+              } catch {
+                // ignore
+              }
+            })();
+          }}
+          onCancel={() => setShowSellPack(false)}
+        />
+      )}
     </View>
   );
 }
@@ -872,6 +970,32 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#1a6ed8',
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 6,
+  },
+  balanceBadge: {
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  balanceBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#059669',
+  },
+  sellPackButton: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  sellPackText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#2563eb',
   },
 
   // Item list

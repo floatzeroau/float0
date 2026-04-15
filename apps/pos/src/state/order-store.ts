@@ -120,7 +120,16 @@ export interface CardPaymentParams {
   lastFour: string;
 }
 
-export type CompletePaymentParams = CashPaymentParams | CardPaymentParams;
+export interface PrepaidPaymentParams {
+  method: 'prepaid';
+  amount: number;
+  tipAmount: number;
+  prepaidPackName: string;
+  customerBalanceId: string;
+  quantityRedeemed: number;
+}
+
+export type CompletePaymentParams = CashPaymentParams | CardPaymentParams | PrepaidPaymentParams;
 
 export interface RefundParams {
   orderId: string;
@@ -1449,10 +1458,16 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             setRaw(p, 'tendered_amount', params.tenderedAmount);
             setRaw(p, 'change_given', params.changeGiven);
             setRaw(p, 'rounding_amount', params.roundingAmount);
-          } else {
+          } else if (params.method === 'card') {
             setRaw(p, 'reference', params.approvalCode);
             setRaw(p, 'card_type', params.cardType);
             setRaw(p, 'last_four', params.lastFour);
+          } else if (params.method === 'prepaid') {
+            setRaw(
+              p,
+              'reference',
+              `Prepaid: ${params.prepaidPackName} x${params.quantityRedeemed}`,
+            );
           }
 
           setRaw(p, 'status', 'completed');
@@ -1502,10 +1517,16 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             setRaw(p, 'tendered_amount', params.tenderedAmount);
             setRaw(p, 'change_given', params.changeGiven);
             setRaw(p, 'rounding_amount', params.roundingAmount);
-          } else {
+          } else if (params.method === 'card') {
             setRaw(p, 'reference', params.approvalCode);
             setRaw(p, 'card_type', params.cardType);
             setRaw(p, 'last_four', params.lastFour);
+          } else if (params.method === 'prepaid') {
+            setRaw(
+              p,
+              'reference',
+              `Prepaid: ${params.prepaidPackName} x${params.quantityRedeemed}`,
+            );
           }
 
           setRaw(p, 'status', 'completed');
@@ -1540,6 +1561,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           cardType: params.cardType,
           lastFour: params.lastFour,
           approvalCode: params.approvalCode,
+        }),
+        ...(params.method === 'prepaid' && {
+          prepaidPackName: params.prepaidPackName,
+          prepaidQuantityRedeemed: params.quantityRedeemed,
         }),
       };
 
