@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull, asc } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { organizations } from '../db/schema/core.js';
+import { categories, products } from '../db/schema/pos.js';
 import { resolveOrgBySlug } from './portal-auth.service.js';
 import { listActivePacksForOrg } from './prepaid-packs.service.js';
 
@@ -64,6 +65,72 @@ export async function portalRoutes(app: FastifyInstance) {
       savings: p.perItemValue * p.packSize - p.price,
       allowCustomSize: p.allowCustomSize,
     }));
+
+    return reply.send(result);
+  });
+
+  /**
+   * GET /portal/:slug/menu
+   * Public endpoint — returns categories with their available products.
+   */
+  app.get('/portal/:slug/menu', async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const org = await resolveOrgBySlug(slug);
+
+    const cats = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        colour: categories.colour,
+        icon: categories.icon,
+        sortOrder: categories.sortOrder,
+      })
+      .from(categories)
+      .where(and(eq(categories.organizationId, org.id), isNull(categories.deletedAt)))
+      .orderBy(asc(categories.sortOrder));
+
+    const prods = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        basePrice: products.basePrice,
+        isAvailable: products.isAvailable,
+        categoryId: products.categoryId,
+        sortOrder: products.sortOrder,
+      })
+      .from(products)
+      .where(
+        and(
+          eq(products.organizationId, org.id),
+          eq(products.isAvailable, true),
+          isNull(products.deletedAt),
+        ),
+      )
+      .orderBy(asc(products.sortOrder));
+
+    const productsByCategory = new Map<string, typeof prods>();
+    for (const p of prods) {
+      const list = productsByCategory.get(p.categoryId) ?? [];
+      list.push(p);
+      productsByCategory.set(p.categoryId, list);
+    }
+
+    const result = cats
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        colour: c.colour,
+        icon: c.icon,
+        products: (productsByCategory.get(c.id) ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          basePrice: p.basePrice,
+          isAvailable: p.isAvailable,
+        })),
+      }))
+      .filter((c) => c.products.length > 0);
 
     return reply.send(result);
   });
