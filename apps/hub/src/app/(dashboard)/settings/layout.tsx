@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, Monitor, Users, Shield } from 'lucide-react';
+import { Building2, Monitor, Users, Shield, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const settingsNav = [
@@ -10,6 +10,7 @@ const settingsNav = [
   { href: '/settings/pos', label: 'POS Config', icon: Monitor },
   { href: '/settings/team', label: 'Team', icon: Users },
   { href: '/settings/permissions', label: 'Roles & Permissions', icon: Shield },
+  { href: '/settings/packs', label: 'Prepaid Packs', icon: Package },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
