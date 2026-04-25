@@ -1,32 +1,12 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import { setCurrentSlug } from '@/lib/api';
 import { CustomerAuthProvider, useAuth } from '@/lib/auth-context';
+import { OrgContext, type OrgInfo } from '@/lib/org-context';
 import { BottomNav } from '@/components/bottom-nav';
-
-// ---------------------------------------------------------------------------
-// Org context
-// ---------------------------------------------------------------------------
-
-export interface OrgInfo {
-  id: string;
-  name: string;
-  slug: string;
-  logo?: string | null;
-  operatingHours?: unknown;
-  socialMedia?: unknown;
-}
-
-const OrgContext = createContext<OrgInfo | null>(null);
-
-export function useOrg() {
-  const ctx = useContext(OrgContext);
-  if (!ctx) throw new Error('useOrg must be used within [slug] layout');
-  return ctx;
-}
 
 // ---------------------------------------------------------------------------
 // Auth-aware shell: shows bottom nav only when authenticated

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { useOrg } from '../layout';
+import { useOrg } from '@/lib/org-context';
 import { cn } from '@/lib/utils';
 
 interface Product {

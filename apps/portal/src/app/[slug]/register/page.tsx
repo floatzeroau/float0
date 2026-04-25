@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useOrg } from '../layout';
+import { useOrg } from '@/lib/org-context';
 import { useAuth } from '@/lib/auth-context';
 import { ApiClientError } from '@/lib/api';
 

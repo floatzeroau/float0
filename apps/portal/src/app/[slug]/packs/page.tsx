@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { useOrg } from '../layout';
+import { useOrg } from '@/lib/org-context';
 import { PackCard } from '@/components/pack-card';
 
 interface Pack {

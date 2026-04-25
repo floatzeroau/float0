@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api, ApiClientError } from '@/lib/api';
-import { useOrg } from '../layout';
+import { useOrg } from '@/lib/org-context';
 import { useAuth } from '@/lib/auth-context';
 
 export default function AccountPage() {

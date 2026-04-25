@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Coffee } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useOrg } from './layout';
+import { useOrg } from '@/lib/org-context';
 import { useAuth } from '@/lib/auth-context';
 
 export default function LandingPage() {
