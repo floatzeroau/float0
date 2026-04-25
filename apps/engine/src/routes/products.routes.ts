@@ -56,6 +56,7 @@ const updateSchema = z.object({
   imageUrl: z.string().url().nullable().optional(),
   isAvailable: z.boolean().optional(),
   isGstFree: z.boolean().optional(),
+  allowAsPack: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
 });
 

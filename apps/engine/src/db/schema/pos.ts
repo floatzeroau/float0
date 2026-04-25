@@ -124,6 +124,7 @@ export const products = pgTable(
     imageUrl: text(),
     isAvailable: boolean().notNull().default(true),
     isGstFree: boolean().notNull().default(false),
+    allowAsPack: boolean().notNull().default(false),
     sortOrder: integer().notNull().default(0),
     _version: integer().notNull().default(1),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -264,78 +265,104 @@ export const customerRefreshTokens = pgTable(
   (t) => [index('customer_refresh_tokens_customer_id_idx').on(t.customerId)],
 );
 
-// ── Prepaid Packs ────────────────────────────────────
+// ── Pack Status Enum ─────────────────────────────────
 
-export const prepaidPacks = pgTable(
-  'prepaid_packs',
+export const packStatusEnum = pgEnum('pack_status', ['active', 'expired', 'consumed', 'refunded']);
+
+export const packTransactionTypeEnum = pgEnum('pack_transaction_type', [
+  'purchase',
+  'serve',
+  'refund',
+  'admin_adjust',
+]);
+
+// ── Packs ────────────────────────────────────────────
+
+export const packs = pgTable(
+  'packs',
   {
     id: uuid().primaryKey().defaultRandom(),
     organizationId: uuid()
       .notNull()
       .references(() => organizations.id),
-    name: varchar({ length: 255 }).notNull(),
-    description: text(),
-    packSize: integer().notNull(),
-    price: doublePrecision().notNull(),
-    perItemValue: doublePrecision().notNull(),
-    eligibleProductIds: jsonb(),
-    isActive: boolean().notNull().default(true),
-    allowCustomSize: boolean().notNull().default(false),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id),
+    productSnapshot: jsonb().notNull(),
+    totalQuantity: integer().notNull(),
+    remainingQuantity: integer().notNull(),
+    pricePaid: doublePrecision().notNull(),
+    unitValue: doublePrecision().notNull(),
+    expiryDate: timestamp({ withTimezone: true }),
+    status: packStatusEnum().notNull().default('active'),
+    sourceOrderId: uuid().references(() => orders.id),
+    purchasedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    _version: integer().notNull().default(1),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp({ withTimezone: true }),
   },
-  (t) => [index('prepaid_packs_organization_id_idx').on(t.organizationId)],
+  (t) => [
+    index('packs_organization_id_idx').on(t.organizationId),
+    index('packs_customer_id_idx').on(t.customerId),
+    index('packs_status_idx').on(t.status),
+  ],
 );
 
-// ── Customer Balances ────────────────────────────────
+// ── Pack Serve Records ──────────────────────────────
 
-export const customerBalances = pgTable(
-  'customer_balances',
+export const packServeRecords = pgTable(
+  'pack_serve_records',
   {
     id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id),
     customerId: uuid()
       .notNull()
       .references(() => customers.id),
+    packId: uuid()
+      .notNull()
+      .references(() => packs.id),
+    productSnapshot: jsonb(),
+    quantityServed: integer().notNull().default(1),
+    servedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    baristaId: uuid(),
+    terminalId: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('pack_serve_records_pack_id_idx').on(t.packId),
+    index('pack_serve_records_organization_id_idx').on(t.organizationId),
+  ],
+);
+
+// ── Pack Transactions (audit ledger) ─────────────────
+
+export const packTransactions = pgTable(
+  'pack_transactions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
     organizationId: uuid()
       .notNull()
       .references(() => organizations.id),
     packId: uuid()
       .notNull()
-      .references(() => prepaidPacks.id),
-    remainingCount: integer().notNull(),
-    originalCount: integer().notNull(),
-    pricePaid: doublePrecision().notNull(),
-    discountType: varchar({ length: 50 }),
-    discountValue: doublePrecision(),
-    purchasedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [
-    index('customer_balances_customer_id_idx').on(t.customerId),
-    index('customer_balances_organization_id_idx').on(t.organizationId),
-  ],
-);
-
-// ── Balance Transactions ─────────────────────────────
-
-export const balanceTransactions = pgTable(
-  'balance_transactions',
-  {
-    id: uuid().primaryKey().defaultRandom(),
-    customerBalanceId: uuid()
-      .notNull()
-      .references(() => customerBalances.id),
-    type: varchar({ length: 50 }).notNull(),
+      .references(() => packs.id),
+    type: packTransactionTypeEnum().notNull(),
     quantity: integer().notNull(),
-    orderId: uuid().references(() => orders.id),
+    amount: doublePrecision(),
+    referenceId: uuid(),
     staffId: uuid(),
     notes: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    index('balance_transactions_customer_balance_id_idx').on(t.customerBalanceId),
-    index('balance_transactions_order_id_idx').on(t.orderId),
+    index('pack_transactions_pack_id_idx').on(t.packId),
+    index('pack_transactions_organization_id_idx').on(t.organizationId),
   ],
 );
 

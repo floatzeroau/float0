@@ -80,11 +80,20 @@ const dayHoursSchema = z.object({
 
 const operatingHoursSchema = z.record(dayHoursSchema).optional();
 
+const cafePackSettingsSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    expiryMode: z.enum(['none', 'fixed', 'custom']).optional(),
+    expiryDays: z.number().int().min(1).nullable().optional(),
+  })
+  .optional();
+
 const patchSettingsSchema = z.object({
   onboarding_status: z.string().optional(),
   receipt: receiptSettingsSchema,
   pos: posSettingsSchema,
   operating_hours: operatingHoursSchema,
+  cafePack: cafePackSettingsSchema,
 });
 
 // ---------------------------------------------------------------------------

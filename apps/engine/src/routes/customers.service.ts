@@ -1,6 +1,7 @@
 import { eq, and, or, isNull, ilike, sql, desc, asc } from 'drizzle-orm';
 import { db } from '../db/connection.js';
-import { customers, customerBalances, orders, orderItems, prepaidPacks } from '../db/schema/pos.js';
+import { customers, orders, orderItems, packs } from '../db/schema/pos.js';
+import { organizations } from '../db/schema/core.js';
 
 export async function listCustomers(
   orgId: string,
@@ -73,7 +74,7 @@ export async function listCustomers(
       lastVisit: sql<
         string | null
       >`(SELECT MAX(o.created_at) FROM orders o WHERE o.customer_id = ${customers.id} AND o.status = 'completed' AND o.deleted_at IS NULL)`,
-      coffeeBalance: sql<number>`COALESCE((SELECT SUM(cb.remaining_count) FROM customer_balances cb WHERE cb.customer_id = ${customers.id} AND cb.remaining_count > 0), 0)::int`,
+      packBalance: sql<number>`COALESCE((SELECT SUM(p.remaining_quantity) FROM packs p WHERE p.customer_id = ${customers.id} AND p.status = 'active'), 0)::int`,
     })
     .from(customers)
     .where(where)
@@ -105,7 +106,7 @@ export async function getCustomer(orgId: string, customerId: string) {
       lastVisit: sql<
         string | null
       >`(SELECT MAX(o.created_at) FROM orders o WHERE o.customer_id = ${customers.id} AND o.status = 'completed' AND o.deleted_at IS NULL)`,
-      coffeeBalance: sql<number>`COALESCE((SELECT SUM(cb.remaining_count) FROM customer_balances cb WHERE cb.customer_id = ${customers.id} AND cb.remaining_count > 0), 0)::int`,
+      packBalance: sql<number>`COALESCE((SELECT SUM(p.remaining_quantity) FROM packs p WHERE p.customer_id = ${customers.id} AND p.status = 'active'), 0)::int`,
     })
     .from(customers)
     .where(
@@ -121,22 +122,21 @@ export async function getCustomer(orgId: string, customerId: string) {
     throw Object.assign(new Error('Customer not found'), { statusCode: 404 });
   }
 
-  // Get active balances
-  const balances = await db
+  // Get active packs
+  const activePacks = await db
     .select({
-      id: customerBalances.id,
-      packId: customerBalances.packId,
-      remainingCount: customerBalances.remainingCount,
-      originalCount: customerBalances.originalCount,
-      pricePaid: customerBalances.pricePaid,
-      purchasedAt: customerBalances.purchasedAt,
-      packName: prepaidPacks.name,
+      id: packs.id,
+      productId: packs.productId,
+      productSnapshot: packs.productSnapshot,
+      totalQuantity: packs.totalQuantity,
+      remainingQuantity: packs.remainingQuantity,
+      pricePaid: packs.pricePaid,
+      purchasedAt: packs.purchasedAt,
+      status: packs.status,
+      expiryDate: packs.expiryDate,
     })
-    .from(customerBalances)
-    .leftJoin(prepaidPacks, eq(customerBalances.packId, prepaidPacks.id))
-    .where(
-      and(eq(customerBalances.customerId, customerId), sql`${customerBalances.remainingCount} > 0`),
-    );
+    .from(packs)
+    .where(and(eq(packs.customerId, customerId), eq(packs.status, 'active')));
 
   // Get recent orders (last 10)
   const recentOrders = await db
@@ -157,7 +157,7 @@ export async function getCustomer(orgId: string, customerId: string) {
   return {
     ...customer,
     status: customer.deletedAt ? 'inactive' : 'active',
-    balances,
+    packs: activePacks,
     recentOrders,
   };
 }
@@ -296,12 +296,60 @@ export async function deactivateCustomer(orgId: string, customerId: string) {
 export async function getPackCustomerCounts(orgId: string) {
   const rows = await db
     .select({
-      packId: customerBalances.packId,
-      customerCount: sql<number>`COUNT(DISTINCT ${customerBalances.customerId})::int`,
+      productId: packs.productId,
+      customerCount: sql<number>`COUNT(DISTINCT ${packs.customerId})::int`,
     })
-    .from(customerBalances)
-    .where(eq(customerBalances.organizationId, orgId))
-    .groupBy(customerBalances.packId);
+    .from(packs)
+    .where(eq(packs.organizationId, orgId))
+    .groupBy(packs.productId);
 
-  return Object.fromEntries(rows.map((r) => [r.packId, r.customerCount]));
+  return Object.fromEntries(rows.map((r) => [r.productId, r.customerCount]));
+}
+
+export async function enablePortalAccess(orgId: string, customerId: string, email?: string) {
+  const [customer] = await db
+    .select()
+    .from(customers)
+    .where(
+      and(
+        eq(customers.id, customerId),
+        eq(customers.organizationId, orgId),
+        isNull(customers.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!customer) {
+    throw Object.assign(new Error('Customer not found'), { statusCode: 404 });
+  }
+
+  // If customer has no email, one must be provided
+  if (!customer.email && !email) {
+    throw Object.assign(new Error('Customer has no email — email must be provided'), {
+      statusCode: 400,
+    });
+  }
+
+  // Set email if provided
+  if (email && email !== customer.email) {
+    await db
+      .update(customers)
+      .set({ email, updatedAt: new Date() })
+      .where(eq(customers.id, customerId));
+  }
+
+  const finalEmail = email ?? customer.email!;
+
+  // Get org slug for URL
+  const [org] = await db
+    .select({ slug: organizations.slug })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  return {
+    customerId,
+    email: finalEmail,
+    orgSlug: org!.slug,
+  };
 }

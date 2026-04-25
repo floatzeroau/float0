@@ -9,6 +9,7 @@ import {
   updateCustomer,
   deactivateCustomer,
   getPackCustomerCounts,
+  enablePortalAccess,
 } from './customers.service.js';
 
 const idParamSchema = z.object({
@@ -125,6 +126,55 @@ export async function customerRoutes(app: FastifyInstance) {
 
       await deactivateCustomer(request.user.orgId, params.data.id);
       return reply.send({ message: 'Customer deactivated' });
+    },
+  );
+
+  // POST /customers/:id/enable-portal
+  app.post(
+    '/customers/:id/enable-portal',
+    { preHandler: [requireAuth, requireRole('manager')] },
+    async (request, reply) => {
+      const params = idParamSchema.safeParse(request.params);
+      if (!params.success) {
+        return reply.status(400).send({ error: 'Invalid customer ID', statusCode: 400 });
+      }
+
+      const bodySchema = z.object({
+        email: z.string().email().optional(),
+      });
+
+      const parsed = bodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: 'Validation failed',
+          statusCode: 400,
+          details: parsed.error.flatten().fieldErrors,
+        });
+      }
+
+      const result = await enablePortalAccess(
+        request.user.orgId,
+        params.data.id,
+        parsed.data.email,
+      );
+
+      // Generate 72-hour setup JWT (different payload shape — cast needed)
+      const setupToken = request.server.jwt.sign(
+        {
+          purpose: 'customer-setup',
+          customerId: result.customerId,
+          orgId: request.user.orgId,
+        } as unknown as Parameters<typeof request.server.jwt.sign>[0],
+        { expiresIn: '72h' },
+      );
+
+      const setupUrl = `https://go.float0.com/${result.orgSlug}/setup?token=${setupToken}`;
+
+      return reply.send({
+        setupUrl,
+        setupToken,
+        email: result.email,
+      });
     },
   );
 }

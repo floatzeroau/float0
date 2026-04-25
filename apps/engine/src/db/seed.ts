@@ -49,6 +49,11 @@ async function seed() {
             footerText: 'Thank you for visiting Float0 Demo Cafe!',
             socialMedia: '@float0cafe',
           },
+          cafePack: {
+            enabled: true,
+            expiryMode: 'none',
+            expiryDays: null,
+          },
         },
       })
       .returning();
@@ -227,6 +232,7 @@ async function seed() {
         sku: 'FW-001',
         barcode: '9300001000011',
         isAvailable: true,
+        allowAsPack: true,
         sortOrder: 0,
       },
       {

@@ -4,7 +4,6 @@ import { db } from '../db/connection.js';
 import { organizations } from '../db/schema/core.js';
 import { categories, products } from '../db/schema/pos.js';
 import { resolveOrgBySlug } from './portal-auth.service.js';
-import { listActivePacksForOrg } from './prepaid-packs.service.js';
 
 // ---------------------------------------------------------------------------
 // Public portal endpoint — NO auth required
@@ -48,25 +47,31 @@ export async function portalRoutes(app: FastifyInstance) {
 
   /**
    * GET /portal/:slug/packs
-   * Public endpoint — list active prepaid packs for this org.
+   * Public endpoint — list products eligible for pack purchase.
    */
   app.get('/portal/:slug/packs', async (request, reply) => {
     const { slug } = request.params as { slug: string };
     const org = await resolveOrgBySlug(slug);
-    const packs = await listActivePacksForOrg(org.id);
 
-    const result = packs.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      packSize: p.packSize,
-      price: p.price,
-      perItemValue: p.perItemValue,
-      savings: p.perItemValue * p.packSize - p.price,
-      allowCustomSize: p.allowCustomSize,
-    }));
+    const packProducts = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        basePrice: products.basePrice,
+      })
+      .from(products)
+      .where(
+        and(
+          eq(products.organizationId, org.id),
+          eq(products.allowAsPack, true),
+          eq(products.isAvailable, true),
+          isNull(products.deletedAt),
+        ),
+      )
+      .orderBy(asc(products.sortOrder));
 
-    return reply.send(result);
+    return reply.send(packProducts);
   });
 
   /**
