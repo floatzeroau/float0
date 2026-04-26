@@ -162,6 +162,7 @@ export default function POSScreen() {
     currentOrder,
     createNewOrder,
     addItem,
+    items,
     updateItemModifiers,
     addItemToSubmittedOrder,
     isManagingSubmittedOrder,
@@ -474,6 +475,7 @@ export default function POSScreen() {
         orderId={currentOrder?.id ?? ''}
         customerId={currentOrder?.customerId ?? undefined}
         customerEmail={currentOrder?.customerEmail ?? undefined}
+        packCount={items.filter((i) => i.isPackPurchase && !i.voidedAt).length}
         onComplete={handlePaymentComplete}
         onRecordPartialPayment={recordPartialPayment}
         onCancel={handlePaymentCancel}

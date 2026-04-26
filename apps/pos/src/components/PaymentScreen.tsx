@@ -23,6 +23,7 @@ interface PaymentScreenProps {
   orderId: string;
   customerId?: string;
   customerEmail?: string;
+  packCount?: number;
   onComplete: (params: CompletePaymentParams) => Promise<ReceiptData | undefined>;
   onRecordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
   onCancel: () => void;
@@ -53,6 +54,7 @@ export function PaymentScreen({
   orderId,
   customerId,
   customerEmail,
+  packCount,
   onComplete,
   onRecordPartialPayment,
   onCancel,
@@ -449,7 +451,14 @@ export function PaymentScreen({
                 {phase === 'card_processing' ? 'Cancel' : 'Back'}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Payment — {orderNumber}</Text>
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <Text style={styles.headerTitle}>Payment — {orderNumber}</Text>
+              {packCount != null && packCount > 0 && (
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#7c3aed', marginTop: 2 }}>
+                  Includes {packCount} Cafe Pack{packCount > 1 ? 's' : ''}
+                </Text>
+              )}
+            </View>
             <View style={styles.headerTotalContainer}>
               {prepaidAmount > 0 && (
                 <>
@@ -735,11 +744,9 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   headerTitle: {
-    flex: 1,
     fontSize: 20,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginLeft: 16,
   },
   headerTotalContainer: {
     alignItems: 'flex-end',

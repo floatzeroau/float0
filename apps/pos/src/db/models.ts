@@ -34,6 +34,7 @@ export class Product extends Model {
   @text('image_url') imageUrl?: string;
   @field('is_available') isAvailable!: boolean;
   @field('is_gst_free') isGstFree!: boolean;
+  @field('allow_as_pack') allowAsPack!: boolean;
   @field('sort_order') sortOrder!: number;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
@@ -227,6 +228,7 @@ export class OrderItem extends Model {
   @text('void_reason') voidReason?: string;
   @field('override_price') overridePrice?: number;
   @text('override_reason') overrideReason?: string;
+  @json('metadata_json', (raw: any) => raw ?? null) metadataJson!: any;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

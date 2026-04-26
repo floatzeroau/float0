@@ -18,6 +18,8 @@ import { DiscountModal } from './DiscountModal';
 import { VoidItemModal } from './VoidItemModal';
 import { PriceOverrideModal } from './PriceOverrideModal';
 import { SellPackModal } from './SellPackModal';
+import { ConvertToPackModal } from './ConvertToPackModal';
+import type { OrgCafePackSettings } from './ConvertToPackModal';
 import { database } from '../db/database';
 import type { Customer } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
@@ -30,6 +32,7 @@ import type { DiscountType } from '@float0/shared';
 interface CartItemRowProps {
   item: CartItemData;
   isSubmittedOrder: boolean;
+  hasCustomer: boolean;
   onQuantityChange: (itemId: string, newQty: number) => void;
   onRemove: (itemId: string) => void;
   onEdit: (item: CartItemData) => void;
@@ -37,11 +40,14 @@ interface CartItemRowProps {
   onDiscount: (item: CartItemData) => void;
   onVoid: (item: CartItemData) => void;
   onPriceOverride: (item: CartItemData) => void;
+  onConvertToPack: (item: CartItemData) => void;
+  onUndoPack: (item: CartItemData) => void;
 }
 
 function CartItemRow({
   item,
   isSubmittedOrder,
+  hasCustomer,
   onQuantityChange,
   onRemove,
   onEdit,
@@ -49,6 +55,8 @@ function CartItemRow({
   onDiscount,
   onVoid,
   onPriceOverride,
+  onConvertToPack,
+  onUndoPack,
 }: CartItemRowProps) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState(item.notes);
@@ -148,7 +156,50 @@ function CartItemRow({
     );
   }
 
+  // Pack item rendering (locked)
+  if (item.isPackPurchase) {
+    return (
+      <View style={[styles.itemRow, styles.itemRowPack]}>
+        <View style={styles.itemMain}>
+          <View style={styles.itemInfo}>
+            <View style={styles.packNameRow}>
+              <Text style={styles.packLockIcon}>🔒</Text>
+              <Text style={styles.itemName}>
+                PACK: {item.packTotalQuantity} × {item.productName}
+              </Text>
+            </View>
+            {hasModifiers && (
+              <Text style={styles.itemModifiers}>
+                {item.modifiers.map((m) => m.name).join(', ')}
+              </Text>
+            )}
+            <View style={styles.packBadge}>
+              <Text style={styles.packBadgeText}>CAFE PACK</Text>
+            </View>
+          </View>
+          <View style={styles.itemPriceCol}>
+            <Text style={styles.itemTotal}>${item.lineTotal.toFixed(2)}</Text>
+          </View>
+        </View>
+        <View style={styles.itemControls}>
+          <Text style={styles.qtyText}>Qty: 1 (pack)</Text>
+          <View style={styles.actionGroup}>
+            <TouchableOpacity onPress={() => onUndoPack(item)}>
+              <Text style={[styles.actionText, styles.actionTextBlue]}>Undo Pack</Text>
+            </TouchableOpacity>
+            <Text style={styles.actionDivider}>|</Text>
+            <TouchableOpacity onPress={() => onRemove(item.id)}>
+              <Text style={[styles.actionText, styles.actionRemove]}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   // Normal draft item rendering
+  const showPackAction = item.allowAsPack && hasCustomer && !isSubmittedOrder;
+
   return (
     <View style={styles.itemRow}>
       <View style={styles.itemMain}>
@@ -206,6 +257,14 @@ function CartItemRow({
         </View>
 
         <View style={styles.actionGroup}>
+          {showPackAction && (
+            <>
+              <TouchableOpacity onPress={() => onConvertToPack(item)}>
+                <Text style={[styles.actionText, styles.actionTextPack]}>Pack</Text>
+              </TouchableOpacity>
+              <Text style={styles.actionDivider}>|</Text>
+            </>
+          )}
           {hasModifiers && (
             <>
               <TouchableOpacity onPress={() => onEdit(item)}>
@@ -290,6 +349,8 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
     voidItem,
     overrideItemPrice,
     returnToNewOrder,
+    convertItemToPack,
+    undoPackConversion,
   } = useOrder();
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -362,6 +423,40 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
     quantity: number;
     modifiers: { id: string; name: string; priceAdjustment: number }[];
   } | null>(null);
+
+  // Convert to Pack modal state
+  const [packModalVisible, setPackModalVisible] = useState(false);
+  const [packTargetItem, setPackTargetItem] = useState<CartItemData | null>(null);
+  const [cafePackSettings, setCafePackSettings] = useState<OrgCafePackSettings>({
+    enabled: false,
+    expiryMode: 'none',
+    expiryDays: null,
+  });
+
+  // Fetch cafe pack settings on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+        const res = await fetch(`${API_URL}/organization`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const org = await res.json();
+          const cp = org?.settings?.cafePack;
+          if (cp) {
+            setCafePackSettings({
+              enabled: cp.enabled === true,
+              expiryMode: cp.expiryMode ?? 'none',
+              expiryDays: cp.expiryDays ?? null,
+            });
+          }
+        }
+      } catch {
+        // silently fail — use defaults
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     refreshHeldOrders();
@@ -542,6 +637,38 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
     setPriceOverrideTargetItem(null);
   }, []);
 
+  // Convert to Pack handlers
+  const handleOpenConvertToPack = useCallback((item: CartItemData) => {
+    setPackTargetItem(item);
+    setPackModalVisible(true);
+  }, []);
+
+  const handlePackConfirm = useCallback(
+    (
+      itemId: string,
+      packTotalQuantity: number,
+      packPrice: number,
+      packExpiryDate: string | null,
+    ) => {
+      convertItemToPack(itemId, packTotalQuantity, packPrice, packExpiryDate);
+      setPackModalVisible(false);
+      setPackTargetItem(null);
+    },
+    [convertItemToPack],
+  );
+
+  const handlePackCancel = useCallback(() => {
+    setPackModalVisible(false);
+    setPackTargetItem(null);
+  }, []);
+
+  const handleUndoPack = useCallback(
+    (item: CartItemData) => {
+      undoPackConversion(item.id);
+    },
+    [undoPackConversion],
+  );
+
   const hasItems = items.length > 0;
 
   // Order type badge text
@@ -652,6 +779,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
               key={item.id}
               item={item}
               isSubmittedOrder={isManagingSubmittedOrder}
+              hasCustomer={!!currentOrder?.customerId && cafePackSettings.enabled}
               onQuantityChange={handleQuantityChange}
               onRemove={handleRemove}
               onEdit={handleEdit}
@@ -659,6 +787,8 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
               onDiscount={handleOpenItemDiscount}
               onVoid={handleOpenVoid}
               onPriceOverride={handleOpenPriceOverride}
+              onConvertToPack={handleOpenConvertToPack}
+              onUndoPack={handleUndoPack}
             />
           ))}
         </ScrollView>
@@ -775,6 +905,14 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         item={priceOverrideTargetItem}
         onConfirm={handlePriceOverrideConfirm}
         onCancel={handlePriceOverrideCancel}
+      />
+
+      <ConvertToPackModal
+        visible={packModalVisible}
+        item={packTargetItem}
+        cafePackSettings={cafePackSettings}
+        onConfirm={handlePackConfirm}
+        onCancel={handlePackCancel}
       />
 
       {currentOrder?.customerId && (
@@ -1209,6 +1347,38 @@ const styles = StyleSheet.create({
   },
   actionRemove: {
     color: '#dc2626',
+  },
+  actionTextPack: {
+    color: '#7c3aed',
+    fontWeight: '600',
+  },
+
+  // Pack item styles
+  itemRowPack: {
+    backgroundColor: '#faf5ff',
+    borderLeftWidth: 3,
+    borderLeftColor: '#7c3aed',
+  },
+  packNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  packLockIcon: {
+    fontSize: 12,
+  },
+  packBadge: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  packBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
   },
 
   // Note input

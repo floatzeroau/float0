@@ -38,6 +38,8 @@ export interface ReceiptItemInput {
   discountAmount: number;
   isVoided: boolean;
   isGstFree: boolean;
+  isPackPurchase?: boolean;
+  packTotalQuantity?: number;
 }
 
 export interface ReceiptPaymentInput {
@@ -122,16 +124,33 @@ export function buildReceipt(
   payments: ReceiptPaymentInput[],
   staffName: string,
 ): ReceiptData {
-  const receiptItems: ReceiptItem[] = items.map((item) => ({
-    name: item.productName,
-    modifiers: item.modifiers,
-    quantity: item.quantity,
-    unitPrice: item.unitPrice,
-    lineTotal: item.lineTotal,
-    discountAmount: item.discountAmount,
-    isVoided: item.isVoided,
-    isGstFree: item.isGstFree,
-  }));
+  const receiptItems: ReceiptItem[] = items.map((item) => {
+    // Format pack purchase lines: "10 × Large Latte with Almond Milk — Cafe Pack"
+    if (item.isPackPurchase && item.packTotalQuantity) {
+      const modifierSuffix = item.modifiers.length > 0 ? ` with ${item.modifiers.join(', ')}` : '';
+      return {
+        name: `${item.packTotalQuantity} × ${item.productName}${modifierSuffix} — Cafe Pack`,
+        modifiers: [],
+        quantity: 1,
+        unitPrice: item.lineTotal,
+        lineTotal: item.lineTotal,
+        discountAmount: item.discountAmount,
+        isVoided: item.isVoided,
+        isGstFree: item.isGstFree,
+      };
+    }
+
+    return {
+      name: item.productName,
+      modifiers: item.modifiers,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+      discountAmount: item.discountAmount,
+      isVoided: item.isVoided,
+      isGstFree: item.isGstFree,
+    };
+  });
 
   const receiptPayments: ReceiptPayment[] = payments.map((p) => ({
     method: p.method,

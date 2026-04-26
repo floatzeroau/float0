@@ -25,6 +25,7 @@ import { eventBus } from '@float0/events';
 import { transitionOrder } from './order-lifecycle';
 import { getPrinterService } from '../services';
 import { onPaymentCompleted } from '../sync/payment-sync-hook';
+import { createPacksForOrder } from '../sync/pack-creation-hook';
 import type { OrderStatusDB } from './order-lifecycle';
 import { generateUUID } from '../utils/uuid';
 
@@ -64,6 +65,13 @@ export interface CartItemData {
   voidReason: string;
   overridePrice: number;
   overrideReason: string;
+  // Pack purchase fields
+  isPackPurchase: boolean;
+  packTotalQuantity: number;
+  packPrice: number;
+  packExpiryDate: string | null;
+  packProductSnapshot: Record<string, unknown> | null;
+  allowAsPack: boolean;
 }
 
 export interface CartTotalsData {
@@ -196,6 +204,13 @@ interface OrderStoreValue {
   completePayment: (params: CompletePaymentParams) => Promise<ReceiptData | undefined>;
   recordPartialPayment: (params: CompletePaymentParams) => Promise<void>;
   refundOrder: (params: RefundParams) => Promise<void>;
+  convertItemToPack: (
+    itemId: string,
+    packTotalQuantity: number,
+    packPrice: number,
+    packExpiryDate: string | null,
+  ) => Promise<void>;
+  undoPackConversion: (itemId: string) => Promise<void>;
   lastDocket: KitchenDocketData | null;
   clearLastDocket: () => void;
 }
@@ -287,6 +302,8 @@ const OrderContext = createContext<OrderStoreValue>({
   completePayment: async () => undefined,
   recordPartialPayment: async () => {},
   refundOrder: async () => {},
+  convertItemToPack: async () => {},
+  undoPackConversion: async () => {},
   lastDocket: null,
   clearLastDocket: () => {},
 });
@@ -320,10 +337,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         orderItems.map(async (oi) => {
           let productName = '';
           let isGstFree = false;
+          let allowAsPack = false;
           try {
             const product = await database.get<Product>('products').find(oi.productId);
             productName = product.name;
             isGstFree = product.isGstFree;
+            allowAsPack = product.allowAsPack ?? false;
           } catch {
             productName = 'Unknown';
           }
@@ -344,6 +363,21 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           const overridePrice = raw.override_price || 0;
           const overrideReason = raw.override_reason || '';
 
+          // Read pack metadata
+          let metadataRaw = raw.metadata_json;
+          if (typeof metadataRaw === 'string') {
+            try {
+              metadataRaw = JSON.parse(metadataRaw);
+            } catch {
+              metadataRaw = null;
+            }
+          }
+          const isPackPurchase = metadataRaw?.isPackPurchase === true;
+          const packTotalQuantity = metadataRaw?.packTotalQuantity ?? 0;
+          const packPrice = metadataRaw?.packPrice ?? 0;
+          const packExpiryDate = metadataRaw?.packExpiryDate ?? null;
+          const packProductSnapshot = metadataRaw?.packProductSnapshot ?? null;
+
           return {
             id: oi.id,
             productId: oi.productId,
@@ -362,6 +396,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             voidReason,
             overridePrice,
             overrideReason,
+            isPackPurchase,
+            packTotalQuantity,
+            packPrice,
+            packExpiryDate,
+            packProductSnapshot,
+            allowAsPack,
           };
         }),
       );
@@ -642,6 +682,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const orderId = orderRecordIdRef.current;
       if (!orderId) return;
 
+      // Block quantity changes on pack items
+      const item = items.find((i) => i.id === itemId);
+      if (item?.isPackPurchase) return;
+
       if (newQuantity <= 0) {
         await database.write(async () => {
           const record = await database.get<OrderItem>('order_items').find(itemId);
@@ -702,6 +746,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const orderId = orderRecordIdRef.current;
       if (!orderId) return;
 
+      // Block modifier changes on pack items
+      const item = items.find((i) => i.id === itemId);
+      if (item?.isPackPurchase) return;
+
       await database.write(async () => {
         const record = await database.get<OrderItem>('order_items').find(itemId);
         await record.update((oi) => {
@@ -733,6 +781,107 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       await refreshItems(orderId, orderDiscount);
     },
     [refreshItems, orderDiscount],
+  );
+
+  // -------------------------------------------------------------------------
+  // convertItemToPack
+  // -------------------------------------------------------------------------
+  const convertItemToPack = useCallback(
+    async (
+      itemId: string,
+      packTotalQuantity: number,
+      packPrice: number,
+      packExpiryDate: string | null,
+    ) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return;
+
+      const packProductSnapshot = {
+        name: item.productName,
+        basePrice: item.unitPrice,
+        modifiers: item.modifiers.map((m) => m.name),
+      };
+
+      const metadata = {
+        isPackPurchase: true,
+        packTotalQuantity,
+        packPrice,
+        packExpiryDate,
+        packProductSnapshot,
+        originalQuantity: item.quantity,
+        originalLineTotal: item.lineTotal,
+        originalModifiers: item.modifiers,
+        originalUnitPrice: item.unitPrice,
+      };
+
+      await database.write(async () => {
+        const record = await database.get<OrderItem>('order_items').find(itemId);
+        await record.update((oi) => {
+          setRaw(oi, 'quantity', 1);
+          setRaw(oi, 'unit_price', packPrice);
+          setRaw(oi, 'line_total', packPrice);
+          setRaw(oi, 'discount_amount', 0);
+          setRaw(oi, 'discount_type', '');
+          setRaw(oi, 'discount_value', 0);
+          setRaw(oi, 'discount_reason', '');
+          setRaw(oi, 'override_price', 0);
+          setRaw(oi, 'override_reason', '');
+          setRaw(oi, 'metadata_json', JSON.stringify(metadata));
+        });
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [items, refreshItems, orderDiscount],
+  );
+
+  // -------------------------------------------------------------------------
+  // undoPackConversion
+  // -------------------------------------------------------------------------
+  const undoPackConversion = useCallback(
+    async (itemId: string) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item?.isPackPurchase) return;
+
+      // Read original data from DB metadata
+      const record = await database.get<OrderItem>('order_items').find(itemId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let metadataRaw = (record as any)._raw.metadata_json;
+      if (typeof metadataRaw === 'string') {
+        try {
+          metadataRaw = JSON.parse(metadataRaw);
+        } catch {
+          metadataRaw = null;
+        }
+      }
+
+      if (!metadataRaw) return;
+
+      const originalQty = metadataRaw.originalQuantity ?? 1;
+      const originalLineTotal = metadataRaw.originalLineTotal ?? item.unitPrice;
+      const originalModifiers = metadataRaw.originalModifiers ?? [];
+      const originalUnitPrice = metadataRaw.originalUnitPrice ?? item.unitPrice;
+
+      await database.write(async () => {
+        const rec = await database.get<OrderItem>('order_items').find(itemId);
+        await rec.update((oi) => {
+          setRaw(oi, 'quantity', originalQty);
+          setRaw(oi, 'unit_price', originalUnitPrice);
+          setRaw(oi, 'line_total', originalLineTotal);
+          setRaw(oi, 'modifiers_json', JSON.stringify(originalModifiers));
+          setRaw(oi, 'metadata_json', '');
+        });
+      });
+
+      await refreshItems(orderId, orderDiscount);
+    },
+    [items, refreshItems, orderDiscount],
   );
 
   // -------------------------------------------------------------------------
@@ -1546,6 +1695,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         discountAmount: i.discountAmount,
         isVoided: !!i.voidedAt,
         isGstFree: i.isGstFree,
+        isPackPurchase: i.isPackPurchase,
+        packTotalQuantity: i.packTotalQuantity,
       }));
 
       const receiptPayment: ReceiptPaymentInput = {
@@ -1619,6 +1770,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       // Priority sync payment
       onPaymentCompleted(orderId, paymentId);
+
+      // Create packs for any pack purchase lines (fire-and-forget with warning on failure)
+      const packItems = items.filter((i) => i.isPackPurchase && !i.voidedAt);
+      if (packItems.length > 0 && currentOrder?.customerId) {
+        createPacksForOrder(currentOrder.customerId, orderId, packItems).catch(() => {
+          // Errors are already logged/alerted inside createPacksForOrder
+        });
+      }
 
       // Auto-start a new order after brief delay
       setTimeout(() => {
@@ -1750,6 +1909,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     completePayment,
     recordPartialPayment,
     refundOrder,
+    convertItemToPack,
+    undoPackConversion,
     lastDocket,
     clearLastDocket,
   };

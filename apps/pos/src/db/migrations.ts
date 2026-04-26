@@ -263,5 +263,18 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 13,
+      steps: [
+        addColumns({
+          table: 'products',
+          columns: [{ name: 'allow_as_pack', type: 'boolean' }],
+        }),
+        addColumns({
+          table: 'order_items',
+          columns: [{ name: 'metadata_json', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });
