@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ShoppingCart, ClipboardList, Users, Settings as SettingsIcon } from 'lucide-react-native';
 
 import InitialSyncScreen from '../screens/InitialSyncScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -12,6 +13,7 @@ import ShiftReportScreen from '../screens/ShiftReportScreen';
 import ZReportScreen from '../screens/ZReportScreen';
 import POSScreen from '../screens/POSScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
+import CustomersScreen from '../screens/CustomersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { SyncProvider } from '../sync/SyncProvider';
 import { SyncStatusBar } from '../components/SyncStatusBar';
@@ -36,6 +38,7 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   POS: undefined;
   Orders: undefined;
+  Customers: undefined;
   Settings: undefined;
 };
 
@@ -53,9 +56,61 @@ function MainTabs() {
           <ShiftProvider>
             <SafeAreaView style={styles.container} edges={['top']}>
               <SyncStatusBar />
-              <Tab.Navigator screenOptions={{ headerShown: false }}>
+              <Tab.Navigator
+                screenOptions={({ route }) => ({
+                  headerShown: false,
+                  tabBarIcon: ({ focused, size }) => {
+                    const color = focused ? '#2563eb' : '#9ca3af';
+                    const strokeWidth = focused ? 2.5 : 1.5;
+                    switch (route.name) {
+                      case 'POS':
+                        return (
+                          <ShoppingCart
+                            size={size}
+                            color={color}
+                            strokeWidth={strokeWidth}
+                            fill={focused ? '#2563eb' : 'none'}
+                          />
+                        );
+                      case 'Orders':
+                        return (
+                          <ClipboardList
+                            size={size}
+                            color={color}
+                            strokeWidth={strokeWidth}
+                            fill={focused ? '#2563eb' : 'none'}
+                          />
+                        );
+                      case 'Customers':
+                        return (
+                          <Users
+                            size={size}
+                            color={color}
+                            strokeWidth={strokeWidth}
+                            fill={focused ? '#2563eb' : 'none'}
+                          />
+                        );
+                      case 'Settings':
+                        return (
+                          <SettingsIcon
+                            size={size}
+                            color={color}
+                            strokeWidth={strokeWidth}
+                            fill={focused ? '#2563eb' : 'none'}
+                          />
+                        );
+                      default:
+                        return null;
+                    }
+                  },
+                  tabBarActiveTintColor: '#2563eb',
+                  tabBarInactiveTintColor: '#9ca3af',
+                  tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+                })}
+              >
                 <Tab.Screen name="POS" component={POSScreen} />
                 <Tab.Screen name="Orders" component={OrderHistoryScreen} />
+                <Tab.Screen name="Customers" component={CustomersScreen} />
                 <Tab.Screen name="Settings" component={SettingsScreen} />
               </Tab.Navigator>
             </SafeAreaView>

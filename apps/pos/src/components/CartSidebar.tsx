@@ -20,6 +20,7 @@ import { PriceOverrideModal } from './PriceOverrideModal';
 import { SellPackModal } from './SellPackModal';
 import { ConvertToPackModal } from './ConvertToPackModal';
 import type { OrgCafePackSettings } from './ConvertToPackModal';
+import { ServeFromPackModal } from './ServeFromPackModal';
 import { database } from '../db/database';
 import type { Customer } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
@@ -356,6 +357,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
   const [showSellPack, setShowSellPack] = useState(false);
+  const [showServePack, setShowServePack] = useState(false);
   const [customerBalances, setCustomerBalances] = useState<
     { id: string; packName: string; remainingCount: number; originalCount: number }[]
   >([]);
@@ -748,15 +750,26 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
                   </View>
                 )}
                 {currentOrder.customerId && (
-                  <TouchableOpacity
-                    style={styles.sellPackButton}
-                    onPress={() => {
-                      setShowMenu(false);
-                      setShowSellPack(true);
-                    }}
-                  >
-                    <Text style={styles.sellPackText}>Sell Pack</Text>
-                  </TouchableOpacity>
+                  <View style={styles.packButtonRow}>
+                    <TouchableOpacity
+                      style={styles.sellPackButton}
+                      onPress={() => {
+                        setShowMenu(false);
+                        setShowSellPack(true);
+                      }}
+                    >
+                      <Text style={styles.sellPackText}>Sell Pack</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.servePackButton}
+                      onPress={() => {
+                        setShowMenu(false);
+                        setShowServePack(true);
+                      }}
+                    >
+                      <Text style={styles.servePackText}>Serve from Pack</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </>
             ) : (
@@ -945,6 +958,37 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
           onCancel={() => setShowSellPack(false)}
         />
       )}
+
+      {currentOrder?.customerId && (
+        <ServeFromPackModal
+          visible={showServePack}
+          customerId={currentOrder.customerId}
+          customerName={currentOrder.customerName ?? ''}
+          onComplete={() => {
+            setShowServePack(false);
+            // Refresh balances
+            (async () => {
+              try {
+                const cust = await database
+                  .get<Customer>('customers')
+                  .find(currentOrder.customerId!);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const serverId = (cust._raw as any).server_id as string;
+                const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+                const res = await fetch(`${API_URL}/customers/${serverId}/balances`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                  setCustomerBalances(await res.json());
+                }
+              } catch {
+                // ignore
+              }
+            })();
+          }}
+          onCancel={() => setShowServePack(false)}
+        />
+      )}
     </View>
   );
 }
@@ -1126,14 +1170,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#059669',
   },
-  sellPackButton: {
+  packButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 6,
+  },
+  sellPackButton: {
     alignSelf: 'flex-start',
   },
   sellPackText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#2563eb',
+  },
+  servePackButton: {
+    alignSelf: 'flex-start',
+  },
+  servePackText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#7c3aed',
   },
 
   // Item list
