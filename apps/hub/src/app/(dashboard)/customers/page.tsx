@@ -212,7 +212,6 @@ export default function CustomersPage() {
               </TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Pack Balance</TableHead>
               <TableHead>
                 <SortButton field="totalSpent">Total Spent</SortButton>
               </TableHead>
@@ -230,7 +229,7 @@ export default function CustomersPage() {
             {loading &&
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 9 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell key={j}>
                       <div className="h-4 w-full animate-pulse rounded bg-muted" />
                     </TableCell>
@@ -240,7 +239,7 @@ export default function CustomersPage() {
 
             {!loading && customers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="h-40 text-center">
+                <TableCell colSpan={8} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Users className="h-8 w-8" />
                     <p className="text-sm">
@@ -283,15 +282,6 @@ export default function CustomersPage() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {customer.phone || <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell>
-                      {customer.coffeeBalance > 0 ? (
-                        <Badge variant="secondary" className="font-mono">
-                          ☕ {customer.coffeeBalance}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       ${Number(customer.totalSpent).toFixed(2)}
@@ -400,7 +390,6 @@ export default function CustomersPage() {
             setDeactivateTarget(c);
           }
         }}
-        onRefresh={fetchCustomers}
       />
 
       {/* Deactivate confirmation */}

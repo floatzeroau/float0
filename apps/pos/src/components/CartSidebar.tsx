@@ -7,7 +7,6 @@ import {
   TextInput,
   StyleSheet,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Lock } from 'lucide-react-native';
@@ -19,15 +18,12 @@ import { HeldOrdersDrawer } from './HeldOrdersDrawer';
 import { DiscountModal } from './DiscountModal';
 import { VoidItemModal } from './VoidItemModal';
 import { PriceOverrideModal } from './PriceOverrideModal';
-import { SellPackModal } from './SellPackModal';
 import { ConvertToPackModal } from './ConvertToPackModal';
 import type { OrgCafePackSettings } from './ConvertToPackModal';
 import { ServeFromPackModal } from './ServeFromPackModal';
-import { database } from '../db/database';
-import type { Customer } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import type { DiscountType } from '@float0/shared';
-import { colors, spacing, radii, typography } from '../theme/tokens';
+import { colors, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // CartItem Row
@@ -359,51 +355,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
-  const [showSellPack, setShowSellPack] = useState(false);
   const [showServePack, setShowServePack] = useState(false);
-  const [customerBalances, setCustomerBalances] = useState<
-    { id: string; packName: string; remainingCount: number; originalCount: number }[]
-  >([]);
-  const [balancesLoading, setBalancesLoading] = useState(false);
-
-  // Fetch prepaid balances when customer is attached
-  useEffect(() => {
-    if (!currentOrder?.customerId) {
-      setCustomerBalances([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setBalancesLoading(true);
-        const cust = await database.get<Customer>('customers').find(currentOrder.customerId!);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const serverId = (cust._raw as any).server_id as string;
-        const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-
-        const res = await fetch(`${API_URL}/customers/${serverId}/balances`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.ok && !cancelled) {
-          const data = await res.json();
-          setCustomerBalances(data);
-        }
-      } catch {
-        // silently fail — balances are informational
-      } finally {
-        if (!cancelled) {
-          setBalancesLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentOrder?.customerId]);
 
   // Discount modal state
   const [discountModalVisible, setDiscountModalVisible] = useState(false);
@@ -689,11 +641,6 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
       : `Dine-in${currentOrder.tableNumber ? ` #${currentOrder.tableNumber}` : ''}`
     : '';
 
-  // Sort customer balances by remainingCount desc, limit to top 3
-  const sortedBalances = [...customerBalances].sort((a, b) => b.remainingCount - a.remainingCount);
-  const displayedBalances = sortedBalances.slice(0, 3);
-  const hasMoreBalances = customerBalances.length > 3;
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -752,35 +699,8 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
                     <Text style={styles.customerRemoveText}>X</Text>
                   </TouchableOpacity>
                 </View>
-                {balancesLoading ? (
-                  <View style={styles.balanceRow}>
-                    <ActivityIndicator size="small" color={colors.pack} />
-                  </View>
-                ) : customerBalances.length > 0 ? (
-                  <View style={styles.balanceRow}>
-                    {displayedBalances.map((b) => (
-                      <View key={b.id} style={styles.balanceBadge}>
-                        <Text style={styles.balanceBadgeText}>
-                          {b.packName}: {b.remainingCount}/{b.originalCount}
-                        </Text>
-                      </View>
-                    ))}
-                    {hasMoreBalances && (
-                      <Text style={styles.morePacksText}>+{customerBalances.length - 3} more</Text>
-                    )}
-                  </View>
-                ) : null}
                 {currentOrder.customerId && (
                   <View style={styles.packButtonRow}>
-                    <TouchableOpacity
-                      style={styles.sellPackButton}
-                      onPress={() => {
-                        setShowMenu(false);
-                        setShowSellPack(true);
-                      }}
-                    >
-                      <Text style={styles.sellPackText}>Sell Pack</Text>
-                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.servePackButton}
                       onPress={() => {
@@ -950,63 +870,11 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
       />
 
       {currentOrder?.customerId && (
-        <SellPackModal
-          visible={showSellPack}
-          customerId={currentOrder.customerId}
-          customerName={currentOrder.customerName ?? ''}
-          onComplete={() => {
-            setShowSellPack(false);
-            // Refresh balances
-            (async () => {
-              try {
-                const cust = await database
-                  .get<Customer>('customers')
-                  .find(currentOrder.customerId!);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const serverId = (cust._raw as any).server_id as string;
-                const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-                const res = await fetch(`${API_URL}/customers/${serverId}/balances`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                });
-                if (res.ok) {
-                  setCustomerBalances(await res.json());
-                }
-              } catch {
-                // ignore
-              }
-            })();
-          }}
-          onCancel={() => setShowSellPack(false)}
-        />
-      )}
-
-      {currentOrder?.customerId && (
         <ServeFromPackModal
           visible={showServePack}
           customerId={currentOrder.customerId}
           customerName={currentOrder.customerName ?? ''}
-          onComplete={() => {
-            setShowServePack(false);
-            // Refresh balances
-            (async () => {
-              try {
-                const cust = await database
-                  .get<Customer>('customers')
-                  .find(currentOrder.customerId!);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const serverId = (cust._raw as any).server_id as string;
-                const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-                const res = await fetch(`${API_URL}/customers/${serverId}/balances`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                });
-                if (res.ok) {
-                  setCustomerBalances(await res.json());
-                }
-              } catch {
-                // ignore
-              }
-            })();
-          }}
+          onComplete={() => setShowServePack(false)}
           onCancel={() => setShowServePack(false)}
         />
       )}
@@ -1174,41 +1042,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.bold,
     color: '#1a6ed8',
   },
-  balanceRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 6,
-  },
-  balanceBadge: {
-    backgroundColor: colors.successLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-  },
-  balanceBadgeText: {
-    fontSize: typography.size.xxs,
-    fontWeight: typography.weight.semibold,
-    color: '#059669',
-  },
-  morePacksText: {
-    fontSize: typography.size.sm,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    marginTop: spacing.xs,
-  },
   packButtonRow: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 6,
-  },
-  sellPackButton: {
-    alignSelf: 'flex-start',
-  },
-  sellPackText: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.semibold,
-    color: colors.primary,
   },
   servePackButton: {
     alignSelf: 'flex-start',
