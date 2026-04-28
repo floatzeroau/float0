@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../config';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -178,7 +179,7 @@ export function OpenDrawerModal({ visible, onConfirm, onCancel }: OpenDrawerModa
                   <TextInput
                     style={styles.otherInput}
                     placeholder="Enter reason..."
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textMuted}
                     value={otherReason}
                     onChangeText={setOtherReason}
                     autoFocus
@@ -219,7 +220,9 @@ export function OpenDrawerModal({ visible, onConfirm, onCancel }: OpenDrawerModa
               </Animated.View>
 
               {pinError ? <Text style={styles.pinErrorText}>{pinError}</Text> : null}
-              {pinLoading && <ActivityIndicator style={styles.pinLoader} color="#1a1a1a" />}
+              {pinLoading && (
+                <ActivityIndicator style={styles.pinLoader} color={colors.textPrimary} />
+              )}
 
               <View style={styles.keypad}>
                 {pinDigits.map((d, i) => {
@@ -265,70 +268,70 @@ export function OpenDrawerModal({ visible, onConfirm, onCancel }: OpenDrawerModa
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
     width: 360,
     maxHeight: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 8,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: typography.size.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
   },
 
   // Reason buttons
   reasonButton: {
     width: '100%',
     paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 8,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
+    marginBottom: spacing.sm,
   },
   reasonButtonActive: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border,
   },
   reasonButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
 
   // Other reason input
   otherRow: {
     flexDirection: 'row',
     width: '100%',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   otherInput: {
     flex: 1,
     height: 40,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#1a1a1a',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
   },
   otherConfirm: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     height: 40,
-    borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    borderRadius: radii.md,
+    backgroundColor: colors.textPrimary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -336,24 +339,24 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   otherConfirmText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
   },
 
   // Cancel
   cancelButton: {
     width: '100%',
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
 
   // PIN section
@@ -362,53 +365,53 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   pinTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 16,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   },
   pinDots: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   dot: {
     width: 14,
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: '#999',
+    borderColor: colors.textMuted,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
   },
   dotError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#dc2626',
+    borderColor: colors.danger,
+    backgroundColor: colors.danger,
   },
   pinErrorText: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginBottom: 8,
+    color: colors.danger,
+    fontSize: typography.size.md,
+    marginBottom: spacing.sm,
   },
   pinLoader: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   keypad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     width: 240,
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   key: {
     width: 68,
     height: 52,
-    margin: 4,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    margin: spacing.xs,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -416,8 +419,8 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   keyText: {
-    fontSize: 22,
-    fontWeight: '500',
-    color: '#1a1a1a',
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.medium,
+    color: colors.textPrimary,
   },
 });

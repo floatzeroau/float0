@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import type { ReceiptData } from '@float0/shared';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -212,17 +213,17 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   paper: {
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 4,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.xs,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   line: {
     fontFamily: monoFont,
-    fontSize: 12,
+    fontSize: typography.size.sm,
     lineHeight: 18,
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
 });

@@ -11,6 +11,7 @@ import * as SecureStore from 'expo-secure-store';
 import { database } from '../db/database';
 import type { Customer } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -185,7 +186,7 @@ export function PrepaidBalancePrompt({
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Checking prepaid balances...</Text>
       </View>
     );
@@ -260,7 +261,7 @@ export function PrepaidBalancePrompt({
           disabled={!hasSelections || redeeming}
         >
           {redeeming ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={colors.white} size="small" />
           ) : (
             <Text style={styles.applyButtonText}>
               {totalPrepaidAmount >= orderTotal
@@ -287,23 +288,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: spacing.xxxl,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 16,
+    fontSize: typography.size.lg,
+    color: colors.textMuted,
+    marginTop: spacing.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
+    fontSize: typography.size.lg,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
   },
   balanceList: {
     width: '100%',
@@ -311,15 +312,15 @@ const styles = StyleSheet.create({
     maxHeight: 300,
   },
   balanceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   balanceCardSelected: {
-    borderColor: '#2563eb',
+    borderColor: colors.primary,
     backgroundColor: '#eff6ff',
   },
   balanceHeader: {
@@ -328,113 +329,113 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   balanceCountBadge: {
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: radii.lg,
   },
   balanceCountText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   balanceValue: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
+    fontSize: typography.size.md,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   qtyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
-    gap: 8,
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
   qtyLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   qtyButton: {
     width: 32,
     height: 32,
-    borderRadius: 8,
-    backgroundColor: '#e0e0e0',
+    borderRadius: radii.md,
+    backgroundColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   qtyButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   qtyValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2563eb',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
     minWidth: 24,
     textAlign: 'center',
   },
   qtyAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#10b981',
-    marginLeft: 4,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.success,
+    marginLeft: spacing.xs,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
     maxWidth: 500,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    marginTop: 4,
+    borderTopColor: colors.border,
+    marginTop: spacing.xs,
   },
   summaryLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   summaryValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#10b981',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.success,
   },
   actions: {
     width: '100%',
     maxWidth: 500,
-    marginTop: 16,
-    gap: 12,
+    marginTop: spacing.lg,
+    gap: spacing.md,
   },
   applyButton: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: radii.lg,
     alignItems: 'center',
   },
   applyButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   applyButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   skipButton: {
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radii.lg,
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
   },
   skipButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
 });

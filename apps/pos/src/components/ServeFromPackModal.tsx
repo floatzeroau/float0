@@ -11,12 +11,14 @@ import {
   Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { ChevronRight, ArrowLeft } from 'lucide-react-native';
 import { buildKitchenDocket } from '@float0/shared';
 import type { DocketItemInput } from '@float0/shared';
 import { database } from '../db/database';
 import type { Customer } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import { getPrinterService } from '../services';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -198,7 +200,12 @@ export function ServeFromPackModal({
     qtyNum <= selectedPack.remainingQuantity;
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      supportedOrientations={['landscape-left', 'landscape-right']}
+    >
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -213,7 +220,7 @@ export function ServeFromPackModal({
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#7c3aed" />
+            <ActivityIndicator size="large" color={colors.pack} />
           </View>
         ) : packs.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -244,7 +251,7 @@ export function ServeFromPackModal({
                     </Text>
                     {isExpired && <Text style={styles.expiredLabel}>Expired</Text>}
                   </View>
-                  {isActive && <Text style={styles.selectArrow}>›</Text>}
+                  {isActive && <ChevronRight size={24} color={colors.textDisabled} />}
                 </TouchableOpacity>
               );
             }}
@@ -253,7 +260,8 @@ export function ServeFromPackModal({
           /* Quantity selection */
           <View style={styles.serveForm}>
             <TouchableOpacity style={styles.backToPacks} onPress={() => setSelectedPack(null)}>
-              <Text style={styles.backToPacksText}>← Choose different pack</Text>
+              <ArrowLeft size={16} color={colors.primary} />
+              <Text style={styles.backToPacksText}>Choose different pack</Text>
             </TouchableOpacity>
 
             <View style={styles.selectedPackCard}>
@@ -305,7 +313,7 @@ export function ServeFromPackModal({
               disabled={!isValidQty || serving}
             >
               {serving ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <Text style={styles.serveConfirmText}>
                   Serve {isValidQty ? qtyNum : ''} × {selectedPack.productName}
@@ -326,41 +334,41 @@ export function ServeFromPackModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   cancelButton: {
-    paddingVertical: 4,
-    paddingRight: 12,
+    paddingVertical: spacing.xs,
+    paddingRight: spacing.md,
   },
   cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#dc2626',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.danger,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   headerSpacer: {
     width: 60,
   },
   customerLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    paddingHorizontal: 16,
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.surfaceAlt,
   },
   loadingContainer: {
     flex: 1,
@@ -371,11 +379,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: spacing.xxxl,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.size.base,
+    color: colors.textMuted,
   },
   listContent: {
     paddingBottom: 20,
@@ -385,10 +393,10 @@ const styles = StyleSheet.create({
   packRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   packRowDisabled: {
     opacity: 0.5,
@@ -398,116 +406,114 @@ const styles = StyleSheet.create({
   },
   packName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   packNameDisabled: {
-    color: '#999',
+    color: colors.textMuted,
   },
   packRemaining: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
+    fontSize: typography.size.md,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
   },
   expiredLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#dc2626',
-    marginTop: 4,
-  },
-  selectArrow: {
-    fontSize: 24,
-    color: '#ccc',
-    marginLeft: 8,
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: colors.danger,
+    marginTop: spacing.xs,
   },
 
   // Serve form
   serveForm: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   backToPacks: {
-    paddingVertical: 8,
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
   backToPacksText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
   selectedPackCard: {
-    backgroundColor: '#faf5ff',
-    padding: 16,
+    backgroundColor: colors.packLight,
+    padding: spacing.lg,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e9d5ff',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   selectedPackName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   selectedPackRemaining: {
-    fontSize: 13,
-    color: '#7c3aed',
-    marginTop: 4,
+    fontSize: typography.size.md,
+    color: colors.pack,
+    marginTop: spacing.xs,
   },
   qtyLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 12,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   qtyRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
-    marginBottom: 16,
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
   },
   qtyButton: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: '#f0f0f0',
+    borderRadius: radii.lg,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   qtyButtonText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   qtyInput: {
     width: 80,
     height: 48,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   errorText: {
-    fontSize: 12,
-    color: '#dc2626',
+    fontSize: typography.size.sm,
+    color: colors.danger,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   serveConfirmButton: {
-    backgroundColor: '#7c3aed',
-    paddingVertical: 16,
+    backgroundColor: colors.pack,
+    paddingVertical: spacing.lg,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
   },
   serveConfirmDisabled: {
-    backgroundColor: '#d1d5db',
+    backgroundColor: colors.textDisabled,
   },
   serveConfirmText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });

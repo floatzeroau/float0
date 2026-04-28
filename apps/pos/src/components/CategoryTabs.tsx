@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { Category } from '../db/models';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 interface CategoryTabsProps {
   selectedCategoryId: string | null;
@@ -69,38 +70,38 @@ export function CategoryTabs({ selectedCategoryId, onSelectCategory }: CategoryT
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   scrollContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.xl,
+    backgroundColor: colors.background,
   },
   tabActive: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   tabTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   colourDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: 6,
+    marginRight: spacing.sm,
   },
 });

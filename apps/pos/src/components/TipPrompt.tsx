@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -135,40 +136,40 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: spacing.xxxl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 8,
+    fontSize: typography.size['4xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   orderTotalLabel: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 32,
+    fontSize: typography.size.xl,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxl,
   },
 
   // Main layout: No Tip on left, percentages on right
   mainRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    gap: 16,
-    marginBottom: 24,
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
   },
   noTipButton: {
     width: 160,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.xl,
     borderWidth: 2,
     borderColor: '#d1d5db',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: spacing.lg,
   },
   noTipButtonText: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: '#374151',
   },
   tipColumn: {
@@ -177,93 +178,93 @@ const styles = StyleSheet.create({
   presetButton: {
     width: 160,
     paddingVertical: 14,
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   presetPercent: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   presetAmount: {
-    fontSize: 13,
+    fontSize: typography.size.md,
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
 
   // Custom button
   customButton: {
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: 14,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+    backgroundColor: colors.background,
+    borderRadius: radii.lg,
   },
   customButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
 
   // Custom mode
   customDisplay: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   customAmount: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#2563eb',
+    fontSize: typography.size['5xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
   },
 
   // Keypad
   keypad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
     justifyContent: 'center',
     width: 296,
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   keypadButton: {
     width: 88,
     height: 72,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keypadText: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size['4xl'],
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
 
   // Custom actions
   customActions: {
     flexDirection: 'row',
-    gap: 16,
+    gap: spacing.lg,
   },
   confirmTipButton: {
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: 14,
-    backgroundColor: '#10b981',
-    borderRadius: 10,
+    backgroundColor: colors.success,
+    borderRadius: radii.lg,
   },
   confirmTipButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
   },
   backButton: {
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: 14,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+    backgroundColor: colors.background,
+    borderRadius: radii.lg,
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
 });

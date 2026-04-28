@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import type { TerminalStatus } from '../services';
 import { getTerminalService } from '../services';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,7 +93,7 @@ export function PaymentFailureScreen({
             disabled={checkingTerminal}
           >
             {checkingTerminal ? (
-              <ActivityIndicator color="#2563eb" size="small" />
+              <ActivityIndicator color={colors.primary} size="small" />
             ) : (
               <Text style={styles.checkTerminalText}>Check Terminal</Text>
             )}
@@ -138,7 +139,7 @@ export function PaymentFailureScreen({
               disabled={checkingTerminal}
             >
               {checkingTerminal ? (
-                <ActivityIndicator color="#2563eb" size="small" />
+                <ActivityIndicator color={colors.primary} size="small" />
               ) : (
                 <Text style={styles.checkTerminalText}>Check Terminal Status</Text>
               )}
@@ -180,8 +181,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
-    backgroundColor: '#f5f5f5',
+    padding: spacing.xxxl,
+    backgroundColor: colors.surfaceAlt,
   },
 
   // Error icon
@@ -189,109 +190,109 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   errorIcon: {
     fontSize: 40,
-    fontWeight: '700',
+    fontWeight: typography.weight.bold,
     color: '#ef4444',
   },
 
   title: {
     fontSize: 26,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 8,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   errorMessage: {
     fontSize: 17,
     color: '#ef4444',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     maxWidth: 400,
   },
   amountText: {
-    fontSize: 15,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.size.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   retryCountText: {
-    fontSize: 13,
-    color: '#999',
-    marginBottom: 24,
+    fontSize: typography.size.md,
+    color: colors.textMuted,
+    marginBottom: spacing.xl,
   },
 
   // Action buttons
   actions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-    marginBottom: 16,
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
   },
   retryButton: {
     paddingHorizontal: 28,
     paddingVertical: 14,
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
   },
   retryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   anotherMethodButton: {
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 14,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+    backgroundColor: colors.background,
+    borderRadius: radii.lg,
   },
   anotherMethodButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   cancelButton: {
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
     color: '#ef4444',
   },
 
   // Terminal check
   terminalSection: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   checkTerminalButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     backgroundColor: '#eff6ff',
-    borderRadius: 8,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: '#bfdbfe',
     minWidth: 140,
     alignItems: 'center',
   },
   checkTerminalText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
   terminalStatusCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    marginTop: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginTop: spacing.md,
     minWidth: 260,
   },
   terminalStatusRow: {
@@ -301,49 +302,49 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   terminalStatusLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.base,
+    color: colors.textSecondary,
   },
   terminalStatusValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
   },
   statusConnected: {
-    color: '#10b981',
+    color: colors.success,
   },
   statusDisconnected: {
     color: '#ef4444',
   },
   terminalStatusValueMono: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
     fontFamily: 'monospace',
   },
 
   // Support section
   supportSection: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
     maxWidth: 400,
   },
   supportDivider: {
     width: 60,
     height: 1,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 16,
+    backgroundColor: colors.border,
+    marginBottom: spacing.lg,
   },
   supportTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 8,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   supportMessage: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.base,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
 });

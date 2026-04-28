@@ -11,6 +11,7 @@ import type { PaymentConfirmationData } from '../screens/PaymentConfirmationScre
 import { PaymentFailureScreen } from './PaymentFailureScreen';
 import { PrepaidBalancePrompt } from './PrepaidBalancePrompt';
 import type { PrepaidRedemption } from './PrepaidBalancePrompt';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -451,10 +452,17 @@ export function PaymentScreen({
                 {phase === 'card_processing' ? 'Cancel' : 'Back'}
               </Text>
             </TouchableOpacity>
-            <View style={{ flex: 1, marginLeft: 16 }}>
+            <View style={{ flex: 1, marginLeft: spacing.lg }}>
               <Text style={styles.headerTitle}>Payment — {orderNumber}</Text>
               {packCount != null && packCount > 0 && (
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#7c3aed', marginTop: 2 }}>
+                <Text
+                  style={{
+                    fontSize: typography.size.sm,
+                    fontWeight: typography.weight.semibold,
+                    color: colors.pack,
+                    marginTop: spacing.xxs,
+                  }}
+                >
                   Includes {packCount} Cafe Pack{packCount > 1 ? 's' : ''}
                 </Text>
               )}
@@ -608,7 +616,7 @@ export function PaymentScreen({
                 disabled={!isSufficient || loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.white} />
                 ) : (
                   <Text style={styles.confirmButtonText}>
                     {isSufficient ? 'Confirm Payment' : 'Insufficient Amount'}
@@ -639,7 +647,7 @@ export function PaymentScreen({
         {/* Phase 3: Card Processing */}
         {phase === 'card_processing' && (
           <View style={styles.cardProcessingContainer}>
-            <ActivityIndicator size="large" color="#2563eb" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.cardProcessingTitle}>Waiting for terminal...</Text>
             <Text style={styles.cardProcessingAmount}>
               {formatCurrency(cardPayment.payableAmount)}
@@ -719,61 +727,61 @@ export function PaymentScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.surfaceAlt,
   },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   backButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
   },
   backButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   headerTotalContainer: {
     alignItems: 'flex-end',
   },
   headerTotalLabel: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
   },
   headerSubtotalValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   headerTipLabel: {
-    fontSize: 12,
-    color: '#10b981',
-    fontWeight: '600',
+    fontSize: typography.size.sm,
+    color: colors.success,
+    fontWeight: typography.weight.semibold,
   },
   headerPrepaidLabel: {
-    fontSize: 12,
-    color: '#2563eb',
-    fontWeight: '600',
+    fontSize: typography.size.sm,
+    color: colors.primary,
+    fontWeight: typography.weight.semibold,
   },
   headerTotalValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
 
   // Method selection
@@ -781,73 +789,73 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: spacing.xxxl,
   },
   methodTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 40,
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xxxl,
   },
   methodButtons: {
     flexDirection: 'row',
-    gap: 24,
+    gap: spacing.xl,
   },
   cashMethodButton: {
     width: 200,
     height: 200,
-    backgroundColor: '#10b981',
-    borderRadius: 16,
+    backgroundColor: colors.success,
+    borderRadius: radii.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cashMethodIcon: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   cashMethodText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-    marginTop: 8,
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
+    marginTop: spacing.sm,
   },
   cardMethodButton: {
     width: 200,
     height: 200,
-    backgroundColor: '#2563eb',
-    borderRadius: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radii.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardMethodIcon: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   cardMethodSubtext: {
-    fontSize: 14,
+    fontSize: typography.size.base,
     color: 'rgba(255,255,255,0.7)',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   splitMethodButton: {
     width: 200,
     height: 200,
-    backgroundColor: '#7c3aed',
-    borderRadius: 16,
+    backgroundColor: colors.pack,
+    borderRadius: radii.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },
   splitMethodIcon: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   splitMethodText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-    marginTop: 8,
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
+    marginTop: spacing.sm,
   },
 
   // Cash entry
@@ -857,16 +865,16 @@ const styles = StyleSheet.create({
   },
   cashLeft: {
     flex: 1,
-    padding: 24,
+    padding: spacing.xl,
     justifyContent: 'center',
   },
   cashRight: {
     width: 320,
-    padding: 24,
+    padding: spacing.xl,
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderLeftWidth: 1,
-    borderLeftColor: '#e0e0e0',
+    borderLeftColor: colors.border,
   },
 
   // Amount displays
@@ -874,129 +882,129 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   amountLabel: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 4,
+    fontSize: typography.size.base,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
   },
   amountTotal: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size['5xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   amountTendered: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#2563eb',
+    fontSize: typography.size['5xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
   },
   changeSection: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
   },
   amountChange: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#10b981',
+    fontSize: typography.size['5xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.success,
   },
   amountInsufficient: {
-    fontSize: 24,
+    fontSize: typography.size['3xl'],
     color: '#ef4444',
   },
 
   // Tip line in cash phase
   tipLine: {
-    fontSize: 14,
-    color: '#10b981',
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: typography.size.base,
+    color: colors.success,
+    fontWeight: typography.weight.semibold,
+    marginTop: spacing.xs,
   },
 
   // Rounding
   roundingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   roundingText: {
-    fontSize: 13,
-    color: '#f59e0b',
-    fontWeight: '500',
+    fontSize: typography.size.md,
+    color: colors.warning,
+    fontWeight: typography.weight.medium,
   },
   roundingArrow: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '600',
+    fontSize: typography.size.md,
+    color: colors.textSecondary,
+    fontWeight: typography.weight.semibold,
   },
   roundingTextNeutral: {
-    fontSize: 13,
-    color: '#999',
-    marginTop: 4,
+    fontSize: typography.size.md,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
 
   // Quick tender
   quickTenderSection: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
   quickTenderLabel: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 8,
+    fontSize: typography.size.base,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
   },
   quickTenderRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   quickTenderButton: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   quickTenderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
 
   // Confirm button
   confirmButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     paddingVertical: 18,
-    borderRadius: 12,
+    borderRadius: radii.lg,
     alignItems: 'center',
   },
   confirmButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   confirmButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 
   // Keypad
   keypad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
     justifyContent: 'center',
   },
   keypadButton: {
     width: 88,
     height: 72,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keypadText: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size['4xl'],
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
 
   // Card processing
@@ -1004,29 +1012,29 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: spacing.xxxl,
   },
   cardProcessingTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginTop: 24,
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginTop: spacing.xl,
   },
   cardProcessingAmount: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#2563eb',
-    marginTop: 12,
+    fontSize: typography.size['5xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
+    marginTop: spacing.md,
   },
   cardProcessingTip: {
-    fontSize: 14,
-    color: '#10b981',
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: typography.size.base,
+    color: colors.success,
+    fontWeight: typography.weight.semibold,
+    marginTop: spacing.xs,
   },
   cardProcessingHint: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 16,
+    fontSize: typography.size.lg,
+    color: colors.textMuted,
+    marginTop: spacing.lg,
   },
 });

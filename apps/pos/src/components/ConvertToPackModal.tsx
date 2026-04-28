@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
 import type { CartItemData } from '../state/order-store';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -178,7 +179,7 @@ export function ConvertToPackModal({
                 value={expiryInput}
                 onChangeText={setExpiryInput}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={colors.textDisabled}
                 editable={cafePackSettings.expiryMode === 'custom'}
               />
             </View>
@@ -218,52 +219,52 @@ export function ConvertToPackModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
     width: 380,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   productName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 2,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xxs,
   },
   unitPriceLabel: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 16,
+    fontSize: typography.size.md,
+    color: colors.textMuted,
+    marginBottom: spacing.lg,
   },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
     color: '#333',
     flex: 1,
   },
@@ -271,41 +272,41 @@ const styles = StyleSheet.create({
     width: 140,
     height: 40,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     fontSize: 15,
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     textAlign: 'right',
   },
   fieldInputReadOnly: {
-    backgroundColor: '#f5f5f5',
-    color: '#888',
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textMuted,
   },
   summaryBox: {
     backgroundColor: '#f0f7ff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
   summaryText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
     color: '#1a6ed8',
     textAlign: 'center',
   },
   confirmButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: radii.md,
     alignItems: 'center',
   },
   confirmButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });

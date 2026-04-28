@@ -10,8 +10,10 @@ import {
   Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { WifiOff, X, ChevronRight, ArrowLeft } from 'lucide-react-native';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import { ServeFromPackModal } from '../components/ServeFromPackModal';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,7 +66,7 @@ interface CustomerDetail {
 function OfflinePlaceholder() {
   return (
     <View style={styles.offlinePlaceholder}>
-      <Text style={styles.offlineIcon}>📡</Text>
+      <WifiOff size={48} color={colors.textMuted} />
       <Text style={styles.offlineTitle}>Connect to the internet</Text>
       <Text style={styles.offlineSubtitle}>
         Customer data requires an active connection to load.
@@ -132,7 +134,7 @@ function CustomerDetailView({ customerId, onBack, onServeFromPack }: CustomerDet
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -155,7 +157,8 @@ function CustomerDetailView({ customerId, onBack, onServeFromPack }: CustomerDet
       {/* Header */}
       <View style={styles.detailHeader}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <ArrowLeft size={16} color={colors.primary} />
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <View style={styles.detailHeaderInfo}>
           <Text style={styles.detailName}>{customerName}</Text>
@@ -421,7 +424,7 @@ export default function CustomersScreen() {
         <TextInput
           style={styles.searchInput}
           placeholder="Search customers..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
@@ -429,7 +432,7 @@ export default function CustomersScreen() {
         />
         {query.length > 0 && (
           <TouchableOpacity style={styles.clearButton} onPress={() => setQuery('')}>
-            <Text style={styles.clearButtonText}>✕</Text>
+            <X size={14} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -437,7 +440,7 @@ export default function CustomersScreen() {
       {/* Customer list */}
       {loading && customers.length === 0 ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -476,7 +479,7 @@ export default function CustomersScreen() {
                   </Text>
                 </View>
               )}
-              <Text style={styles.chevron}>›</Text>
+              <ChevronRight size={20} color={colors.textDisabled} />
             </TouchableOpacity>
           )}
         />
@@ -502,7 +505,7 @@ export default function CustomersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   centerContainer: {
     flex: 1,
@@ -511,9 +514,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    fontSize: 14,
-    color: '#dc2626',
-    marginBottom: 12,
+    fontSize: typography.size.base,
+    color: colors.danger,
+    marginBottom: spacing.md,
   },
 
   // Offline
@@ -521,22 +524,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 40,
-  },
-  offlineIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.xxxl,
   },
   offlineTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 8,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
   offlineSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.base,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 
@@ -544,267 +544,262 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   searchInput: {
     flex: 1,
     height: 40,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#1a1a1a',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
   },
   clearButton: {
-    marginLeft: 8,
+    marginLeft: spacing.sm,
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    borderRadius: radii.xl,
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  clearButtonText: {
-    fontSize: 14,
-    color: '#666',
   },
   listContent: {
     paddingBottom: 20,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.size.base,
+    color: colors.textMuted,
   },
 
   // Customer row
   customerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   customerAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e0e7ff',
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   customerAvatarText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#4338ca',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
   },
   customerInfo: {
     flex: 1,
   },
   customerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   customerEmail: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
   },
   customerPhone: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
     marginTop: 1,
   },
   packBadge: {
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
+    backgroundColor: colors.successLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.lg,
+    marginRight: spacing.sm,
   },
   packBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#059669',
-  },
-  chevron: {
-    fontSize: 20,
-    color: '#ccc',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.success,
   },
 
   // Detail view
   detailContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    gap: 12,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingVertical: 6,
-    paddingRight: 8,
+    paddingRight: spacing.sm,
   },
   backButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
   detailHeaderInfo: {
     flex: 1,
   },
   detailName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   detailSub: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
   },
   serveButton: {
-    backgroundColor: '#7c3aed',
+    backgroundColor: colors.pack,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
   },
   serveButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 
   // Tabs
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
   tabActive: {
     borderBottomWidth: 2,
-    borderBottomColor: '#2563eb',
+    borderBottomColor: colors.primary,
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   tabTextActive: {
-    color: '#2563eb',
+    color: colors.primary,
   },
   tabContent: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   emptyTab: {
-    padding: 40,
+    padding: spacing.xxxl,
     alignItems: 'center',
   },
   emptyTabText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.size.base,
+    color: colors.textMuted,
   },
 
   // Overview
   overviewCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   overviewLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.size.base,
+    color: colors.textSecondary,
   },
   overviewValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
 
   // Packs
   packCard: {
-    marginHorizontal: 16,
-    marginTop: 12,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
     padding: 14,
-    backgroundColor: '#faf5ff',
-    borderRadius: 10,
+    backgroundColor: colors.packLight,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: '#e9d5ff',
   },
   packCardInactive: {
-    backgroundColor: '#f5f5f5',
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
   },
   packCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   packProductName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
     flex: 1,
   },
   packTextMuted: {
-    color: '#999',
+    color: colors.textMuted,
   },
   packStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.lg,
   },
   packStatusActive: {
     backgroundColor: '#dcfce7',
   },
   packStatusInactive: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
   },
   packStatusText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   packCardBody: {
-    gap: 4,
+    gap: spacing.xs,
   },
   packDetail: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
   },
   packExpiredText: {
-    color: '#dc2626',
-    fontWeight: '600',
+    color: colors.danger,
+    fontWeight: typography.weight.semibold,
   },
 
   // Orders
   orderCard: {
-    marginHorizontal: 16,
-    marginTop: 12,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
     padding: 14,
     backgroundColor: '#f9fafb',
-    borderRadius: 10,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   orderCardHeader: {
     flexDirection: 'row',
@@ -812,25 +807,25 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   orderNumber: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   orderTotal: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   orderCardBody: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   orderDetail: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
   },
   orderDate: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
   },
 });

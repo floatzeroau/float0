@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
+import { Package } from 'lucide-react-native';
 import { database } from '../db/database';
 import type { Product } from '../db/models';
+import { colors, spacing, radii, typography, shadows } from '../theme/tokens';
 
 interface ProductGridProps {
   categoryId: string | null;
@@ -17,6 +19,7 @@ export interface ProductItem {
   isAvailable: boolean;
   categoryColour: string | null;
   hasModifierGroups: boolean;
+  isPackEligible: boolean;
 }
 
 const NUM_COLUMNS = 4;
@@ -65,6 +68,7 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
           isAvailable: p.isAvailable,
           categoryColour,
           hasModifierGroups,
+          isPackEligible: (p._raw as any).allow_as_pack ?? false,
         };
       }),
     );
@@ -103,9 +107,16 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
           >
             {item.name}
           </Text>
-          <Text style={[styles.productPrice, !item.isAvailable && styles.textUnavailable]}>
-            ${item.basePrice.toFixed(2)}
-          </Text>
+          <View style={styles.pricePill}>
+            <Text style={[styles.productPrice, !item.isAvailable && styles.textUnavailable]}>
+              ${item.basePrice.toFixed(2)}
+            </Text>
+          </View>
+          {item.isPackEligible && (
+            <View style={styles.packIcon}>
+              <Package size={12} color={colors.pack} />
+            </View>
+          )}
           {!item.isAvailable && (
             <View style={styles.unavailableBadge}>
               <Text style={styles.unavailableText}>86&apos;d</Text>
@@ -142,24 +153,20 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
 
 const styles = StyleSheet.create({
   grid: {
-    padding: 8,
+    padding: spacing.sm,
   },
   row: {
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   card: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     minHeight: 80,
     overflow: 'hidden',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
+    ...shadows.card,
   },
   cardUnavailable: {
     opacity: 0.5,
@@ -169,43 +176,54 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    padding: 10,
+    padding: spacing.md,
     justifyContent: 'space-between',
   },
   productName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   productPrice: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   textUnavailable: {
-    color: '#aaa',
+    color: colors.textDisabled,
   },
   unavailableBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.danger,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.xs,
   },
   unavailableText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   emptyContainer: {
     paddingTop: 60,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 15,
-    color: '#999',
+    fontSize: typography.size.base,
+    color: colors.textMuted,
+  },
+  pricePill: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+  },
+  packIcon: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
   },
 });

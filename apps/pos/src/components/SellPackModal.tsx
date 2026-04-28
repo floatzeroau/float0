@@ -13,6 +13,7 @@ import * as SecureStore from 'expo-secure-store';
 import { database } from '../db/database';
 import type { Customer } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY, STAFF_ID_KEY } from '../config';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,6 +52,8 @@ export function SellPackModal({
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [selling, setSelling] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!visible) return;
@@ -58,6 +61,7 @@ export function SellPackModal({
     setLoading(true);
     setPacks([]);
     setSelling(null);
+    setError(null);
 
     (async () => {
       try {
@@ -71,12 +75,12 @@ export function SellPackModal({
           setPacks(data.filter((p: Pack) => p.isActive));
         }
       } catch {
-        // silently fail
+        setError('Could not load packs. Check your connection.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [visible]);
+  }, [visible, retryCount]);
 
   const handleSell = useCallback(
     async (pack: Pack) => {
@@ -141,7 +145,20 @@ export function SellPackModal({
           {/* Pack list */}
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator color="#999" />
+              <ActivityIndicator color={colors.textMuted} />
+            </View>
+          ) : !loading && packs.length === 0 && error ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  setError(null);
+                  setRetryCount((c) => c + 1);
+                }}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
             </View>
           ) : packs.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -180,7 +197,7 @@ export function SellPackModal({
                       disabled={selling !== null}
                     >
                       {isSelling ? (
-                        <ActivityIndicator color="#fff" size="small" />
+                        <ActivityIndicator color={colors.white} size="small" />
                       ) : (
                         <Text style={styles.sellButtonText}>${pack.price.toFixed(2)}</Text>
                       )}
@@ -203,13 +220,13 @@ export function SellPackModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
     maxHeight: '70%',
     paddingBottom: 20,
   },
@@ -219,35 +236,52 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 8,
+    paddingBottom: spacing.sm,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   customerLabel: {
-    fontSize: 13,
-    color: '#888',
+    fontSize: typography.size.md,
+    color: colors.textMuted,
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
   },
   loadingContainer: {
-    paddingVertical: 40,
+    paddingVertical: spacing.xxxl,
     alignItems: 'center',
   },
   emptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: spacing.xxxl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.size.base,
+    color: colors.textMuted,
+  },
+  errorText: {
+    fontSize: typography.size.base,
+    color: colors.danger,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+  },
+  retryButtonText: {
+    color: colors.white,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
   },
   packList: {
     maxHeight: 320,
@@ -258,54 +292,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   packInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   packName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   packDescription: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xxs,
   },
   packDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   packDetail: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
   },
   packDetailDot: {
-    fontSize: 12,
-    color: '#ccc',
+    fontSize: typography.size.sm,
+    color: colors.textDisabled,
   },
   packSavings: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#10b981',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.success,
   },
   sellButton: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 16,
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: radii.md,
     minWidth: 80,
     alignItems: 'center',
   },
   sellButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   sellButtonText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });

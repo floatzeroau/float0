@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import type { KitchenDocketData } from '@float0/shared';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 interface DocketPreviewProps {
   data: KitchenDocketData;
@@ -82,16 +83,16 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 70,
-    right: 16,
+    right: spacing.lg,
     zIndex: 9999,
   },
   card: {
     backgroundColor: '#fefce8',
-    borderRadius: 10,
+    borderRadius: radii.lg,
     padding: 14,
     minWidth: 240,
     maxWidth: 300,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -100,51 +101,51 @@ const styles = StyleSheet.create({
     borderColor: '#fde68a',
   },
   title: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     fontWeight: '800',
     color: '#92400e',
     textAlign: 'center',
     letterSpacing: 1,
   },
   orderNumber: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   meta: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     color: '#78716c',
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   divider: {
     height: 1,
     backgroundColor: '#d6d3d1',
-    marginVertical: 8,
+    marginVertical: spacing.sm,
   },
   modificationLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
     color: '#b45309',
     textAlign: 'center',
     marginBottom: 6,
   },
   itemRow: {
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   itemText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   modifierText: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     color: '#57534e',
   },
   notesText: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     color: '#b45309',
     fontStyle: 'italic',
   },

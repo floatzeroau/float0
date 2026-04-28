@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { X } from 'lucide-react-native';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 interface ProductSearchProps {
   value: string;
@@ -13,7 +15,7 @@ export function ProductSearch({ value, onChangeText, onClear }: ProductSearchPro
       <TextInput
         style={styles.input}
         placeholder="Search products..."
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.textMuted}
         value={value}
         onChangeText={onChangeText}
         autoCorrect={false}
@@ -21,7 +23,7 @@ export function ProductSearch({ value, onChangeText, onClear }: ProductSearchPro
       />
       {value.length > 0 && (
         <TouchableOpacity style={styles.clearButton} onPress={onClear}>
-          <Text style={styles.clearText}>X</Text>
+          <X size={14} color={colors.textSecondary} />
         </TouchableOpacity>
       )}
     </View>
@@ -32,33 +34,28 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   input: {
     flex: 1,
     height: 36,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#1a1a1a',
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
   },
   clearButton: {
-    marginLeft: 8,
+    marginLeft: spacing.sm,
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#ddd',
+    backgroundColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  clearText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#666',
   },
 });

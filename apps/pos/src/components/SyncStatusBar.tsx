@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSync } from '../sync/SyncProvider';
 import { SyncDetailPanel } from './SyncDetailPanel';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 function formatRelativeTime(timestamp: number | null): string {
   if (!timestamp) return 'Never';
@@ -98,10 +99,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     backgroundColor: '#f8f9fa',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   barWarning: {
     backgroundColor: '#fef3c7',
@@ -114,12 +115,12 @@ const styles = StyleSheet.create({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radii.xs,
     marginRight: 6,
   },
   text: {
-    fontSize: 13,
-    color: '#1a1a1a',
+    fontSize: typography.size.md,
+    color: colors.textPrimary,
   },
   textWarning: {
     color: '#92400e',
@@ -129,21 +130,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   syncIcon: {
-    fontSize: 16,
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    color: colors.textPrimary,
     marginRight: 6,
   },
   badge: {
-    backgroundColor: '#f59e0b',
-    borderRadius: 10,
+    backgroundColor: colors.warning,
+    borderRadius: radii.lg,
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     minWidth: 20,
     alignItems: 'center',
   },
   badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });

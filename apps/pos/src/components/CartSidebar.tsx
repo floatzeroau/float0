@@ -7,8 +7,10 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { Lock } from 'lucide-react-native';
 import { useOrder } from '../state/order-store';
 import type { CartItemData } from '../state/order-store';
 import { CustomerSearchModal } from './CustomerSearchModal';
@@ -25,6 +27,7 @@ import { database } from '../db/database';
 import type { Customer } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import type { DiscountType } from '@float0/shared';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // CartItem Row
@@ -164,7 +167,7 @@ function CartItemRow({
         <View style={styles.itemMain}>
           <View style={styles.itemInfo}>
             <View style={styles.packNameRow}>
-              <Text style={styles.packLockIcon}>🔒</Text>
+              <Lock size={12} color={colors.pack} />
               <Text style={styles.itemName}>
                 PACK: {item.packTotalQuantity} × {item.productName}
               </Text>
@@ -303,7 +306,7 @@ function CartItemRow({
           <TextInput
             style={styles.noteInput}
             placeholder="Add a note..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={noteText}
             onChangeText={setNoteText}
             onSubmitEditing={handleNoteSubmit}
@@ -361,6 +364,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
   const [customerBalances, setCustomerBalances] = useState<
     { id: string; packName: string; remainingCount: number; originalCount: number }[]
   >([]);
+  const [balancesLoading, setBalancesLoading] = useState(false);
 
   // Fetch prepaid balances when customer is attached
   useEffect(() => {
@@ -373,6 +377,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
 
     (async () => {
       try {
+        setBalancesLoading(true);
         const cust = await database.get<Customer>('customers').find(currentOrder.customerId!);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const serverId = (cust._raw as any).server_id as string;
@@ -388,6 +393,10 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         }
       } catch {
         // silently fail — balances are informational
+      } finally {
+        if (!cancelled) {
+          setBalancesLoading(false);
+        }
       }
     })();
 
@@ -680,6 +689,11 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
       : `Dine-in${currentOrder.tableNumber ? ` #${currentOrder.tableNumber}` : ''}`
     : '';
 
+  // Sort customer balances by remainingCount desc, limit to top 3
+  const sortedBalances = [...customerBalances].sort((a, b) => b.remainingCount - a.remainingCount);
+  const displayedBalances = sortedBalances.slice(0, 3);
+  const hasMoreBalances = customerBalances.length > 3;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -738,17 +752,24 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
                     <Text style={styles.customerRemoveText}>X</Text>
                   </TouchableOpacity>
                 </View>
-                {customerBalances.length > 0 && (
+                {balancesLoading ? (
                   <View style={styles.balanceRow}>
-                    {customerBalances.map((b) => (
+                    <ActivityIndicator size="small" color={colors.pack} />
+                  </View>
+                ) : customerBalances.length > 0 ? (
+                  <View style={styles.balanceRow}>
+                    {displayedBalances.map((b) => (
                       <View key={b.id} style={styles.balanceBadge}>
                         <Text style={styles.balanceBadgeText}>
                           {b.packName}: {b.remainingCount}/{b.originalCount}
                         </Text>
                       </View>
                     ))}
+                    {hasMoreBalances && (
+                      <Text style={styles.morePacksText}>+{customerBalances.length - 3} more</Text>
+                    )}
                   </View>
-                )}
+                ) : null}
                 {currentOrder.customerId && (
                   <View style={styles.packButtonRow}>
                     <TouchableOpacity
@@ -1000,7 +1021,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
 
   // Header
@@ -1008,7 +1029,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   headerTop: {
     flexDirection: 'row',
@@ -1025,60 +1046,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 6,
+    backgroundColor: colors.background,
+    borderRadius: radii.sm,
     gap: 4,
   },
   heldButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   heldBadge: {
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.warning,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
   },
   heldBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   submittedBadge: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: radii.lg,
   },
   submittedBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#2563eb',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
   },
   menuButton: {
     width: 28,
     height: 28,
-    borderRadius: 6,
-    backgroundColor: '#f0f0f0',
+    borderRadius: radii.sm,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#666',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textSecondary,
     marginTop: -4,
   },
   menuDropdown: {
     marginTop: 8,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: radii.md,
     overflow: 'hidden',
   },
   menuItem: {
@@ -1086,30 +1107,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   menuItemText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   menuItemTextDanger: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#dc2626',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.danger,
   },
   headerOrder: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   orderTypeBadge: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: radii.lg,
   },
   orderTypeBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
 
   // Customer
@@ -1120,8 +1141,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   addCustomerText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
     color: '#888',
   },
   customerAssigned: {
@@ -1130,12 +1151,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f7ff',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: radii.sm,
     alignSelf: 'flex-start',
   },
   customerName: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
     color: '#1a6ed8',
     maxWidth: 160,
   },
@@ -1144,13 +1165,13 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#dbeafe',
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   customerRemoveText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.bold,
     color: '#1a6ed8',
   },
   balanceRow: {
@@ -1160,15 +1181,21 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   balanceBadge: {
-    backgroundColor: '#ecfdf5',
+    backgroundColor: colors.successLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: radii.sm,
   },
   balanceBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.semibold,
     color: '#059669',
+  },
+  morePacksText: {
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
   },
   packButtonRow: {
     flexDirection: 'row',
@@ -1179,17 +1206,17 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   sellPackText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
   servePackButton: {
     alignSelf: 'flex-start',
   },
   servePackText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#7c3aed',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.pack,
   },
 
   // Item list
@@ -1202,8 +1229,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.size.base,
+    color: colors.textMuted,
   },
 
   // Item row
@@ -1211,10 +1238,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   itemRowVoided: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.dangerLight,
   },
   itemMain: {
     flexDirection: 'row',
@@ -1226,30 +1253,30 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   itemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   itemNameVoided: {
     textDecorationLine: 'line-through',
-    color: '#999',
+    color: colors.textMuted,
   },
   textStrikethrough: {
     textDecorationLine: 'line-through',
   },
   itemModifiers: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     color: '#888',
     marginTop: 2,
   },
   itemDiscountReason: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     fontStyle: 'italic',
-    color: '#16a34a',
+    color: colors.successDark,
     marginTop: 2,
   },
   itemNotes: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     fontStyle: 'italic',
     color: '#888',
     marginTop: 2,
@@ -1258,69 +1285,69 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   itemTotal: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   itemTotalVoided: {
     textDecorationLine: 'line-through',
-    color: '#999',
+    color: colors.textMuted,
   },
   itemTotalStrikethrough: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
     textDecorationLine: 'line-through',
   },
   itemTotalDiscounted: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#16a34a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.successDark,
   },
 
   // Void styles
   voidBadge: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.danger,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radii.xs,
     alignSelf: 'flex-start',
     marginTop: 4,
   },
   voidBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
   voidReasonText: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     fontStyle: 'italic',
-    color: '#dc2626',
+    color: colors.danger,
     marginTop: 2,
   },
   // Override styles
   overrideBadge: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radii.xs,
     alignSelf: 'flex-start',
     marginTop: 4,
   },
   overrideBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#2563eb',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
   },
   overrideReasonText: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     fontStyle: 'italic',
-    color: '#2563eb',
+    color: colors.primary,
     marginTop: 2,
   },
   itemTotalOverride: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
   submittedActions: {
     flexDirection: 'row',
@@ -1329,25 +1356,25 @@ const styles = StyleSheet.create({
   priceOverrideButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: radii.sm,
     backgroundColor: '#eff6ff',
   },
   priceOverrideButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
 
   voidItemButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#fef2f2',
+    borderRadius: radii.sm,
+    backgroundColor: colors.dangerLight,
   },
   voidItemButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#dc2626',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.danger,
   },
 
   // Quantity & actions
@@ -1365,20 +1392,20 @@ const styles = StyleSheet.create({
   qtyButton: {
     width: 28,
     height: 28,
-    borderRadius: 6,
-    backgroundColor: '#f0f0f0',
+    borderRadius: radii.sm,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   qtyButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   qtyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
     minWidth: 20,
     textAlign: 'center',
   },
@@ -1388,32 +1415,32 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionText: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     color: '#888',
   },
   actionTextGreen: {
-    color: '#16a34a',
+    color: colors.successDark,
   },
   actionTextBlue: {
-    color: '#2563eb',
+    color: colors.primary,
   },
   actionDivider: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
     color: '#ddd',
   },
   actionRemove: {
-    color: '#dc2626',
+    color: colors.danger,
   },
   actionTextPack: {
-    color: '#7c3aed',
-    fontWeight: '600',
+    color: colors.pack,
+    fontWeight: typography.weight.semibold,
   },
 
   // Pack item styles
   itemRowPack: {
-    backgroundColor: '#faf5ff',
+    backgroundColor: colors.packLight,
     borderLeftWidth: 3,
-    borderLeftColor: '#7c3aed',
+    borderLeftColor: colors.pack,
   },
   packNameRow: {
     flexDirection: 'row',
@@ -1421,20 +1448,20 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   packLockIcon: {
-    fontSize: 12,
+    fontSize: typography.size.sm,
   },
   packBadge: {
-    backgroundColor: '#7c3aed',
+    backgroundColor: colors.pack,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radii.xs,
     alignSelf: 'flex-start',
     marginTop: 4,
   },
   packBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.xxs,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 
   // Note input
@@ -1449,21 +1476,21 @@ const styles = StyleSheet.create({
     height: 32,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 6,
+    borderRadius: radii.sm,
     paddingHorizontal: 8,
-    fontSize: 12,
-    color: '#1a1a1a',
+    fontSize: typography.size.sm,
+    color: colors.textPrimary,
   },
   noteSaveButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 6,
+    backgroundColor: colors.textPrimary,
+    borderRadius: radii.sm,
   },
   noteSaveText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
   },
 
   // Totals
@@ -1471,7 +1498,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
   },
   totalRow: {
     flexDirection: 'row',
@@ -1479,38 +1506,38 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   totalLabel: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.size.md,
+    color: colors.textSecondary,
   },
   totalValue: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.size.md,
+    color: colors.textSecondary,
   },
   totalLabelGreen: {
-    fontSize: 13,
-    color: '#16a34a',
+    fontSize: typography.size.md,
+    color: colors.successDark,
   },
   totalValueGreen: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#16a34a',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.successDark,
   },
   grandTotalRow: {
     marginTop: 4,
     marginBottom: 0,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
   },
   grandTotalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   grandTotalValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
 
   // Actions
@@ -1519,54 +1546,56 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
   },
   actionButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   holdButtonStyle: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
   },
   holdButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   submitButton: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   submitButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
   },
   disabledSubmitText: {
-    color: '#fff',
+    color: colors.white,
   },
   disabledText: {
-    color: '#bbb',
+    color: colors.textDisabled,
   },
   doneButton: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   doneButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
   },
   payButton: {
-    backgroundColor: '#10b981',
+    flex: 2,
+    backgroundColor: colors.success,
+    paddingVertical: 14,
   },
   payButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });

@@ -13,6 +13,7 @@ import { Q } from '@nozbe/watermelondb';
 import { database } from '../db/database';
 import type { Customer } from '../db/models';
 import { generateUUID } from '../utils/uuid';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,7 +108,7 @@ function QuickAddForm({
           <TextInput
             style={styles.fieldInput}
             placeholder="First name"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={firstName}
             onChangeText={setFirstName}
             autoFocus
@@ -118,7 +119,7 @@ function QuickAddForm({
           <TextInput
             style={styles.fieldInput}
             placeholder="Last name"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={lastName}
             onChangeText={setLastName}
           />
@@ -128,7 +129,7 @@ function QuickAddForm({
           <TextInput
             style={styles.fieldInput}
             placeholder="Phone number"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
@@ -139,7 +140,7 @@ function QuickAddForm({
           <TextInput
             style={styles.fieldInput}
             placeholder="Email address"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -154,7 +155,7 @@ function QuickAddForm({
         disabled={!isValid || saving}
       >
         {saving ? (
-          <ActivityIndicator color="#fff" size="small" />
+          <ActivityIndicator color={colors.white} size="small" />
         ) : (
           <Text style={styles.saveButtonText}>Add Customer</Text>
         )}
@@ -272,7 +273,7 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Search by name, phone, or email..."
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textMuted}
                   value={query}
                   onChangeText={setQuery}
                   autoFocus
@@ -283,7 +284,7 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
               <ScrollView style={styles.resultsList} showsVerticalScrollIndicator={false}>
                 {loading ? (
                   <View style={styles.loadingContainer}>
-                    <ActivityIndicator color="#999" />
+                    <ActivityIndicator color={colors.textMuted} />
                   </View>
                 ) : results.length === 0 ? (
                   <View style={styles.emptyContainer}>
@@ -345,13 +346,13 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
     maxHeight: '70%',
   },
 
@@ -362,33 +363,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
 
   // Search
   searchRow: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
   },
   searchInput: {
     height: 40,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#1a1a1a',
-    backgroundColor: '#fafafa',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
   },
 
   // Results
@@ -396,69 +397,69 @@ const styles = StyleSheet.create({
     maxHeight: 320,
   },
   loadingContainer: {
-    paddingVertical: 40,
+    paddingVertical: spacing.xxxl,
     alignItems: 'center',
   },
   emptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: spacing.xxxl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.size.base,
+    color: colors.textMuted,
   },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   resultInfo: {
     flex: 1,
   },
   resultName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   resultDetail: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xxs,
   },
   loyaltyBadge: {
     backgroundColor: '#fef3c7',
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: 10,
-    marginLeft: 8,
+    marginLeft: spacing.sm,
   },
   loyaltyText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
     color: '#92400e',
   },
 
   // Footer
   footer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
   },
   quickAddButton: {
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
     alignItems: 'center',
   },
   quickAddText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
 
   // Quick-add form
@@ -471,57 +472,57 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
   },
   backText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   formTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   backPlaceholder: {
     width: 40,
   },
   formFields: {
     paddingHorizontal: 20,
-    gap: 12,
+    gap: spacing.md,
   },
   fieldRow: {
-    gap: 4,
+    gap: spacing.xs,
   },
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   fieldInput: {
     height: 40,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#1a1a1a',
-    backgroundColor: '#fafafa',
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
   },
   saveButton: {
     marginHorizontal: 20,
-    marginTop: 16,
+    marginTop: spacing.lg,
     paddingVertical: 14,
     borderRadius: 10,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   saveButtonText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });

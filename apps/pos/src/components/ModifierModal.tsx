@@ -3,6 +3,7 @@ import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet } from 'rea
 import { database } from '../db/database';
 import type { ProductModifierGroup, ModifierGroup, Modifier } from '../db/models';
 import { calculateLineTotal } from '@float0/shared';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -332,13 +333,13 @@ export function ModifierModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
     maxHeight: '80%',
   },
 
@@ -349,21 +350,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
     flex: 1,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   headerPrice: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
 
   // Body
@@ -373,9 +374,9 @@ const styles = StyleSheet.create({
 
   // Group section
   groupSection: {
-    paddingVertical: 16,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -385,16 +386,16 @@ const styles = StyleSheet.create({
   },
   groupName: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   groupHint: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
   },
   groupHintRequired: {
-    color: '#dc2626',
-    fontWeight: '600',
+    color: colors.danger,
+    fontWeight: typography.weight.semibold,
   },
 
   // Modifier row
@@ -408,18 +409,18 @@ const styles = StyleSheet.create({
   },
   modifierName: {
     flex: 1,
-    fontSize: 14,
-    color: '#1a1a1a',
-    marginLeft: 12,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
+    marginLeft: spacing.md,
   },
   modifierNameDisabled: {
-    color: '#999',
+    color: colors.textMuted,
   },
   modifierPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginLeft: 8,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
   },
 
   // Radio / Checkbox indicators
@@ -428,65 +429,65 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: colors.textDisabled,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 4,
+    borderRadius: radii.xs,
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: colors.textDisabled,
     justifyContent: 'center',
     alignItems: 'center',
   },
   indicatorSelected: {
-    borderColor: '#1a1a1a',
+    borderColor: colors.textPrimary,
   },
   indicatorDisabled: {
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   indicatorInner: {
     width: 12,
     height: 12,
-    borderRadius: 6,
-    backgroundColor: '#1a1a1a',
+    borderRadius: radii.sm,
+    backgroundColor: colors.textPrimary,
   },
 
   // Footer
   footer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    gap: 12,
+    borderTopColor: colors.border,
+    gap: spacing.md,
   },
   cancelButton: {
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 14,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   addButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 10,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
     alignItems: 'center',
   },
   addButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.textDisabled,
   },
   addText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });

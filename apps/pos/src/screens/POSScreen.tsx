@@ -21,6 +21,8 @@ import { useShift } from '../state/ShiftProvider';
 import { getPrinterService } from '../services';
 import { calculateLineTotal } from '@float0/shared';
 import { generateUUID } from '../utils/uuid';
+import { colors, spacing, radii, typography } from '../theme/tokens';
+import { useToast } from '../components/Toast';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setRaw(record: any, field: string, value: string | number) {
@@ -121,7 +123,7 @@ function TopBar({
                 <TextInput
                   style={styles.tableInput}
                   placeholder="Table #"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   maxLength={2}
                   value={currentOrder.tableNumber ?? ''}
@@ -172,6 +174,7 @@ export default function POSScreen() {
     lastDocket,
     clearLastDocket,
   } = useOrder();
+  const toast = useToast();
   const [initialized, setInitialized] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -368,61 +371,63 @@ export default function POSScreen() {
         onCashMovement(movementId);
       }
 
-      Alert.alert(
-        data.direction === 'in' ? 'Cash In Recorded' : 'Cash Out Recorded',
-        `$${data.amount.toFixed(2)} — ${data.reason}`,
+      toast.success(
+        `${data.direction === 'in' ? 'Cash In' : 'Cash Out'} Recorded — $${data.amount.toFixed(2)}`,
       );
     },
-    [currentShift],
+    [currentShift, toast],
   );
 
-  const handleOpenDrawer = useCallback(async (reason: string, staffId: string) => {
-    setDrawerModalVisible(false);
+  const handleOpenDrawer = useCallback(
+    async (reason: string, staffId: string) => {
+      setDrawerModalVisible(false);
 
-    // 1. Open the drawer
-    await getPrinterService().openDrawer();
+      // 1. Open the drawer
+      await getPrinterService().openDrawer();
 
-    // 2. Get active shift ID
-    const shifts = await database.get<Shift>('shifts').query(Q.where('status', 'open')).fetch();
-    const shiftId = shifts[0]?.id ?? '';
+      // 2. Get active shift ID
+      const shifts = await database.get<Shift>('shifts').query(Q.where('status', 'open')).fetch();
+      const shiftId = shifts[0]?.id ?? '';
 
-    // 3. Audit log
-    const now = Date.now();
-    await database.write(async () => {
-      await database.get<AuditLog>('audit_logs').create((log) => {
-        setRaw(log, 'server_id', generateUUID());
-        setRaw(log, 'action', 'no_sale');
-        setRaw(log, 'entity_type', 'terminal');
-        setRaw(log, 'entity_id', 'terminal-1');
-        setRaw(log, 'staff_id', staffId);
-        setRaw(log, 'changes_json', JSON.stringify({ reason, shiftId }));
-        setRaw(log, 'device_id', 'terminal-1');
-        setRaw(log, 'created_at', now);
+      // 3. Audit log
+      const now = Date.now();
+      await database.write(async () => {
+        await database.get<AuditLog>('audit_logs').create((log) => {
+          setRaw(log, 'server_id', generateUUID());
+          setRaw(log, 'action', 'no_sale');
+          setRaw(log, 'entity_type', 'terminal');
+          setRaw(log, 'entity_id', 'terminal-1');
+          setRaw(log, 'staff_id', staffId);
+          setRaw(log, 'changes_json', JSON.stringify({ reason, shiftId }));
+          setRaw(log, 'device_id', 'terminal-1');
+          setRaw(log, 'created_at', now);
+        });
       });
-    });
 
-    // 4. Check no-sale count for this shift
-    if (shiftId) {
-      const logs = await database
-        .get<AuditLog>('audit_logs')
-        .query(Q.where('action', 'no_sale'))
-        .fetch();
-      const shiftLogs = logs.filter((l) => {
-        const data = JSON.parse(l.changesJson ?? '{}');
-        return data.shiftId === shiftId;
-      });
-      const MAX_NO_SALE = 10;
-      if (MAX_NO_SALE > 0 && shiftLogs.length >= MAX_NO_SALE) {
-        Alert.alert(
-          'Drawer Open Limit',
-          `The cash drawer has been opened ${shiftLogs.length} times this shift without a sale. Please notify a manager.`,
-        );
+      // 4. Check no-sale count for this shift
+      if (shiftId) {
+        const logs = await database
+          .get<AuditLog>('audit_logs')
+          .query(Q.where('action', 'no_sale'))
+          .fetch();
+        const shiftLogs = logs.filter((l) => {
+          const data = JSON.parse(l.changesJson ?? '{}');
+          return data.shiftId === shiftId;
+        });
+        const MAX_NO_SALE = 10;
+        if (MAX_NO_SALE > 0 && shiftLogs.length >= MAX_NO_SALE) {
+          Alert.alert(
+            'Drawer Open Limit',
+            `The cash drawer has been opened ${shiftLogs.length} times this shift without a sale. Please notify a manager.`,
+          );
+        }
       }
-    }
 
-    // 5. Toast feedback
-    Alert.alert('Drawer Opened', 'Cash drawer opened successfully.');
-  }, []);
+      // 5. Toast feedback
+      toast.success('Cash drawer opened successfully.');
+    },
+    [toast],
+  );
 
   return (
     <View style={styles.container}>
@@ -506,18 +511,18 @@ export default function POSScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.surfaceAlt,
   },
 
   // Top bar
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   topBarLeft: {
     flexDirection: 'row',
@@ -529,7 +534,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   topBarRight: {
     flexDirection: 'row',
@@ -540,44 +545,44 @@ const styles = StyleSheet.create({
 
   // Order number
   orderNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   statusBadge: {
-    marginLeft: 8,
-    backgroundColor: '#e8e8e8',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    marginLeft: spacing.sm,
+    backgroundColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.xs,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
 
   // Order type toggle
   toggleGroup: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
     overflow: 'hidden',
   },
   toggleButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
   },
   toggleActive: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   toggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   toggleTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
 
   // Table number
@@ -585,66 +590,66 @@ const styles = StyleSheet.create({
     width: 72,
     height: 36,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    fontSize: 14,
-    color: '#1a1a1a',
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
 
   // Managing label
   managingLabel: {
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
   },
   managingLabelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.primary,
   },
 
   // Cash movement buttons
   cashMovementButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 4,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    marginRight: spacing.xs,
   },
   cashMovementText: {
-    color: '#1a1a1a',
-    fontSize: 13,
-    fontWeight: '600',
+    color: colors.textPrimary,
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
   },
 
   // Open Drawer button
   openDrawerButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 8,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    marginRight: spacing.sm,
   },
   openDrawerText: {
-    color: '#1a1a1a',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.textPrimary,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
   },
 
   // New Order button
   newOrderButton: {
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: colors.textPrimary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
   },
   newOrderText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.white,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
   },
 
   // Main content
@@ -655,10 +660,10 @@ const styles = StyleSheet.create({
   productArea: {
     flex: 2,
     borderRightWidth: 1,
-    borderRightColor: '#e0e0e0',
+    borderRightColor: colors.border,
   },
   cartSidebar: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
 });

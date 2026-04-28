@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../config';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -253,7 +254,7 @@ export function PriceOverrideModal({
               <TextInput
                 style={styles.reasonInput}
                 placeholder="Reason for override (required)"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 value={reason}
                 onChangeText={setReason}
               />
@@ -308,7 +309,9 @@ export function PriceOverrideModal({
               </Animated.View>
 
               {pinError ? <Text style={styles.pinErrorText}>{pinError}</Text> : null}
-              {pinLoading && <ActivityIndicator style={styles.pinLoader} color="#1a1a1a" />}
+              {pinLoading && (
+                <ActivityIndicator style={styles.pinLoader} color={colors.textPrimary} />
+              )}
 
               <View style={styles.keypad}>
                 {pinDigits.map((d, i) => {
@@ -354,105 +357,105 @@ export function PriceOverrideModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
     width: 360,
     maxHeight: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 12,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
 
   // Current price
   currentPriceLabel: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 2,
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    marginBottom: spacing.xxs,
   },
   currentPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   },
 
   // New price
   newPriceLabel: {
-    fontSize: 12,
-    color: '#2563eb',
-    marginBottom: 2,
+    fontSize: typography.size.sm,
+    color: colors.primary,
+    marginBottom: spacing.xxs,
   },
   newPriceDisplay: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#2563eb',
-    marginBottom: 12,
+    fontSize: typography.size['5xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.primary,
+    marginBottom: spacing.md,
   },
 
   // Preview
   preview: {
     width: '100%',
     backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   previewRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   previewRowBorder: {
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
     paddingTop: 6,
-    marginTop: 4,
+    marginTop: spacing.xs,
     marginBottom: 0,
   },
   previewLabel: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.size.md,
+    color: colors.textSecondary,
   },
   previewValue: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: typography.size.md,
+    color: colors.textSecondary,
   },
   previewValueBlue: {
-    fontSize: 13,
-    color: '#2563eb',
-    fontWeight: '600',
+    fontSize: typography.size.md,
+    color: colors.primary,
+    fontWeight: typography.weight.semibold,
   },
   previewLabelBold: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
   },
   previewValueBold: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
   },
   textGreen: {
-    color: '#16a34a',
+    color: colors.successDark,
   },
   textRed: {
-    color: '#dc2626',
+    color: colors.danger,
   },
 
   // Keypad
@@ -461,14 +464,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     width: 240,
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   key: {
     width: 68,
     height: 52,
-    margin: 4,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    margin: spacing.xs,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -476,9 +479,9 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   keyText: {
-    fontSize: 22,
-    fontWeight: '500',
-    color: '#1a1a1a',
+    fontSize: typography.size.xxl,
+    fontWeight: typography.weight.medium,
+    color: colors.textPrimary,
   },
 
   // Reason
@@ -486,60 +489,60 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 40,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#1a1a1a',
-    marginBottom: 12,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
 
   // Approval
   approvalNotice: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#f59e0b',
-    marginBottom: 12,
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.warning,
+    marginBottom: spacing.md,
   },
   approvedNotice: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#16a34a',
-    marginBottom: 12,
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.successDark,
+    marginBottom: spacing.md,
   },
 
   // Footer
   footer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     width: '100%',
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
     alignItems: 'center',
   },
   cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
   },
   applyButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#2563eb',
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
     alignItems: 'center',
   },
   applyButtonDisabled: {
     opacity: 0.3,
   },
   applyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
   },
 
   // PIN section
@@ -548,38 +551,38 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   pinTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 16,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   },
   pinDots: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   dot: {
     width: 14,
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: '#999',
+    borderColor: colors.textMuted,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
   },
   dotError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#dc2626',
+    borderColor: colors.danger,
+    backgroundColor: colors.danger,
   },
   pinErrorText: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginBottom: 8,
+    color: colors.danger,
+    fontSize: typography.size.md,
+    marginBottom: spacing.sm,
   },
   pinLoader: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
 });

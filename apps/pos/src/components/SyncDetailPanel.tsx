@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSync } from '../sync/SyncProvider';
 import { SYNC_INTERVAL_MS } from '../config';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 interface SyncDetailPanelProps {
   visible: boolean;
@@ -85,11 +86,11 @@ function Row({ label, value, dot }: { label: string; value: string; dot?: string
 
 const styles = StyleSheet.create({
   panel: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   row: {
     flexDirection: 'row',
@@ -104,17 +105,17 @@ const styles = StyleSheet.create({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: radii.xs,
     marginRight: 6,
   },
   label: {
-    fontSize: 13,
+    fontSize: typography.size.md,
     color: '#6b7280',
   },
   value: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
   },
   actions: {
     flexDirection: 'row',
@@ -123,29 +124,29 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    backgroundColor: '#2563eb',
-    borderRadius: 6,
-    paddingVertical: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.white,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
   },
   closeButton: {
     flex: 1,
     backgroundColor: '#f3f4f6',
-    borderRadius: 6,
-    paddingVertical: 8,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#1a1a1a',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.textPrimary,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
   },
 });
