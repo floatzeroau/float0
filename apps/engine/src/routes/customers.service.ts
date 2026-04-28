@@ -1,6 +1,6 @@
 import { eq, and, or, isNull, ilike, sql, desc, asc } from 'drizzle-orm';
 import { db } from '../db/connection.js';
-import { customers, orders, orderItems, packs } from '../db/schema/pos.js';
+import { customers, orders, packs } from '../db/schema/pos.js';
 import { organizations } from '../db/schema/core.js';
 
 export async function listCustomers(
@@ -66,6 +66,7 @@ export async function listCustomers(
       lastName: customers.lastName,
       email: customers.email,
       phone: customers.phone,
+      passwordHash: customers.passwordHash,
       createdAt: customers.createdAt,
       updatedAt: customers.updatedAt,
       deletedAt: customers.deletedAt,
@@ -74,7 +75,7 @@ export async function listCustomers(
       lastVisit: sql<
         string | null
       >`(SELECT MAX(o.created_at) FROM orders o WHERE o.customer_id = ${customers.id} AND o.status = 'completed' AND o.deleted_at IS NULL)`,
-      packBalance: sql<number>`COALESCE((SELECT SUM(p.remaining_quantity) FROM packs p WHERE p.customer_id = ${customers.id} AND p.status = 'active'), 0)::int`,
+      activePackCount: sql<number>`COALESCE((SELECT COUNT(*) FROM packs p WHERE p.customer_id = ${customers.id} AND p.status = 'active'), 0)::int`,
     })
     .from(customers)
     .where(where)
@@ -82,9 +83,10 @@ export async function listCustomers(
     .limit(limit)
     .offset(offset);
 
-  const data = rows.map((r) => ({
-    ...r,
-    status: r.deletedAt ? 'inactive' : 'active',
+  const data = rows.map(({ passwordHash, ...rest }) => ({
+    ...rest,
+    status: rest.deletedAt ? 'inactive' : 'active',
+    hasPortalAccess: !!passwordHash,
   }));
 
   return { data, total, page, limit };
@@ -98,6 +100,7 @@ export async function getCustomer(orgId: string, customerId: string) {
       lastName: customers.lastName,
       email: customers.email,
       phone: customers.phone,
+      passwordHash: customers.passwordHash,
       createdAt: customers.createdAt,
       updatedAt: customers.updatedAt,
       deletedAt: customers.deletedAt,
@@ -106,7 +109,7 @@ export async function getCustomer(orgId: string, customerId: string) {
       lastVisit: sql<
         string | null
       >`(SELECT MAX(o.created_at) FROM orders o WHERE o.customer_id = ${customers.id} AND o.status = 'completed' AND o.deleted_at IS NULL)`,
-      packBalance: sql<number>`COALESCE((SELECT SUM(p.remaining_quantity) FROM packs p WHERE p.customer_id = ${customers.id} AND p.status = 'active'), 0)::int`,
+      activePackCount: sql<number>`COALESCE((SELECT COUNT(*) FROM packs p WHERE p.customer_id = ${customers.id} AND p.status = 'active'), 0)::int`,
     })
     .from(customers)
     .where(
@@ -121,22 +124,6 @@ export async function getCustomer(orgId: string, customerId: string) {
   if (!customer) {
     throw Object.assign(new Error('Customer not found'), { statusCode: 404 });
   }
-
-  // Get active packs
-  const activePacks = await db
-    .select({
-      id: packs.id,
-      productId: packs.productId,
-      productSnapshot: packs.productSnapshot,
-      totalQuantity: packs.totalQuantity,
-      remainingQuantity: packs.remainingQuantity,
-      pricePaid: packs.pricePaid,
-      purchasedAt: packs.purchasedAt,
-      status: packs.status,
-      expiryDate: packs.expiryDate,
-    })
-    .from(packs)
-    .where(and(eq(packs.customerId, customerId), eq(packs.status, 'active')));
 
   // Get recent orders (last 10)
   const recentOrders = await db
@@ -154,10 +141,11 @@ export async function getCustomer(orgId: string, customerId: string) {
     .orderBy(desc(orders.createdAt))
     .limit(10);
 
+  const { passwordHash, ...rest } = customer;
   return {
-    ...customer,
-    status: customer.deletedAt ? 'inactive' : 'active',
-    packs: activePacks,
+    ...rest,
+    status: rest.deletedAt ? 'inactive' : 'active',
+    hasPortalAccess: !!passwordHash,
     recentOrders,
   };
 }

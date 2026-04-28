@@ -350,7 +350,17 @@ export default function ProductsPage() {
                   >
                     <TableCell>
                       <div>
-                        <p className="font-medium">{product.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{product.name}</p>
+                          {product.allowAsPack && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-amber-100 text-amber-800 hover:bg-amber-100"
+                            >
+                              Pack
+                            </Badge>
+                          )}
+                        </div>
                         {product.description && (
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             {product.description}

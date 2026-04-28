@@ -23,6 +23,8 @@ export interface Customer {
   totalSpent: number;
   visitCount: number;
   lastVisit?: string | null;
+  activePackCount?: number;
+  hasPortalAccess?: boolean;
   status: string;
   createdAt: string;
 }
