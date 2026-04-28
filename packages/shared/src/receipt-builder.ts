@@ -43,7 +43,7 @@ export interface ReceiptItemInput {
 }
 
 export interface ReceiptPaymentInput {
-  method: 'cash' | 'card' | 'prepaid';
+  method: 'cash' | 'card';
   amount: number;
   tipAmount: number;
   tenderedAmount?: number;
@@ -52,8 +52,6 @@ export interface ReceiptPaymentInput {
   cardType?: string;
   lastFour?: string;
   approvalCode?: string;
-  prepaidPackName?: string;
-  prepaidQuantityRedeemed?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +70,7 @@ export interface ReceiptItem {
 }
 
 export interface ReceiptPayment {
-  method: 'cash' | 'card' | 'prepaid';
+  method: 'cash' | 'card';
   amount: number;
   tipAmount: number;
   tenderedAmount?: number;
@@ -81,8 +79,6 @@ export interface ReceiptPayment {
   cardType?: string;
   lastFour?: string;
   approvalCode?: string;
-  prepaidPackName?: string;
-  prepaidQuantityRedeemed?: number;
 }
 
 export type InvoiceType = 'simplified' | 'full_tax_invoice';
@@ -162,10 +158,6 @@ export function buildReceipt(
     ...(p.cardType && { cardType: p.cardType }),
     ...(p.lastFour && { lastFour: p.lastFour }),
     ...(p.approvalCode && { approvalCode: p.approvalCode }),
-    ...(p.prepaidPackName && { prepaidPackName: p.prepaidPackName }),
-    ...(p.prepaidQuantityRedeemed != null && {
-      prepaidQuantityRedeemed: p.prepaidQuantityRedeemed,
-    }),
   }));
 
   const tipAmount = payments.reduce((sum, p) => sum + p.tipAmount, 0);

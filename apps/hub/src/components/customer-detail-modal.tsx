@@ -2,23 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Coffee, DollarSign, Calendar, Hash, Mail, Phone, Pencil, UserX } from 'lucide-react';
+import { DollarSign, Calendar, Hash, Mail, Phone, Pencil, UserX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { api, ApiClientError } from '@/lib/api';
-import { BalanceAdjustModal } from './balance-adjust-modal';
-
-interface Balance {
-  id: string;
-  packId: string;
-  packName: string;
-  remainingCount: number;
-  originalCount: number;
-  pricePaid: number;
-  purchasedAt: string;
-}
+import { api } from '@/lib/api';
 
 interface Order {
   id: string;
@@ -36,13 +25,11 @@ interface CustomerDetail {
   lastName: string;
   email?: string | null;
   phone?: string | null;
-  coffeeBalance: number;
   totalSpent: number;
   visitCount: number;
   lastVisit?: string | null;
   status: string;
   createdAt: string;
-  balances: Balance[];
   recentOrders: Order[];
 }
 
@@ -52,7 +39,6 @@ interface CustomerDetailModalProps {
   customerId: string | null;
   onEdit: () => void;
   onDeactivate: () => void;
-  onRefresh: () => void;
 }
 
 function relativeTime(date: string): string {
@@ -88,11 +74,9 @@ export function CustomerDetailModal({
   customerId,
   onEdit,
   onDeactivate,
-  onRefresh,
 }: CustomerDetailModalProps) {
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [adjustBalance, setAdjustBalance] = useState<Balance | null>(null);
 
   const fetchCustomer = useCallback(async () => {
     if (!customerId) return;
@@ -175,9 +159,6 @@ export function CustomerDetailModal({
                   <TabsTrigger value="overview" className="flex-1">
                     Overview
                   </TabsTrigger>
-                  <TabsTrigger value="packs" className="flex-1">
-                    Packs
-                  </TabsTrigger>
                   <TabsTrigger value="orders" className="flex-1">
                     Orders
                   </TabsTrigger>
@@ -202,11 +183,6 @@ export function CustomerDetailModal({
 
                   <div className="grid grid-cols-2 gap-3">
                     <StatCard
-                      icon={<Coffee className="h-4 w-4" />}
-                      label="Pack Balance"
-                      value={String(customer.coffeeBalance)}
-                    />
-                    <StatCard
                       icon={<DollarSign className="h-4 w-4" />}
                       label="Total Spent"
                       value={`$${Number(customer.totalSpent).toFixed(2)}`}
@@ -226,39 +202,6 @@ export function CustomerDetailModal({
                   <div className="text-xs text-muted-foreground">
                     Customer since {new Date(customer.createdAt).toLocaleDateString()}
                   </div>
-                </TabsContent>
-
-                {/* Packs tab */}
-                <TabsContent value="packs" className="space-y-3 pt-2">
-                  {customer.balances.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      No active packs.
-                    </p>
-                  ) : (
-                    customer.balances.map((b) => (
-                      <div
-                        key={b.id}
-                        className="flex items-center justify-between rounded-md border p-3"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{b.packName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {b.remainingCount} / {b.originalCount} remaining
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Purchased {relativeTime(b.purchasedAt)} &middot; $
-                            {Number(b.pricePaid).toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{b.remainingCount} left</Badge>
-                          <Button size="sm" variant="outline" onClick={() => setAdjustBalance(b)}>
-                            Adjust
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
                 </TabsContent>
 
                 {/* Orders tab */}
@@ -298,19 +241,6 @@ export function CustomerDetailModal({
           )}
         </DialogContent>
       </Dialog>
-
-      {adjustBalance && customer && (
-        <BalanceAdjustModal
-          open={!!adjustBalance}
-          onOpenChange={(v) => !v && setAdjustBalance(null)}
-          customerId={customer.id}
-          balance={adjustBalance}
-          onAdjusted={() => {
-            fetchCustomer();
-            onRefresh();
-          }}
-        />
-      )}
     </>
   );
 }

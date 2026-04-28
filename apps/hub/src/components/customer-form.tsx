@@ -20,7 +20,6 @@ export interface Customer {
   lastName: string;
   email?: string | null;
   phone?: string | null;
-  coffeeBalance: number;
   totalSpent: number;
   visitCount: number;
   lastVisit?: string | null;

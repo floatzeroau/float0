@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { calculatePaymentTotal } from '@float0/shared';
 import type { ReceiptData } from '@float0/shared';
@@ -9,8 +9,6 @@ import { SplitPaymentFlow } from './SplitPaymentFlow';
 import { PaymentConfirmationScreen } from '../screens/PaymentConfirmationScreen';
 import type { PaymentConfirmationData } from '../screens/PaymentConfirmationScreen';
 import { PaymentFailureScreen } from './PaymentFailureScreen';
-import { PrepaidBalancePrompt } from './PrepaidBalancePrompt';
-import type { PrepaidRedemption } from './PrepaidBalancePrompt';
 import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
@@ -22,7 +20,6 @@ interface PaymentScreenProps {
   orderTotal: number;
   orderNumber: string;
   orderId: string;
-  customerId?: string;
   customerEmail?: string;
   packCount?: number;
   onComplete: (params: CompletePaymentParams) => Promise<ReceiptData | undefined>;
@@ -31,7 +28,6 @@ interface PaymentScreenProps {
 }
 
 type Phase =
-  | 'prepaid_check'
   | 'method'
   | 'tip'
   | 'cash'
@@ -53,7 +49,6 @@ export function PaymentScreen({
   orderTotal,
   orderNumber,
   orderId,
-  customerId,
   customerEmail,
   packCount,
   onComplete,
@@ -71,20 +66,8 @@ export function PaymentScreen({
   const [isTimeout, setIsTimeout] = useState(false);
   const [failedAmount, setFailedAmount] = useState(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [prepaidAmount, setPrepaidAmount] = useState(0);
-  const [prepaidRedemptions, setPrepaidRedemptions] = useState<PrepaidRedemption[]>([]);
 
-  // Start at prepaid_check if customer is attached
-  useEffect(() => {
-    if (visible && customerId) {
-      setPhase('prepaid_check');
-    } else if (visible) {
-      setPhase('method');
-    }
-  }, [visible, customerId]);
-
-  const effectiveTotal = orderTotal - prepaidAmount;
-  const totalWithTip = effectiveTotal + tipAmount;
+  const totalWithTip = orderTotal + tipAmount;
   const cashPayment = useMemo(() => calculatePaymentTotal(totalWithTip, 'cash'), [totalWithTip]);
   const cardPayment = useMemo(() => calculatePaymentTotal(totalWithTip, 'card'), [totalWithTip]);
 
@@ -115,8 +98,6 @@ export function PaymentScreen({
     setRetryCount(0);
     setIsTimeout(false);
     setFailedAmount(0);
-    setPrepaidAmount(0);
-    setPrepaidRedemptions([]);
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -173,7 +154,7 @@ export function PaymentScreen({
       setCardError('');
       setIsTimeout(false);
 
-      const amountToCharge = calculatePaymentTotal(effectiveTotal + tip, 'card').payableAmount;
+      const amountToCharge = calculatePaymentTotal(orderTotal + tip, 'card').payableAmount;
       setFailedAmount(amountToCharge);
       const terminal = getTerminalService();
 
@@ -305,64 +286,6 @@ export function PaymentScreen({
     setPhase('method');
   }, []);
 
-  const handlePrepaidApply = useCallback(
-    async (total: number, redemptions: PrepaidRedemption[]) => {
-      setPrepaidAmount(total);
-      setPrepaidRedemptions(redemptions);
-
-      // Record prepaid as partial payment for each redemption
-      for (const r of redemptions) {
-        await onRecordPartialPayment({
-          method: 'prepaid',
-          amount: r.amount,
-          tipAmount: 0,
-          prepaidPackName: r.packName,
-          customerBalanceId: r.balanceId,
-          quantityRedeemed: r.quantity,
-        });
-      }
-
-      if (total >= orderTotal) {
-        // Fully covered by prepaid — complete the order
-        setLoading(true);
-        const receiptData = await onComplete({
-          method: 'prepaid',
-          amount: orderTotal,
-          tipAmount: 0,
-          prepaidPackName: redemptions.map((r) => r.packName).join(', '),
-          customerBalanceId: redemptions[0].balanceId,
-          quantityRedeemed: redemptions.reduce((s, r) => s + r.quantity, 0),
-        });
-        showConfirmation({
-          orderId,
-          orderNumber,
-          orderTotal,
-          totalPaid: orderTotal,
-          tipAmount: 0,
-          paymentMethod: 'prepaid' as 'cash',
-          receiptData,
-          customerEmail,
-        });
-      } else {
-        // Partial — proceed to method selection for remaining
-        setPhase('method');
-      }
-    },
-    [
-      orderTotal,
-      orderId,
-      orderNumber,
-      customerEmail,
-      onComplete,
-      onRecordPartialPayment,
-      showConfirmation,
-    ],
-  );
-
-  const handlePrepaidSkip = useCallback(() => {
-    setPhase('method');
-  }, []);
-
   const handleKeyPress = useCallback((key: string) => {
     if (key === 'backspace') {
       setTenderedInput((prev) => prev.slice(0, -1));
@@ -444,8 +367,8 @@ export function PaymentScreen({
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
       <View style={styles.container}>
-        {/* Header — hidden during confirmation and prepaid_check */}
-        {phase !== 'confirmation' && phase !== 'prepaid_check' && (
+        {/* Header — hidden during confirmation */}
+        {phase !== 'confirmation' && (
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
               <Text style={styles.backButtonText}>
@@ -468,49 +391,22 @@ export function PaymentScreen({
               )}
             </View>
             <View style={styles.headerTotalContainer}>
-              {prepaidAmount > 0 && (
-                <>
-                  <Text style={styles.headerTotalLabel}>Order</Text>
-                  <Text style={styles.headerSubtotalValue}>{formatCurrency(orderTotal)}</Text>
-                  <Text style={styles.headerPrepaidLabel}>
-                    Prepaid: -{formatCurrency(prepaidAmount)}
-                  </Text>
-                </>
-              )}
               {tipAmount > 0 ? (
                 <>
-                  {prepaidAmount === 0 && (
-                    <>
-                      <Text style={styles.headerTotalLabel}>Subtotal</Text>
-                      <Text style={styles.headerSubtotalValue}>
-                        {formatCurrency(effectiveTotal)}
-                      </Text>
-                    </>
-                  )}
+                  <Text style={styles.headerTotalLabel}>Subtotal</Text>
+                  <Text style={styles.headerSubtotalValue}>{formatCurrency(orderTotal)}</Text>
                   <Text style={styles.headerTipLabel}>Tip: {formatCurrency(tipAmount)}</Text>
                   <Text style={styles.headerTotalLabel}>Total</Text>
                   <Text style={styles.headerTotalValue}>{formatCurrency(totalWithTip)}</Text>
                 </>
               ) : (
                 <>
-                  <Text style={styles.headerTotalLabel}>
-                    {prepaidAmount > 0 ? 'Remaining' : 'Total'}
-                  </Text>
-                  <Text style={styles.headerTotalValue}>{formatCurrency(effectiveTotal)}</Text>
+                  <Text style={styles.headerTotalLabel}>Total</Text>
+                  <Text style={styles.headerTotalValue}>{formatCurrency(orderTotal)}</Text>
                 </>
               )}
             </View>
           </View>
-        )}
-
-        {/* Phase 0: Prepaid Balance Check */}
-        {phase === 'prepaid_check' && customerId && (
-          <PrepaidBalancePrompt
-            customerId={customerId}
-            orderTotal={orderTotal}
-            onApply={handlePrepaidApply}
-            onSkip={handlePrepaidSkip}
-          />
         )}
 
         {/* Phase 1: Method Selection */}
@@ -771,11 +667,6 @@ const styles = StyleSheet.create({
   headerTipLabel: {
     fontSize: typography.size.sm,
     color: colors.success,
-    fontWeight: typography.weight.semibold,
-  },
-  headerPrepaidLabel: {
-    fontSize: typography.size.sm,
-    color: colors.primary,
     fontWeight: typography.weight.semibold,
   },
   headerTotalValue: {
