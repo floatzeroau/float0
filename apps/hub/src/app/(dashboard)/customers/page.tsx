@@ -6,7 +6,9 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  KeyRound,
   MoreHorizontal,
+  Package,
   Pencil,
   Plus,
   Search,
@@ -210,8 +212,7 @@ export default function CustomersPage() {
               <TableHead>
                 <SortButton field="name">Name</SortButton>
               </TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
+              <TableHead>Contact</TableHead>
               <TableHead>
                 <SortButton field="totalSpent">Total Spent</SortButton>
               </TableHead>
@@ -221,6 +222,8 @@ export default function CustomersPage() {
               <TableHead>
                 <SortButton field="lastVisit">Last Visit</SortButton>
               </TableHead>
+              <TableHead>Active Packs</TableHead>
+              <TableHead>Portal Access</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -229,7 +232,7 @@ export default function CustomersPage() {
             {loading &&
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
+                  {Array.from({ length: 9 }).map((_, j) => (
                     <TableCell key={j}>
                       <div className="h-4 w-full animate-pulse rounded bg-muted" />
                     </TableCell>
@@ -239,7 +242,7 @@ export default function CustomersPage() {
 
             {!loading && customers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="h-40 text-center">
+                <TableCell colSpan={9} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Users className="h-8 w-8" />
                     <p className="text-sm">
@@ -278,10 +281,16 @@ export default function CustomersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {customer.email || <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {customer.phone || <span className="text-muted-foreground">—</span>}
+                      {customer.email || customer.phone ? (
+                        <div className="space-y-0.5">
+                          {customer.email && <p className="truncate">{customer.email}</p>}
+                          {customer.phone && (
+                            <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       ${Number(customer.totalSpent).toFixed(2)}
@@ -289,6 +298,26 @@ export default function CustomersPage() {
                     <TableCell className="text-sm">{customer.visitCount}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {customer.lastVisit ? relativeTime(customer.lastVisit) : 'Never'}
+                    </TableCell>
+                    <TableCell>
+                      {customer.activePackCount && customer.activePackCount > 0 ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <Package className="h-3 w-3" />
+                          {customer.activePackCount}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {customer.hasPortalAccess ? (
+                        <Badge variant="outline" className="gap-1 text-green-700">
+                          <KeyRound className="h-3 w-3" />
+                          Yes
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">No</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={customer.status === 'active' ? 'default' : 'secondary'}>
@@ -390,6 +419,7 @@ export default function CustomersPage() {
             setDeactivateTarget(c);
           }
         }}
+        onRefresh={fetchCustomers}
       />
 
       {/* Deactivate confirmation */}

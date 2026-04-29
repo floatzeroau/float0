@@ -30,6 +30,7 @@ export interface Product {
   barcode?: string | null;
   isAvailable: boolean;
   isGstFree: boolean;
+  allowAsPack: boolean;
   sortOrder: number;
   orgId: string;
   createdAt: string;
@@ -90,6 +91,7 @@ export function ProductForm({
   const [sku, setSku] = useState('');
   const [autoSku, setAutoSku] = useState(true);
   const [isGstFree, setIsGstFree] = useState(false);
+  const [allowAsPack, setAllowAsPack] = useState(false);
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [selectedModifierGroups, setSelectedModifierGroups] = useState<string[]>([]);
   const [originalModifierGroups, setOriginalModifierGroups] = useState<string[]>([]);
@@ -119,6 +121,7 @@ export function ProductForm({
       setSku(product.sku ?? '');
       setAutoSku(false);
       setIsGstFree(product.isGstFree);
+      setAllowAsPack(product.allowAsPack ?? false);
       // Fetch product detail to get linked modifier groups
       api
         .get<{ modifierGroups?: { id: string }[] }>(`/products/${product.id}`)
@@ -139,6 +142,7 @@ export function ProductForm({
       setSku('');
       setAutoSku(true);
       setIsGstFree(false);
+      setAllowAsPack(false);
       setSelectedModifierGroups([]);
       setOriginalModifierGroups([]);
     }
@@ -197,6 +201,7 @@ export function ProductForm({
         basePrice: parseFloat(price),
         sku: sku.trim() || undefined,
         isGstFree,
+        allowAsPack,
       };
 
       if (isEdit) {
@@ -356,6 +361,17 @@ export function ProductForm({
               <p className="text-xs text-muted-foreground">Exempt this product from GST.</p>
             </div>
             <Switch checked={isGstFree} onCheckedChange={setIsGstFree} disabled={saving} />
+          </div>
+
+          {/* Allow as Cafe Pack */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Allow as Cafe Pack</p>
+              <p className="text-xs text-muted-foreground">
+                Customers can buy this product as a prepaid pack.
+              </p>
+            </div>
+            <Switch checked={allowAsPack} onCheckedChange={setAllowAsPack} disabled={saving} />
           </div>
 
           {/* Modifier Groups */}

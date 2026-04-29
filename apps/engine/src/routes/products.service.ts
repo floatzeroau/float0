@@ -26,6 +26,7 @@ interface CreateProductInput {
   imageUrl?: string | null;
   isAvailable?: boolean;
   isGstFree?: boolean;
+  allowAsPack?: boolean;
   sortOrder?: number;
 }
 
@@ -39,6 +40,7 @@ interface UpdateProductInput {
   imageUrl?: string | null;
   isAvailable?: boolean;
   isGstFree?: boolean;
+  allowAsPack?: boolean;
   sortOrder?: number;
 }
 
@@ -111,6 +113,7 @@ export async function listProducts(orgId: string, options: ListProductsOptions =
       imageUrl: products.imageUrl,
       isAvailable: products.isAvailable,
       isGstFree: products.isGstFree,
+      allowAsPack: products.allowAsPack,
       sortOrder: products.sortOrder,
       _version: products._version,
       createdAt: products.createdAt,
@@ -146,6 +149,7 @@ export async function getProduct(orgId: string, id: string) {
       imageUrl: products.imageUrl,
       isAvailable: products.isAvailable,
       isGstFree: products.isGstFree,
+      allowAsPack: products.allowAsPack,
       sortOrder: products.sortOrder,
       _version: products._version,
       createdAt: products.createdAt,
@@ -262,6 +266,7 @@ export async function createProduct(orgId: string, input: CreateProductInput, ct
       imageUrl: input.imageUrl,
       isAvailable: input.isAvailable ?? true,
       isGstFree: input.isGstFree ?? false,
+      allowAsPack: input.allowAsPack ?? false,
       sortOrder: input.sortOrder ?? 0,
     })
     .returning();
@@ -438,6 +443,7 @@ export async function duplicateProduct(orgId: string, id: string, ctx: AuditCont
       imageUrl: source.imageUrl,
       isAvailable: source.isAvailable,
       isGstFree: source.isGstFree,
+      allowAsPack: source.allowAsPack,
       sortOrder: source.sortOrder,
     })
     .returning();

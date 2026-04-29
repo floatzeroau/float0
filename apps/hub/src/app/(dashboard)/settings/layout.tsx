@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, Monitor, Users, Shield } from 'lucide-react';
+import { Building2, Coffee, Monitor, Users, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const settingsNav = [
   { href: '/settings/business', label: 'Business Profile', icon: Building2 },
   { href: '/settings/pos', label: 'POS Config', icon: Monitor },
+  { href: '/settings/cafe-pack', label: 'Cafe Pack', icon: Coffee },
   { href: '/settings/team', label: 'Team', icon: Users },
   { href: '/settings/permissions', label: 'Roles & Permissions', icon: Shield },
 ];
