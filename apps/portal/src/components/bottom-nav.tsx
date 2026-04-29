@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Coffee, User } from 'lucide-react';
+import { Home, Coffee, Clock, User } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,8 +21,8 @@ export function BottomNav({ slug }: BottomNavProps) {
 
   const tabs: Tab[] = [
     { path: `/${slug}`, label: 'Home', icon: Home },
-    { path: `/${slug}/menu`, label: 'Menu', icon: BookOpen },
     { path: `/${slug}/my-packs`, label: 'My Packs', icon: Coffee },
+    { path: `/${slug}/history`, label: 'History', icon: Clock },
     { path: `/${slug}/account`, label: 'Account', icon: User },
   ];
 

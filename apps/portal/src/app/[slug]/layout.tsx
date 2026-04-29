@@ -15,7 +15,7 @@ import { BottomNav } from '@/components/bottom-nav';
 function PortalShell({ children, slug }: { children: React.ReactNode; slug: string }) {
   const { isAuthenticated } = useAuth();
   const pathname = usePathname();
-  const authPages = [`/${slug}/login`, `/${slug}/register`];
+  const authPages = [`/${slug}/login`, `/${slug}/register`, `/${slug}/setup`];
   const isAuthPage = authPages.includes(pathname);
   const isLanding = pathname === `/${slug}`;
   const showNav = isAuthenticated && !isAuthPage && !isLanding;
