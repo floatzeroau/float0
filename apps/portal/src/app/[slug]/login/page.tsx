@@ -54,58 +54,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
+    <div className="fade-in flex min-h-screen items-center justify-center px-6 py-12">
       <Card className="w-full">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>Log in to {org.name}</CardDescription>
+        <CardHeader className="space-y-1.5 text-center">
+          <CardTitle className="text-display font-bold">Welcome back</CardTitle>
+          <CardDescription className="text-body">Log in to your {org.name} account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label htmlFor="email" className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-small font-medium">
                 Email
               </label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 aria-invalid={!!errors.email}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-small text-destructive">{errors.email}</p>}
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="password" className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-small font-medium">
                 Password
               </label>
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="Your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 aria-invalid={!!errors.password}
               />
-              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+              {errors.password && <p className="text-small text-destructive">{errors.password}</p>}
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? 'Logging in...' : 'Log In'}
+              {loading ? 'Logging in…' : 'Log in'}
             </Button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
+          <p className="mt-5 text-center text-small text-muted-foreground">
+            New here?{' '}
             <Link
               href={`/${org.slug}/register`}
               className="font-medium text-primary hover:underline"
             >
-              Sign up
+              Create an account
             </Link>
           </p>
         </CardContent>

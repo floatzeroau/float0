@@ -67,102 +67,120 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
+    <div className="fade-in flex min-h-screen items-center justify-center px-6 py-12">
       <Card className="w-full">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Create account</CardTitle>
-          <CardDescription>Join {org.name}</CardDescription>
+        <CardHeader className="space-y-1.5 text-center">
+          <CardTitle className="text-display font-bold">Join {org.name}</CardTitle>
+          <CardDescription className="text-body">
+            Track packs, orders, and rewards in one place.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label htmlFor="firstName" className="text-sm font-medium">
-                  First Name
+              <div className="space-y-1.5">
+                <label htmlFor="firstName" className="text-small font-medium">
+                  First name
                 </label>
                 <Input
                   id="firstName"
-                  placeholder="John"
+                  autoComplete="given-name"
+                  placeholder="Jamie"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   disabled={loading}
                   aria-invalid={!!errors.firstName}
                 />
-                {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
+                {errors.firstName && (
+                  <p className="text-small text-destructive">{errors.firstName}</p>
+                )}
               </div>
-              <div className="space-y-1">
-                <label htmlFor="lastName" className="text-sm font-medium">
-                  Last Name
+              <div className="space-y-1.5">
+                <label htmlFor="lastName" className="text-small font-medium">
+                  Last name
                 </label>
                 <Input
                   id="lastName"
-                  placeholder="Smith"
+                  autoComplete="family-name"
+                  placeholder="Lee"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   disabled={loading}
                   aria-invalid={!!errors.lastName}
                 />
-                {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
+                {errors.lastName && (
+                  <p className="text-small text-destructive">{errors.lastName}</p>
+                )}
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="email" className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-small font-medium">
                 Email
               </label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 aria-invalid={!!errors.email}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-small text-destructive">{errors.email}</p>}
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="password" className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-small font-medium">
                 Password
               </label>
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 aria-invalid={!!errors.password}
               />
-              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+              {errors.password ? (
+                <p className="text-small text-destructive">{errors.password}</p>
+              ) : (
+                <p className="text-small text-muted-foreground">
+                  At least 8 characters with a letter and a number.
+                </p>
+              )}
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirm Password
+            <div className="space-y-1.5">
+              <label htmlFor="confirmPassword" className="text-small font-medium">
+                Confirm password
               </label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Repeat password"
+                autoComplete="new-password"
+                placeholder="Re-enter password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
                 aria-invalid={!!errors.confirmPassword}
               />
               {errors.confirmPassword && (
-                <p className="text-xs text-destructive">{errors.confirmPassword}</p>
+                <p className="text-small text-destructive">{errors.confirmPassword}</p>
               )}
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="phone" className="text-sm font-medium">
+            <div className="space-y-1.5">
+              <label htmlFor="phone" className="text-small font-medium">
                 Phone <span className="text-muted-foreground">(optional)</span>
               </label>
               <Input
                 id="phone"
                 type="tel"
+                autoComplete="tel"
                 placeholder="0400 000 000"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -171,12 +189,12 @@ export default function RegisterPage() {
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? 'Creating account...' : 'Sign Up'}
+              {loading ? 'Creating account…' : 'Create account'}
             </Button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+          <p className="mt-5 text-center text-small text-muted-foreground">
+            Already have one?{' '}
             <Link href={`/${org.slug}/login`} className="font-medium text-primary hover:underline">
               Log in
             </Link>

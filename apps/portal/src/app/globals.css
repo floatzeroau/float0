@@ -4,45 +4,52 @@
 
 @layer base {
   :root {
-    /* Portal: warmer, friendlier variant of Float0 brand */
-    /* Background: warm off-white */
-    --background: 30 33% 99%;
-    /* Foreground: softer navy */
-    --foreground: 210 25% 20%;
+    /* ------------------------------------------------------------------ */
+    /* Portal palette: warm, café-friendly. Cream surfaces + espresso accent.
+       Designed for the customer-facing mobile portal — feels like a coffee
+       shop, not an admin dashboard. */
+    /* ------------------------------------------------------------------ */
 
-    --card: 0 0% 100%;
-    --card-foreground: 210 25% 20%;
-
+    /* Surfaces — warm cream */
+    --background: 36 38% 97%; /* #FAF6EF page bg */
+    --card: 0 0% 100%; /* #FFFFFF card surface */
+    --card-foreground: 24 28% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 25% 20%;
+    --popover-foreground: 24 28% 14%;
 
-    /* Primary: slightly softer indigo */
-    --primary: 243 80% 65%;
-    --primary-foreground: 0 0% 100%;
+    /* Text — softer near-black with warm undertone */
+    --foreground: 24 28% 14%; /* #2D211A primary text */
+    --muted: 36 28% 94%; /* #F4EEE3 subtle row tint */
+    --muted-foreground: 24 12% 42%; /* #756B62 secondary copy */
 
-    --secondary: 30 20% 96%;
-    --secondary-foreground: 210 25% 20%;
+    /* Primary — espresso brown */
+    --primary: 24 36% 28%; /* #5E3F2E */
+    --primary-foreground: 36 38% 98%;
 
-    --muted: 30 20% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* Secondary / accent — warm caramel highlight */
+    --secondary: 32 56% 90%; /* #F1E2CC */
+    --secondary-foreground: 24 36% 28%;
+    --accent: 32 70% 80%; /* #EFCDA0 caramel */
+    --accent-foreground: 24 36% 28%;
 
-    --accent: 30 20% 96%;
-    --accent-foreground: 210 25% 20%;
+    /* Status */
+    --destructive: 3 70% 50%; /* #D9362C */
+    --destructive-foreground: 36 38% 98%;
+    --success: 142 45% 35%; /* #336B47 */
+    --warning: 32 80% 45%; /* #C77A1F */
 
-    /* Destructive: #FF453A */
-    --destructive: 3 100% 61%;
-    --destructive-foreground: 0 0% 100%;
+    /* Borders + inputs */
+    --border: 32 22% 88%; /* #E5DCCF */
+    --input: 32 22% 88%;
+    --ring: 24 36% 28%;
 
-    --border: 214 25% 92%;
-    --input: 214 25% 92%;
-    --ring: 243 80% 65%;
+    /* Radii — softer, café-feel */
+    --radius: 1rem; /* 16px lg */
 
-    --radius: 0.75rem;
-
-    /* Tab bar tokens (replaces sidebar in portal) */
+    /* Tab bar */
     --tab-bar-background: 0 0% 100%;
-    --tab-bar-foreground: 215 16% 47%;
-    --tab-bar-active: 243 80% 65%;
+    --tab-bar-foreground: 24 12% 42%;
+    --tab-bar-active: 24 36% 28%;
   }
 }
 
@@ -50,7 +57,39 @@
   * {
     @apply border-border;
   }
+  html,
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  /* Tap target helper — ensures min 48px touch area without changing layout */
+  .tap-target {
+    @apply relative;
+  }
+  .tap-target::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}
+
+@layer utilities {
+  .fade-in {
+    animation: fade-in 200ms ease-out both;
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

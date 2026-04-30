@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Coffee } from 'lucide-react';
+import { ChevronDown, Coffee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import { api } from '@/lib/api';
 import { useOrg } from '@/lib/org-context';
 import { useAuth } from '@/lib/auth-context';
+import { cn } from '@/lib/utils';
 
 interface ProductSnapshot {
   name: string;
@@ -31,10 +34,16 @@ interface PortalPack {
   purchasedAt: string;
 }
 
-const GROUPS: { key: PackStatus; label: string }[] = [
-  { key: 'active', label: 'Active' },
-  { key: 'expired', label: 'Expired' },
-  { key: 'consumed', label: 'Consumed' },
+interface Group {
+  key: PackStatus;
+  label: string;
+  defaultOpen: boolean;
+}
+
+const GROUPS: Group[] = [
+  { key: 'active', label: 'Active', defaultOpen: true },
+  { key: 'expired', label: 'Expired', defaultOpen: false },
+  { key: 'consumed', label: 'Used up', defaultOpen: false },
 ];
 
 function productLabel(snapshot: ProductSnapshot): string {
@@ -61,7 +70,11 @@ function formatExpiry(iso?: string | null): { label: string; tone: 'warn' | 'mut
 function statusBadge(status: PackStatus) {
   switch (status) {
     case 'active':
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>;
+      return (
+        <Badge className="border-transparent bg-success/15 text-[hsl(var(--success))] hover:bg-success/15">
+          Active
+        </Badge>
+      );
     case 'expired':
       return <Badge variant="secondary">Expired</Badge>;
     case 'consumed':
@@ -73,36 +86,35 @@ function statusBadge(status: PackStatus) {
 
 function PackCard({ pack }: { pack: PortalPack }) {
   const expiry = pack.status === 'active' ? formatExpiry(pack.expiryDate) : null;
-  const progressPct =
-    pack.totalQuantity > 0 ? (pack.remainingQuantity / pack.totalQuantity) * 100 : 0;
+  const isInactive = pack.status !== 'active';
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={cn('overflow-hidden', isInactive && 'opacity-75')}>
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold leading-tight">{productLabel(pack.productSnapshot)}</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-body font-semibold leading-tight">
+              {productLabel(pack.productSnapshot)}
+            </h3>
+            <p className="mt-0.5 text-small text-muted-foreground">
               {pack.remainingQuantity} of {pack.totalQuantity} remaining
             </p>
           </div>
           {statusBadge(pack.status)}
         </div>
 
-        <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full bg-primary transition-all"
-            style={{ width: `${progressPct}%` }}
-            aria-label={`${Math.round(progressPct)}% remaining`}
-          />
-        </div>
+        <ProgressBar
+          value={pack.remainingQuantity}
+          max={pack.totalQuantity}
+          ariaLabel={`${pack.remainingQuantity} of ${pack.totalQuantity} remaining`}
+        />
 
         {expiry && (
           <p
             className={
               expiry.tone === 'warn'
-                ? 'text-xs font-medium text-amber-700'
-                : 'text-xs text-muted-foreground'
+                ? 'text-small font-medium text-[hsl(var(--warning))]'
+                : 'text-small text-muted-foreground'
             }
           >
             {expiry.label}
@@ -110,6 +122,35 @@ function PackCard({ pack }: { pack: PortalPack }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+interface CollapsibleSectionProps {
+  label: string;
+  count: number;
+  defaultOpen: boolean;
+  children: React.ReactNode;
+}
+
+function CollapsibleSection({ label, count, defaultOpen, children }: CollapsibleSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-md py-1 text-left transition-colors hover:text-foreground"
+        aria-expanded={open}
+      >
+        <span className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
+          {label} <span className="ml-1 normal-case tracking-normal">({count})</span>
+        </span>
+        <ChevronDown
+          className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')}
+        />
+      </button>
+      {open && <div className="space-y-3">{children}</div>}
+    </section>
   );
 }
 
@@ -143,17 +184,16 @@ export default function MyPacksPage() {
     );
   }
 
-  const grouped = GROUPS.map(({ key, label }) => ({
-    key,
-    label,
-    packs: packs.filter((p) => p.status === key),
+  const grouped = GROUPS.map((g) => ({
+    ...g,
+    packs: packs.filter((p) => p.status === g.key),
   }));
   const visibleGroups = grouped.filter((g) => g.packs.length > 0);
 
   return (
-    <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold">My Packs</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Track your prepaid packs</p>
+    <div className="fade-in px-4 pb-8 pt-6">
+      <h1 className="text-display font-bold">My Packs</h1>
+      <p className="mt-1 text-body text-muted-foreground">Your prepaid coffee packs.</p>
 
       {loading && (
         <div className="mt-6 space-y-3">
@@ -164,28 +204,27 @@ export default function MyPacksPage() {
       )}
 
       {!loading && visibleGroups.length === 0 && (
-        <div className="mt-12 flex flex-col items-center text-center">
-          <Coffee className="h-12 w-12 text-muted-foreground" />
-          <p className="mt-3 font-medium">No packs yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Once you buy a Cafe Pack at the till, it&apos;ll show up here.
-          </p>
-        </div>
+        <EmptyState
+          className="mt-10"
+          icon={Coffee}
+          title="No packs yet"
+          description="Buy a Cafe Pack at the till and it’ll show up here. You'll save with every cup."
+        />
       )}
 
       {!loading && visibleGroups.length > 0 && (
-        <div className="mt-4 space-y-6">
+        <div className="mt-5 space-y-5">
           {visibleGroups.map((group) => (
-            <section key={group.key} className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {group.label}
-              </h2>
-              <div className="space-y-3">
-                {group.packs.map((pack) => (
-                  <PackCard key={pack.id} pack={pack} />
-                ))}
-              </div>
-            </section>
+            <CollapsibleSection
+              key={group.key}
+              label={group.label}
+              count={group.packs.length}
+              defaultOpen={group.defaultOpen}
+            >
+              {group.packs.map((pack) => (
+                <PackCard key={pack.id} pack={pack} />
+              ))}
+            </CollapsibleSection>
           ))}
         </div>
       )}

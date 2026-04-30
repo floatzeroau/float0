@@ -31,32 +31,33 @@ export default function LandingPage() {
   const hours = org.operatingHours as Record<string, string> | null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
-      {/* Logo / Icon */}
-      <div className="mb-6">
+    <div className="fade-in flex min-h-screen flex-col items-center px-6 pb-12 pt-16">
+      <div className="mb-5">
         {org.logo ? (
           <img src={org.logo} alt={org.name} className="h-24 w-24 rounded-2xl object-cover" />
         ) : (
-          <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/10">
+          <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-secondary">
             <Coffee className="h-12 w-12 text-primary" />
           </div>
         )}
       </div>
 
-      {/* Org name */}
-      <h1 className="text-3xl font-bold tracking-tight">{org.name}</h1>
-      <p className="mt-2 text-center text-muted-foreground">Welcome to our customer portal</p>
+      <h1 className="text-display font-bold tracking-tight">{org.name}</h1>
+      <p className="mt-2 text-center text-body text-muted-foreground">
+        Order, track packs, and skip the queue.
+      </p>
 
-      {/* Operating hours */}
       {hours && Object.keys(hours).length > 0 && (
-        <Card className="mt-6 w-full">
-          <CardContent className="p-4">
-            <h3 className="mb-2 text-sm font-semibold">Operating Hours</h3>
-            <div className="space-y-1">
+        <Card className="mt-8 w-full">
+          <CardContent className="p-5">
+            <h3 className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
+              Hours
+            </h3>
+            <div className="mt-3 space-y-2">
               {Object.entries(hours).map(([day, time]) => (
-                <div key={day} className="flex justify-between text-sm">
+                <div key={day} className="flex justify-between text-small">
                   <span className="capitalize text-muted-foreground">{day}</span>
-                  <span>{time}</span>
+                  <span className="font-medium">{time}</span>
                 </div>
               ))}
             </div>
@@ -64,25 +65,21 @@ export default function LandingPage() {
         </Card>
       )}
 
-      {/* CTA Buttons */}
       <div className="mt-8 flex w-full flex-col gap-3">
         <Button asChild size="lg" className="w-full">
-          <Link href={`/${org.slug}/register`}>Sign Up</Link>
+          <Link href={`/${org.slug}/register`}>Create account</Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="w-full">
-          <Link href={`/${org.slug}/login`}>Log In</Link>
+          <Link href={`/${org.slug}/login`}>I already have one</Link>
         </Button>
       </div>
 
-      {/* Browse links */}
-      <div className="mt-6 flex gap-4 text-sm">
-        <Link href={`/${org.slug}/menu`} className="text-primary hover:underline">
-          Browse Menu
-        </Link>
-        <Link href={`/${org.slug}/packs`} className="text-primary hover:underline">
-          View Packs
-        </Link>
-      </div>
+      <Link
+        href={`/${org.slug}/menu`}
+        className="mt-6 text-small text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        Just looking? Browse the menu
+      </Link>
     </div>
   );
 }

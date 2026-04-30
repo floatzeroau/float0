@@ -52,19 +52,26 @@ const config: Config = {
           foreground: 'hsl(var(--tab-bar-foreground))',
           active: 'hsl(var(--tab-bar-active))',
         },
-        float0: {
-          navy: '#0A2540',
-          indigo: '#635BFF',
-          'light-bg': '#F6F9FC',
-          success: '#30D158',
-          warning: '#FFD60A',
-          error: '#FF453A',
-        },
+        success: 'hsl(var(--success))',
+        warning: 'hsl(var(--warning))',
+      },
+      fontSize: {
+        display: ['1.75rem', { lineHeight: '2.125rem', letterSpacing: '-0.01em' }],
+        h1: ['1.5rem', { lineHeight: '1.875rem', letterSpacing: '-0.005em' }],
+        h2: ['1.25rem', { lineHeight: '1.625rem' }],
+        body: ['0.9375rem', { lineHeight: '1.4rem' }],
+        small: ['0.8125rem', { lineHeight: '1.125rem' }],
+        micro: ['0.6875rem', { lineHeight: '0.875rem', letterSpacing: '0.04em' }],
       },
       borderRadius: {
+        xl: 'calc(var(--radius) + 8px)',
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: 'calc(var(--radius) - 4px)',
+        sm: 'calc(var(--radius) - 8px)',
+      },
+      boxShadow: {
+        soft: '0 1px 2px 0 rgb(45 33 26 / 0.04), 0 1px 3px 0 rgb(45 33 26 / 0.06)',
+        lift: '0 4px 12px -2px rgb(45 33 26 / 0.08), 0 2px 4px -2px rgb(45 33 26 / 0.06)',
       },
       keyframes: {
         'accordion-down': {

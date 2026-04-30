@@ -27,7 +27,7 @@ export function BottomNav({ slug }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-tab-bar pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgb(45_33_26_/_0.04)]">
       <div className="mx-auto flex max-w-[480px]">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -38,14 +38,13 @@ export function BottomNav({ slug }: BottomNavProps) {
             <Link
               key={tab.path}
               href={tab.path}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs transition-colors',
-                isActive
-                  ? 'font-medium text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
+                'flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 text-micro font-medium transition-colors',
+                isActive ? 'text-tab-bar-active' : 'text-tab-bar-foreground hover:text-foreground',
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.25 : 1.75} />
               <span>{tab.label}</span>
             </Link>
           );

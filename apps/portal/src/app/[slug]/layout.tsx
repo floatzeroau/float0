@@ -22,7 +22,15 @@ function PortalShell({ children, slug }: { children: React.ReactNode; slug: stri
 
   return (
     <div className="mx-auto min-h-screen max-w-[480px] bg-background">
-      <main className={showNav ? 'pb-16' : ''}>{children}</main>
+      <main
+        className={
+          showNav
+            ? 'pb-[calc(56px+env(safe-area-inset-bottom))]'
+            : 'pb-[env(safe-area-inset-bottom)]'
+        }
+      >
+        {children}
+      </main>
       {showNav && <BottomNav slug={slug} />}
     </div>
   );

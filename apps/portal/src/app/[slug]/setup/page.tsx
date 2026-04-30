@@ -26,16 +26,17 @@ function SetupForm() {
   if (!token) {
     return (
       <Card className="w-full">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Setup link missing</CardTitle>
-          <CardDescription>
-            This page requires a setup token. Please use the link {org.name} sent you.
+        <CardHeader className="space-y-1.5 text-center">
+          <CardTitle className="text-display font-bold">Setup link missing</CardTitle>
+          <CardDescription className="text-body">
+            This page needs a setup link from {org.name}. Check your email or ask the cafe to resend
+            it.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Link
             href={`/${org.slug}/login`}
-            className="block text-center text-sm font-medium text-primary hover:underline"
+            className="block text-center text-small font-medium text-primary hover:underline"
           >
             Back to login
           </Link>
@@ -86,16 +87,16 @@ function SetupForm() {
 
   return (
     <Card className="w-full">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Set your password</CardTitle>
-        <CardDescription>
-          Create a password to access your {org.name} customer portal.
+      <CardHeader className="space-y-1.5 text-center">
+        <CardTitle className="text-display font-bold">Set your password</CardTitle>
+        <CardDescription className="text-body">
+          One last step to unlock your {org.name} portal.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="password" className="text-sm font-medium">
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="text-small font-medium">
               Password
             </label>
             <Input
@@ -109,16 +110,16 @@ function SetupForm() {
               aria-invalid={!!errors.password}
             />
             {errors.password ? (
-              <p className="text-xs text-destructive">{errors.password}</p>
+              <p className="text-small text-destructive">{errors.password}</p>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters and include a letter and a number.
+              <p className="text-small text-muted-foreground">
+                At least 8 characters with a letter and a number.
               </p>
             )}
           </div>
 
-          <div className="space-y-1">
-            <label htmlFor="confirm" className="text-sm font-medium">
+          <div className="space-y-1.5">
+            <label htmlFor="confirm" className="text-small font-medium">
               Confirm password
             </label>
             <Input
@@ -131,11 +132,11 @@ function SetupForm() {
               disabled={loading}
               aria-invalid={!!errors.confirm}
             />
-            {errors.confirm && <p className="text-xs text-destructive">{errors.confirm}</p>}
+            {errors.confirm && <p className="text-small text-destructive">{errors.confirm}</p>}
           </div>
 
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading ? 'Setting up...' : 'Continue'}
+            {loading ? 'Setting up…' : 'Continue'}
           </Button>
         </form>
       </CardContent>
@@ -145,7 +146,7 @@ function SetupForm() {
 
 export default function SetupPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
+    <div className="fade-in flex min-h-screen items-center justify-center px-6 py-12">
       <Suspense
         fallback={
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
