@@ -24,6 +24,7 @@ interface AuthContextValue {
     slug: string,
     data: { firstName: string; lastName: string; email: string; password: string; phone?: string },
   ) => Promise<void>;
+  completeSetup: (slug: string, setupToken: string, password: string) => Promise<void>;
   logout: () => void;
   refreshProfile: (slug: string) => Promise<void>;
 }
@@ -103,6 +104,15 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     [],
   );
 
+  const completeSetup = useCallback(async (slug: string, setupToken: string, password: string) => {
+    const res = await api.post<AuthResponse>(`/portal/${slug}/auth/setup`, {
+      setupToken,
+      password,
+    });
+    setTokens(res.accessToken, res.refreshToken);
+    setCustomer(res.customer);
+  }, []);
+
   const logout = useCallback(() => {
     clearTokens();
     setCustomer(null);
@@ -121,6 +131,7 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
         isAuthenticated: !!customer,
         login,
         register,
+        completeSetup,
         logout,
         refreshProfile,
       }}
