@@ -164,6 +164,7 @@ export async function customerRoutes(app: FastifyInstance) {
           purpose: 'customer-setup',
           customerId: result.customerId,
           orgId: request.user.orgId,
+          role: 'customer',
         } as unknown as Parameters<typeof request.server.jwt.sign>[0],
         { expiresIn: '72h' },
       );
