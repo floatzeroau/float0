@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { api } from '@/lib/api';
 import { useOrg } from '@/lib/org-context';
 import { useAuth } from '@/lib/auth-context';
@@ -31,19 +32,27 @@ interface HistoryResponse {
 function typeBadge(type: EntryType) {
   switch (type) {
     case 'order':
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Order</Badge>;
+      return <Badge variant="secondary">Order</Badge>;
     case 'pack_purchase':
       return (
-        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Pack purchase</Badge>
+        <Badge className="border-transparent bg-success/15 text-[hsl(var(--success))] hover:bg-success/15">
+          Pack
+        </Badge>
       );
     case 'pack_serve':
-      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Redeemed</Badge>;
-    case 'pack_refund':
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Refund</Badge>;
-    case 'pack_adjust':
       return (
-        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Adjustment</Badge>
+        <Badge className="border-transparent bg-accent text-accent-foreground hover:bg-accent">
+          Redeemed
+        </Badge>
       );
+    case 'pack_refund':
+      return (
+        <Badge className="border-transparent bg-destructive/15 text-destructive hover:bg-destructive/15">
+          Refund
+        </Badge>
+      );
+    case 'pack_adjust':
+      return <Badge variant="outline">Adjusted</Badge>;
   }
 }
 
@@ -135,7 +144,6 @@ export default function HistoryPage() {
     );
   }
 
-  // Group entries by day header
   const groups: { key: string; entries: HistoryEntry[] }[] = [];
   for (const entry of entries) {
     const key = dateHeader(entry.timestamp);
@@ -148,9 +156,11 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold">History</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Your orders and pack activity</p>
+    <div className="fade-in px-4 pb-8 pt-6">
+      <h1 className="text-display font-bold">History</h1>
+      <p className="mt-1 text-body text-muted-foreground">
+        Orders, pack purchases, and redemptions.
+      </p>
 
       {loading && (
         <div className="mt-6 space-y-3">
@@ -161,20 +171,19 @@ export default function HistoryPage() {
       )}
 
       {!loading && entries.length === 0 && (
-        <div className="mt-12 flex flex-col items-center text-center">
-          <Clock className="h-12 w-12 text-muted-foreground" />
-          <p className="mt-3 font-medium">No activity yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your orders and pack history will appear here.
-          </p>
-        </div>
+        <EmptyState
+          className="mt-10"
+          icon={Clock}
+          title="Nothing here yet"
+          description="Your orders and pack activity will land here once you visit."
+        />
       )}
 
       {!loading && entries.length > 0 && (
-        <div className="mt-4 space-y-6">
+        <div className="mt-5 space-y-5">
           {groups.map((group) => (
             <section key={group.key} className="space-y-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <h2 className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
                 {group.key}
               </h2>
               <div className="space-y-2">
@@ -183,19 +192,19 @@ export default function HistoryPage() {
                   return (
                     <div
                       key={entry.id}
-                      className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3"
+                      className="flex items-start justify-between gap-3 rounded-lg border bg-card p-4 shadow-soft"
                     >
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           {typeBadge(entry.type)}
-                          <p className="text-sm font-medium">{entry.description}</p>
+                          <p className="text-body font-medium">{entry.description}</p>
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mt-1 text-small text-muted-foreground">
                           {formatTime(entry.timestamp)}
                         </p>
                       </div>
                       {amount && (
-                        <span className="shrink-0 text-sm font-semibold tabular-nums">
+                        <span className="shrink-0 text-body font-semibold tabular-nums">
                           {amount}
                         </span>
                       )}
@@ -209,7 +218,7 @@ export default function HistoryPage() {
           {hasMore && (
             <div className="flex justify-center pt-2">
               <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? 'Loading...' : 'Load more'}
+                {loadingMore ? 'Loading…' : 'Load more'}
               </Button>
             </div>
           )}

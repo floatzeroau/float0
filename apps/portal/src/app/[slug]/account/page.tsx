@@ -88,15 +88,19 @@ export default function AccountPage() {
 
   const initials = `${customer.firstName[0]}${customer.lastName[0]}`.toUpperCase();
 
-  return (
-    <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold">Account</h1>
+  const memberSince = new Date(customer.createdAt).toLocaleDateString('en-AU', {
+    month: 'short',
+    year: 'numeric',
+  });
 
-      {/* Profile card */}
-      <Card className="mt-4">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
+  return (
+    <div className="fade-in px-4 pb-8 pt-6">
+      <h1 className="text-display font-bold">Account</h1>
+
+      <Card className="mt-5">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-h2 font-semibold text-primary-foreground">
               {initials}
             </span>
             <div className="flex-1 min-w-0">
@@ -123,10 +127,10 @@ export default function AccountPage() {
                     type="tel"
                     disabled={saving}
                   />
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-1">
                     <Button size="sm" onClick={handleSave} disabled={saving}>
                       <Check className="mr-1 h-3.5 w-3.5" />
-                      {saving ? 'Saving...' : 'Save'}
+                      {saving ? 'Saving…' : 'Save'}
                     </Button>
                     <Button size="sm" variant="outline" onClick={handleCancel} disabled={saving}>
                       <X className="mr-1 h-3.5 w-3.5" />
@@ -136,18 +140,23 @@ export default function AccountPage() {
                 </div>
               ) : (
                 <>
-                  <h2 className="text-lg font-semibold">
+                  <h2 className="text-h2 font-semibold leading-tight">
                     {customer.firstName} {customer.lastName}
                   </h2>
-                  <p className="text-sm text-muted-foreground">{customer.email}</p>
+                  <p className="mt-0.5 text-small text-muted-foreground">{customer.email}</p>
                   {customer.phone && (
-                    <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                    <p className="text-small text-muted-foreground">{customer.phone}</p>
                   )}
                 </>
               )}
             </div>
             {!editing && (
-              <Button size="icon" variant="ghost" onClick={handleStartEdit}>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleStartEdit}
+                aria-label="Edit profile"
+              >
                 <Pencil className="h-4 w-4" />
               </Button>
             )}
@@ -155,26 +164,26 @@ export default function AccountPage() {
         </CardContent>
       </Card>
 
-      {/* Stats */}
       <Card className="mt-3">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Member since</p>
-              <p className="font-medium">{new Date(customer.createdAt).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Loyalty balance</p>
-              <p className="font-medium">{customer.loyaltyBalance} pts</p>
-            </div>
+        <CardContent className="grid grid-cols-2 gap-4 p-5">
+          <div>
+            <p className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
+              Member since
+            </p>
+            <p className="mt-1 text-body font-semibold">{memberSince}</p>
+          </div>
+          <div>
+            <p className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
+              Loyalty
+            </p>
+            <p className="mt-1 text-body font-semibold">{customer.loyaltyBalance} pts</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Logout */}
       <Button variant="outline" className="mt-6 w-full" onClick={handleLogout}>
         <LogOut className="mr-2 h-4 w-4" />
-        Log Out
+        Log out
       </Button>
     </div>
   );
