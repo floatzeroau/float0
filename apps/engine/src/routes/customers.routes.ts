@@ -169,7 +169,8 @@ export async function customerRoutes(app: FastifyInstance) {
         { expiresIn: '72h' },
       );
 
-      const setupUrl = `https://go.float0.com/${result.orgSlug}/setup?token=${setupToken}`;
+      const portalBaseUrl = process.env.PORTAL_BASE_URL ?? 'http://localhost:3001';
+      const setupUrl = `${portalBaseUrl}/${result.orgSlug}/setup?token=${setupToken}`;
 
       return reply.send({
         setupUrl,
