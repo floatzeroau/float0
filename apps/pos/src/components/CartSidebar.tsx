@@ -198,6 +198,15 @@ function CartItemRow({
   }
 
   // Normal draft item rendering
+  if (__DEV__) {
+    console.log('[Pack pill check]', {
+      productName: item.productName,
+      allowAsPack: item.allowAsPack,
+      hasCustomer,
+      isSubmittedOrder,
+      result: item.allowAsPack && hasCustomer && !isSubmittedOrder,
+    });
+  }
   const showPackAction = item.allowAsPack && hasCustomer && !isSubmittedOrder;
 
   return (

@@ -55,8 +55,9 @@ interface CustomerDetail {
   lastName: string;
   email: string | null;
   phone: string | null;
-  loyaltyTier: string | null;
-  loyaltyBalance: number;
+  totalSpent: number;
+  visitCount: number;
+  lastVisit: string | null;
   createdAt: string;
 }
 
@@ -375,15 +376,19 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
               <Text style={styles.overviewValue}>{detail.phone}</Text>
             </View>
           )}
-          {detail.loyaltyTier && (
-            <View style={styles.overviewCard}>
-              <Text style={styles.overviewLabel}>Loyalty Tier</Text>
-              <Text style={styles.overviewValue}>{detail.loyaltyTier}</Text>
-            </View>
-          )}
           <View style={styles.overviewCard}>
-            <Text style={styles.overviewLabel}>Loyalty Balance</Text>
-            <Text style={styles.overviewValue}>${detail.loyaltyBalance.toFixed(2)}</Text>
+            <Text style={styles.overviewLabel}>Total Spent</Text>
+            <Text style={styles.overviewValue}>${(detail.totalSpent ?? 0).toFixed(2)}</Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewLabel}>Visits</Text>
+            <Text style={styles.overviewValue}>{detail.visitCount ?? 0}</Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewLabel}>Last Visit</Text>
+            <Text style={styles.overviewValue}>
+              {detail.lastVisit ? new Date(detail.lastVisit).toLocaleDateString() : '—'}
+            </Text>
           </View>
           <View style={styles.overviewCard}>
             <Text style={styles.overviewLabel}>Active Packs</Text>
