@@ -94,7 +94,7 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
       <TouchableOpacity
         style={[styles.card, !item.isAvailable && styles.cardUnavailable]}
         onPress={() => handlePress(item)}
-        activeOpacity={item.isAvailable ? 0.7 : 1}
+        activeOpacity={item.isAvailable ? 0.85 : 1}
         disabled={!item.isAvailable}
       >
         {item.categoryColour && (
@@ -107,7 +107,7 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
           >
             {item.name}
           </Text>
-          <View style={styles.pricePill}>
+          <View style={styles.priceContainer}>
             <Text style={[styles.productPrice, !item.isAvailable && styles.textUnavailable]}>
               ${item.basePrice.toFixed(2)}
             </Text>
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: colors.textPrimary,
+    color: colors.primary,
   },
   textUnavailable: {
     color: colors.textDisabled,
@@ -215,11 +215,8 @@ const styles = StyleSheet.create({
     fontSize: typography.size.base,
     color: colors.textMuted,
   },
-  pricePill: {
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radii.xs,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
+  priceContainer: {
+    alignSelf: 'flex-end',
   },
   packIcon: {
     position: 'absolute',

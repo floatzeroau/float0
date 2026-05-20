@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { Lock } from 'lucide-react-native';
+import { Lock, Package } from 'lucide-react-native';
 import { useOrder } from '../state/order-store';
 import type { CartItemData } from '../state/order-store';
 import { CustomerSearchModal } from './CustomerSearchModal';
@@ -20,10 +20,9 @@ import { VoidItemModal } from './VoidItemModal';
 import { PriceOverrideModal } from './PriceOverrideModal';
 import { ConvertToPackModal } from './ConvertToPackModal';
 import type { OrgCafePackSettings } from './ConvertToPackModal';
-import { ServeFromPackModal } from './ServeFromPackModal';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import type { DiscountType } from '@float0/shared';
-import { colors, radii, typography } from '../theme/tokens';
+import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // CartItem Row
@@ -173,12 +172,13 @@ function CartItemRow({
                 {item.modifiers.map((m) => m.name).join(', ')}
               </Text>
             )}
-            <View style={styles.packBadge}>
-              <Text style={styles.packBadgeText}>CAFE PACK</Text>
-            </View>
           </View>
           <View style={styles.itemPriceCol}>
             <Text style={styles.itemTotal}>${item.lineTotal.toFixed(2)}</Text>
+            <View style={styles.cafePackPill}>
+              <Lock size={12} color={colors.white} />
+              <Text style={styles.cafePackPillText}>{item.packTotalQuantity}-pack</Text>
+            </View>
           </View>
         </View>
         <View style={styles.itemControls}>
@@ -235,6 +235,16 @@ function CartItemRow({
           ) : (
             <Text style={styles.itemTotal}>${item.lineTotal.toFixed(2)}</Text>
           )}
+          {showPackAction && (
+            <TouchableOpacity
+              style={styles.packPill}
+              onPress={() => onConvertToPack(item)}
+              activeOpacity={0.7}
+            >
+              <Package size={14} color={colors.pack} />
+              <Text style={styles.packPillText}>Pack</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -257,14 +267,6 @@ function CartItemRow({
         </View>
 
         <View style={styles.actionGroup}>
-          {showPackAction && (
-            <>
-              <TouchableOpacity onPress={() => onConvertToPack(item)}>
-                <Text style={[styles.actionText, styles.actionTextPack]}>Pack</Text>
-              </TouchableOpacity>
-              <Text style={styles.actionDivider}>|</Text>
-            </>
-          )}
           {hasModifiers && (
             <>
               <TouchableOpacity onPress={() => onEdit(item)}>
@@ -355,8 +357,6 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
-  const [showServePack, setShowServePack] = useState(false);
-
   // Discount modal state
   const [discountModalVisible, setDiscountModalVisible] = useState(false);
   const [discountTarget, setDiscountTarget] = useState<{
@@ -699,19 +699,6 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
                     <Text style={styles.customerRemoveText}>X</Text>
                   </TouchableOpacity>
                 </View>
-                {currentOrder.customerId && (
-                  <View style={styles.packButtonRow}>
-                    <TouchableOpacity
-                      style={styles.servePackButton}
-                      onPress={() => {
-                        setShowMenu(false);
-                        setShowServePack(true);
-                      }}
-                    >
-                      <Text style={styles.servePackText}>Serve from Pack</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
               </>
             ) : (
               <TouchableOpacity
@@ -868,16 +855,6 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         onConfirm={handlePackConfirm}
         onCancel={handlePackCancel}
       />
-
-      {currentOrder?.customerId && (
-        <ServeFromPackModal
-          visible={showServePack}
-          customerId={currentOrder.customerId}
-          customerName={currentOrder.customerName ?? ''}
-          onComplete={() => setShowServePack(false)}
-          onCancel={() => setShowServePack(false)}
-        />
-      )}
     </View>
   );
 }
@@ -1041,19 +1018,6 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xxs,
     fontWeight: typography.weight.bold,
     color: '#1a6ed8',
-  },
-  packButtonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 6,
-  },
-  servePackButton: {
-    alignSelf: 'flex-start',
-  },
-  servePackText: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.semibold,
-    color: colors.pack,
   },
 
   // Item list
@@ -1268,11 +1232,6 @@ const styles = StyleSheet.create({
   actionRemove: {
     color: colors.danger,
   },
-  actionTextPack: {
-    color: colors.pack,
-    fontWeight: typography.weight.semibold,
-  },
-
   // Pack item styles
   itemRowPack: {
     backgroundColor: colors.packLight,
@@ -1287,16 +1246,39 @@ const styles = StyleSheet.create({
   packLockIcon: {
     fontSize: typography.size.sm,
   },
-  packBadge: {
-    backgroundColor: colors.pack,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radii.xs,
-    alignSelf: 'flex-start',
-    marginTop: 4,
+  // Pack pill (on eligible draft items)
+  packPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.packLight,
+    borderWidth: 1,
+    borderColor: colors.pack,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.xs,
+    minHeight: 32,
   },
-  packBadgeText: {
-    fontSize: typography.size.xxs,
+  packPillText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.pack,
+  },
+  // Cafe Pack pill (on converted pack items)
+  cafePackPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.pack,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.xs,
+    minHeight: 32,
+  },
+  cafePackPillText: {
+    fontSize: typography.size.sm,
     fontWeight: typography.weight.bold,
     color: colors.white,
   },

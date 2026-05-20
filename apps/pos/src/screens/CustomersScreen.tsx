@@ -8,11 +8,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   Modal,
+  Animated,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { WifiOff, X, ChevronRight, ArrowLeft } from 'lucide-react-native';
+import { WifiOff, X, ChevronRight, ArrowLeft, CheckCircle, Minus, Plus } from 'lucide-react-native';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
-import { ServeFromPackModal } from '../components/ServeFromPackModal';
+import { useToast } from '../components/Toast';
 import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
@@ -76,21 +77,179 @@ function OfflinePlaceholder() {
 }
 
 // ---------------------------------------------------------------------------
+// Serve Confirmation Modal (single-pack, animated)
+// ---------------------------------------------------------------------------
+
+interface ServeConfirmationProps {
+  visible: boolean;
+  pack: CustomerPack | null;
+  customerId: string;
+  onComplete: () => void;
+  onCancel: () => void;
+}
+
+function ServeConfirmationModal({
+  visible,
+  pack,
+  customerId,
+  onComplete,
+  onCancel,
+}: ServeConfirmationProps) {
+  const toast = useToast();
+  const [quantity, setQuantity] = useState(1);
+  const [serving, setServing] = useState(false);
+  const [showCheck, setShowCheck] = useState(false);
+  const progress = useRef(new Animated.Value(0)).current;
+  const checkOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) {
+      setQuantity(1);
+      setServing(false);
+      setShowCheck(false);
+      progress.setValue(0);
+      checkOpacity.setValue(0);
+    }
+  }, [visible, progress, checkOpacity]);
+
+  const handleServe = useCallback(async () => {
+    if (!pack || serving) return;
+    setServing(true);
+    progress.setValue(0);
+
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 2000,
+      useNativeDriver: false,
+    }).start();
+
+    try {
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const [res] = await Promise.all([
+        fetch(`${API_URL}/customers/${customerId}/packs/${pack.id}/serve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantity }),
+        }),
+        new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+      ]);
+
+      if (!(res as Response).ok) throw new Error(`HTTP ${(res as Response).status}`);
+
+      setShowCheck(true);
+      Animated.timing(checkOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setTimeout(() => {
+          toast.success(`Served ${quantity} × ${pack.productName}`);
+          onComplete();
+        }, 200);
+      });
+    } catch {
+      toast.error("Couldn't serve from pack — try again");
+      onCancel();
+    }
+  }, [pack, serving, quantity, customerId, progress, checkOpacity, toast, onComplete, onCancel]);
+
+  if (!pack) return null;
+
+  const maxQty = pack.remainingQuantity;
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      supportedOrientations={['landscape-left', 'landscape-right']}
+    >
+      <View style={serveStyles.overlay}>
+        <View style={serveStyles.sheet}>
+          <TouchableOpacity style={serveStyles.cancelLink} onPress={onCancel} disabled={serving}>
+            <X size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={serveStyles.packSummary}>
+            <Text style={serveStyles.packName}>{pack.productName}</Text>
+            <Text style={serveStyles.packRemaining}>
+              {pack.remainingQuantity} / {pack.totalQuantity} remaining
+            </Text>
+          </View>
+
+          <View style={serveStyles.stepperRow}>
+            <TouchableOpacity
+              style={[serveStyles.stepperBtn, quantity <= 1 && serveStyles.stepperBtnDisabled]}
+              onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1 || serving}
+            >
+              <Minus size={20} color={quantity <= 1 ? colors.textDisabled : colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={serveStyles.stepperValue}>{quantity}</Text>
+            <TouchableOpacity
+              style={[serveStyles.stepperBtn, quantity >= maxQty && serveStyles.stepperBtnDisabled]}
+              onPress={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+              disabled={quantity >= maxQty || serving}
+            >
+              <Plus
+                size={20}
+                color={quantity >= maxQty ? colors.textDisabled : colors.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={serveStyles.serveBtn}
+            onPress={handleServe}
+            disabled={serving}
+            activeOpacity={0.85}
+          >
+            <Animated.View
+              style={[
+                serveStyles.progressFill,
+                {
+                  width: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
+            {showCheck ? (
+              <Animated.View style={{ opacity: checkOpacity }}>
+                <CheckCircle size={28} color={colors.white} />
+              </Animated.View>
+            ) : serving ? (
+              <Text style={serveStyles.serveBtnText}>Serving...</Text>
+            ) : (
+              <Text style={serveStyles.serveBtnText}>Serve</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Customer Detail View
 // ---------------------------------------------------------------------------
 
 interface CustomerDetailViewProps {
   customerId: string;
   onBack: () => void;
-  onServeFromPack: (customerId: string, customerName: string) => void;
 }
 
-function CustomerDetailView({ customerId, onBack, onServeFromPack }: CustomerDetailViewProps) {
+function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'packs' | 'history'>('overview');
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [packs, setPacks] = useState<CustomerPack[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [serveTargetPack, setServeTargetPack] = useState<CustomerPack | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +290,21 @@ function CustomerDetailView({ customerId, onBack, onServeFromPack }: CustomerDet
     };
   }, [customerId]);
 
+  const refreshPacks = useCallback(async () => {
+    try {
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const res = await fetch(`${API_URL}/customers/${customerId}/packs`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPacks(Array.isArray(data) ? data : (data.packs ?? []));
+      }
+    } catch {
+      // silently fail
+    }
+  }, [customerId]);
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -165,12 +339,6 @@ function CustomerDetailView({ customerId, onBack, onServeFromPack }: CustomerDet
           {detail.email && <Text style={styles.detailSub}>{detail.email}</Text>}
           {detail.phone && <Text style={styles.detailSub}>{detail.phone}</Text>}
         </View>
-        <TouchableOpacity
-          style={styles.serveButton}
-          onPress={() => onServeFromPack(customerId, customerName)}
-        >
-          <Text style={styles.serveButtonText}>Serve from Pack</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Tab bar */}
@@ -275,6 +443,15 @@ function CustomerDetailView({ customerId, onBack, onServeFromPack }: CustomerDet
                     </Text>
                   )}
                 </View>
+                {isActive && pack.remainingQuantity > 0 && (
+                  <TouchableOpacity
+                    style={styles.packServeButton}
+                    onPress={() => setServeTargetPack(pack)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.packServeButtonText}>Serve</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           }}
@@ -313,6 +490,16 @@ function CustomerDetailView({ customerId, onBack, onServeFromPack }: CustomerDet
           )}
         />
       )}
+      <ServeConfirmationModal
+        visible={serveTargetPack !== null}
+        pack={serveTargetPack}
+        customerId={customerId}
+        onComplete={() => {
+          setServeTargetPack(null);
+          refreshPacks();
+        }}
+        onCancel={() => setServeTargetPack(null)}
+      />
     </View>
   );
 }
@@ -327,9 +514,6 @@ export default function CustomersScreen() {
   const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [serveModalVisible, setServeModalVisible] = useState(false);
-  const [serveCustomerId, setServeCustomerId] = useState<string | null>(null);
-  const [serveCustomerName, setServeCustomerName] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchCustomers = useCallback(async (search: string) => {
@@ -442,22 +626,6 @@ export default function CustomersScreen() {
     }
   }, [addFirstName, addLastName, addPhone, addEmail, fetchCustomers, query]);
 
-  const handleServeFromPack = useCallback((customerId: string, customerName: string) => {
-    setServeCustomerId(customerId);
-    setServeCustomerName(customerName);
-    setServeModalVisible(true);
-  }, []);
-
-  const handleServeComplete = useCallback(() => {
-    setServeModalVisible(false);
-    setServeCustomerId(null);
-    // Refresh detail if viewing one
-    if (selectedCustomerId) {
-      setSelectedCustomerId(null);
-      setTimeout(() => setSelectedCustomerId(selectedCustomerId), 50);
-    }
-  }, [selectedCustomerId]);
-
   // If offline, show placeholder
   if (!isOnline && customers.length === 0 && !loading) {
     return <OfflinePlaceholder />;
@@ -466,23 +634,10 @@ export default function CustomersScreen() {
   // Customer detail view
   if (selectedCustomerId) {
     return (
-      <>
-        <CustomerDetailView
-          customerId={selectedCustomerId}
-          onBack={() => setSelectedCustomerId(null)}
-          onServeFromPack={handleServeFromPack}
-        />
-        {serveCustomerId && (
-          <ServeFromPackModal
-            visible={serveModalVisible}
-            customerId={serveCustomerId}
-            customerName={serveCustomerName}
-            isServerId
-            onComplete={handleServeComplete}
-            onCancel={() => setServeModalVisible(false)}
-          />
-        )}
-      </>
+      <CustomerDetailView
+        customerId={selectedCustomerId}
+        onBack={() => setSelectedCustomerId(null)}
+      />
     );
   }
 
@@ -642,16 +797,6 @@ export default function CustomersScreen() {
               <ChevronRight size={20} color={colors.textDisabled} />
             </TouchableOpacity>
           )}
-        />
-      )}
-
-      {serveCustomerId && (
-        <ServeFromPackModal
-          visible={serveModalVisible}
-          customerId={serveCustomerId}
-          customerName={serveCustomerName}
-          onComplete={handleServeComplete}
-          onCancel={() => setServeModalVisible(false)}
         />
       )}
     </View>
@@ -840,17 +985,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xxs,
   },
-  serveButton: {
-    backgroundColor: colors.pack,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-  },
-  serveButtonText: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.bold,
-    color: colors.white,
-  },
 
   // Tabs
   tabBar: {
@@ -961,6 +1095,19 @@ const styles = StyleSheet.create({
   packExpiredText: {
     color: colors.danger,
     fontWeight: typography.weight.semibold,
+  },
+  packServeButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    alignSelf: 'flex-start',
+    marginTop: spacing.md,
+  },
+  packServeButtonText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 
   // Orders
@@ -1077,6 +1224,95 @@ const styles = StyleSheet.create({
   },
   modalSubmitText: {
     fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Serve Confirmation Modal styles
+// ---------------------------------------------------------------------------
+
+const serveStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    width: 360,
+    position: 'relative',
+  },
+  cancelLink: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: 1,
+    padding: spacing.xs,
+  },
+  packSummary: {
+    marginBottom: spacing.xl,
+    paddingRight: spacing.xxl,
+  },
+  packName: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  packRemaining: {
+    fontSize: typography.size.base,
+    color: colors.pack,
+    fontWeight: typography.weight.semibold,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
+    marginBottom: spacing.xl,
+  },
+  stepperBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.lg,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperBtnDisabled: {
+    opacity: 0.4,
+  },
+  stepperValue: {
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    minWidth: 48,
+    textAlign: 'center',
+  },
+  serveBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    minHeight: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  progressFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: radii.lg,
+  },
+  serveBtnText: {
+    fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
     color: colors.white,
   },

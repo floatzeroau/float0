@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ShoppingCart, ClipboardList, Users, Settings as SettingsIcon } from 'lucide-react-native';
 
-import { colors, typography } from '../theme/tokens';
+import { colors, spacing, typography } from '../theme/tokens';
 import { ToastProvider } from '../components/Toast';
 import InitialSyncScreen from '../screens/InitialSyncScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -62,14 +62,15 @@ function MainTabs() {
                 <Tab.Navigator
                   screenOptions={({ route }) => ({
                     headerShown: false,
-                    tabBarIcon: ({ focused, size }) => {
+                    tabBarIcon: ({ focused }) => {
                       const color = focused ? colors.tabActive : colors.tabInactive;
+                      const iconSize = focused ? 24 : 22;
                       const strokeWidth = focused ? 2.5 : 1.5;
                       switch (route.name) {
                         case 'POS':
                           return (
                             <ShoppingCart
-                              size={size}
+                              size={iconSize}
                               color={color}
                               strokeWidth={strokeWidth}
                               fill={focused ? colors.tabActive : 'none'}
@@ -78,7 +79,7 @@ function MainTabs() {
                         case 'Orders':
                           return (
                             <ClipboardList
-                              size={size}
+                              size={iconSize}
                               color={color}
                               strokeWidth={strokeWidth}
                               fill={focused ? colors.tabActive : 'none'}
@@ -87,7 +88,7 @@ function MainTabs() {
                         case 'Customers':
                           return (
                             <Users
-                              size={size}
+                              size={iconSize}
                               color={color}
                               strokeWidth={strokeWidth}
                               fill={focused ? colors.tabActive : 'none'}
@@ -96,7 +97,7 @@ function MainTabs() {
                         case 'Settings':
                           return (
                             <SettingsIcon
-                              size={size}
+                              size={iconSize}
                               color={color}
                               strokeWidth={strokeWidth}
                               fill={focused ? colors.tabActive : 'none'}
@@ -108,9 +109,27 @@ function MainTabs() {
                     },
                     tabBarActiveTintColor: colors.tabActive,
                     tabBarInactiveTintColor: colors.tabInactive,
-                    tabBarLabelStyle: {
-                      fontSize: typography.size.xs,
-                      fontWeight: typography.weight.semibold,
+                    tabBarActiveBackgroundColor: 'rgba(37, 99, 235, 0.06)',
+                    tabBarLabel: ({ focused, children }) => (
+                      <Text
+                        style={{
+                          fontSize: typography.size.xs,
+                          fontWeight: focused ? typography.weight.medium : '400',
+                          color: focused ? colors.tabActive : colors.tabInactive,
+                        }}
+                      >
+                        {children}
+                      </Text>
+                    ),
+                    tabBarStyle: {
+                      height: 64,
+                      borderTopWidth: StyleSheet.hairlineWidth,
+                      borderTopColor: colors.border,
+                      paddingBottom: spacing.sm,
+                      paddingTop: spacing.xs,
+                    },
+                    tabBarItemStyle: {
+                      paddingVertical: spacing.xs,
                     },
                   })}
                 >
