@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,8 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { Q } from '@nozbe/watermelondb';
-import { database } from '../db/database';
-import type { Customer } from '../db/models';
-import { generateUUID } from '../utils/uuid';
+import * as SecureStore from 'expo-secure-store';
+import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
@@ -35,15 +33,6 @@ interface CustomerSearchModalProps {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function setRaw(record: Customer, field: string, value: string | number) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (record._raw as any)[field] = value;
-}
-
-// ---------------------------------------------------------------------------
 // Quick-Add Form
 // ---------------------------------------------------------------------------
 
@@ -59,35 +48,61 @@ function QuickAddForm({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const isValid = firstName.trim().length > 0 && phone.trim().length > 0;
 
   const handleSave = useCallback(async () => {
     if (!isValid || saving) return;
     setSaving(true);
+    setError('');
 
     try {
-      await database.write(async () => {
-        const created = await database.get<Customer>('customers').create((c) => {
-          setRaw(c, 'server_id', generateUUID());
-          setRaw(c, 'first_name', firstName.trim());
-          setRaw(c, 'last_name', lastName.trim());
-          setRaw(c, 'phone', phone.trim());
-          setRaw(c, 'email', email.trim());
-          setRaw(c, 'loyalty_tier', '');
-          setRaw(c, 'loyalty_balance', 0);
-        });
-
-        onCreated({
-          id: created.id,
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const res = await fetch(`${API_URL}/customers`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           phone: phone.trim(),
           email: email.trim(),
-          loyaltyTier: null,
-        });
+        }),
+      });
+
+      if (res.status === 403) {
+        setError("You don't have permission to add customers — ask a manager.");
+        setSaving(false);
+        return;
+      }
+
+      if (!res.ok) {
+        let msg = "Couldn't add customer — try again.";
+        try {
+          const body = await res.json();
+          if (body.message) msg = body.message;
+        } catch {
+          /* ignore parse failure */
+        }
+        setError(msg);
+        setSaving(false);
+        return;
+      }
+
+      const created = await res.json();
+      onCreated({
+        id: created.id,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        phone: created.phone ?? '',
+        email: created.email ?? '',
+        loyaltyTier: null,
       });
     } catch {
+      setError("Couldn't add customer — try again.");
       setSaving(false);
     }
   }, [firstName, lastName, phone, email, isValid, saving, onCreated]);
@@ -149,6 +164,8 @@ function QuickAddForm({
         </View>
       </View>
 
+      {error !== '' && <Text style={styles.formError}>{error}</Text>}
+
       <TouchableOpacity
         style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
         onPress={handleSave}
@@ -172,72 +189,65 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CustomerResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState('');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
       setQuery('');
       setResults([]);
+      setFetchError('');
       setShowQuickAdd(false);
     }
   }, [visible]);
 
-  // Search customers
+  // Search customers via HTTP (debounced)
   useEffect(() => {
     if (!visible || showQuickAdd) return;
 
-    const trimmed = query.trim();
-    if (trimmed.length === 0) {
-      // Show all customers when no query
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
       setLoading(true);
-      database
-        .get<Customer>('customers')
-        .query()
-        .fetch()
-        .then((rows) => {
-          setResults(
-            rows.map((c) => ({
-              id: c.id,
-              firstName: c.firstName,
-              lastName: c.lastName,
-              phone: c.phone ?? '',
-              email: c.email ?? '',
-              loyaltyTier: c.loyaltyTier || null,
-            })),
-          );
-          setLoading(false);
+      setFetchError('');
+      try {
+        const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+        const trimmed = query.trim();
+        const url = trimmed
+          ? `${API_URL}/customers?search=${encodeURIComponent(trimmed)}&limit=50`
+          : `${API_URL}/customers?limit=50`;
+
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-      return;
-    }
 
-    setLoading(true);
-    const lowerQ = trimmed.toLowerCase();
-
-    database
-      .get<Customer>('customers')
-      .query(
-        Q.or(
-          Q.where('first_name', Q.like(`%${Q.sanitizeLikeString(lowerQ)}%`)),
-          Q.where('last_name', Q.like(`%${Q.sanitizeLikeString(lowerQ)}%`)),
-          Q.where('phone', Q.like(`%${Q.sanitizeLikeString(lowerQ)}%`)),
-          Q.where('email', Q.like(`%${Q.sanitizeLikeString(lowerQ)}%`)),
-        ),
-      )
-      .fetch()
-      .then((rows) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const rows = data.data ?? [];
         setResults(
-          rows.map((c) => ({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          rows.map((c: any) => ({
             id: c.id,
             firstName: c.firstName,
             lastName: c.lastName,
             phone: c.phone ?? '',
             email: c.email ?? '',
-            loyaltyTier: c.loyaltyTier || null,
+            loyaltyTier: null,
           })),
         );
+      } catch {
+        setFetchError("Couldn't load customers — check connection");
+        setResults([]);
+      } finally {
         setLoading(false);
-      });
+      }
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [query, visible, showQuickAdd]);
 
   const handleCreated = useCallback(
@@ -282,11 +292,16 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
 
               {/* Results */}
               <ScrollView style={styles.resultsList} showsVerticalScrollIndicator={false}>
+                {fetchError !== '' && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{fetchError}</Text>
+                  </View>
+                )}
                 {loading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator color={colors.textMuted} />
                   </View>
-                ) : results.length === 0 ? (
+                ) : results.length === 0 && fetchError === '' ? (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>
                       {query.trim() ? 'No customers found' : 'No customers yet'}
@@ -408,6 +423,14 @@ const styles = StyleSheet.create({
     fontSize: typography.size.base,
     color: colors.textMuted,
   },
+  errorContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: spacing.sm,
+  },
+  errorText: {
+    fontSize: typography.size.sm,
+    color: colors.danger,
+  },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -508,6 +531,12 @@ const styles = StyleSheet.create({
     fontSize: typography.size.base,
     color: colors.textPrimary,
     backgroundColor: colors.surfaceAlt,
+  },
+  formError: {
+    fontSize: typography.size.sm,
+    color: colors.danger,
+    marginHorizontal: 20,
+    marginTop: spacing.sm,
   },
   saveButton: {
     marginHorizontal: 20,

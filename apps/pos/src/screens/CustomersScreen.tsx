@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
+  Modal,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { WifiOff, X, ChevronRight, ArrowLeft } from 'lucide-react-native';
@@ -25,7 +25,7 @@ interface CustomerListItem {
   lastName: string;
   email: string | null;
   phone: string | null;
-  activePacks: number;
+  activePackCount: number;
 }
 
 interface CustomerPack {
@@ -346,7 +346,7 @@ export default function CustomersScreen() {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setCustomers(Array.isArray(data) ? data : (data.customers ?? []));
+      setCustomers(Array.isArray(data) ? data : (data.data ?? []));
       setIsOnline(true);
     } catch {
       setIsOnline(false);
@@ -371,6 +371,76 @@ export default function CustomersScreen() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, fetchCustomers]);
+
+  // Add Customer modal state
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [addFirstName, setAddFirstName] = useState('');
+  const [addLastName, setAddLastName] = useState('');
+  const [addPhone, setAddPhone] = useState('');
+  const [addEmail, setAddEmail] = useState('');
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [addFirstNameError, setAddFirstNameError] = useState('');
+
+  const openAddModal = useCallback(() => {
+    setAddFirstName('');
+    setAddLastName('');
+    setAddPhone('');
+    setAddEmail('');
+    setAddError('');
+    setAddFirstNameError('');
+    setAddSaving(false);
+    setAddModalVisible(true);
+  }, []);
+
+  const handleAddCustomer = useCallback(async () => {
+    const trimmedFirst = addFirstName.trim();
+    if (!trimmedFirst) {
+      setAddFirstNameError('First name is required');
+      return;
+    }
+    setAddFirstNameError('');
+    setAddError('');
+    setAddSaving(true);
+    try {
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const res = await fetch(`${API_URL}/customers`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: trimmedFirst,
+          lastName: addLastName.trim(),
+          phone: addPhone.trim(),
+          email: addEmail.trim(),
+        }),
+      });
+      if (res.status === 403) {
+        setAddError("You don't have permission to add customers — ask a manager.");
+        setAddSaving(false);
+        return;
+      }
+      if (!res.ok) {
+        let msg = "Couldn't add customer — try again.";
+        try {
+          const body = await res.json();
+          if (body.message) msg = body.message;
+        } catch {
+          /* ignore parse failure */
+        }
+        setAddError(msg);
+        setAddSaving(false);
+        return;
+      }
+      setAddModalVisible(false);
+      fetchCustomers(query);
+    } catch {
+      setAddError("Couldn't add customer — try again.");
+      setAddSaving(false);
+    }
+  }, [addFirstName, addLastName, addPhone, addEmail, fetchCustomers, query]);
 
   const handleServeFromPack = useCallback((customerId: string, customerName: string) => {
     setServeCustomerId(customerId);
@@ -435,7 +505,97 @@ export default function CustomersScreen() {
             <X size={14} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
+        <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
+          <Text style={styles.addButtonText}>+ New</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Add Customer Modal */}
+      <Modal
+        visible={addModalVisible}
+        animationType="fade"
+        transparent
+        supportedOrientations={['landscape-left', 'landscape-right']}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>New Customer</Text>
+
+            <View style={styles.modalField}>
+              <Text style={styles.modalLabel}>First Name *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="First name"
+                placeholderTextColor={colors.textMuted}
+                value={addFirstName}
+                onChangeText={(t) => {
+                  setAddFirstName(t);
+                  setAddFirstNameError('');
+                }}
+                autoFocus
+              />
+              {addFirstNameError !== '' && (
+                <Text style={styles.modalFieldError}>{addFirstNameError}</Text>
+              )}
+            </View>
+            <View style={styles.modalField}>
+              <Text style={styles.modalLabel}>Last Name</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Last name"
+                placeholderTextColor={colors.textMuted}
+                value={addLastName}
+                onChangeText={setAddLastName}
+              />
+            </View>
+            <View style={styles.modalField}>
+              <Text style={styles.modalLabel}>Phone</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Phone number"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="phone-pad"
+                value={addPhone}
+                onChangeText={setAddPhone}
+              />
+            </View>
+            <View style={styles.modalField}>
+              <Text style={styles.modalLabel}>Email</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Email address"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={addEmail}
+                onChangeText={setAddEmail}
+              />
+            </View>
+
+            {addError !== '' && <Text style={styles.modalError}>{addError}</Text>}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setAddModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSubmitButton, addSaving && styles.modalSubmitDisabled]}
+                onPress={handleAddCustomer}
+                disabled={addSaving}
+              >
+                {addSaving ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Text style={styles.modalSubmitText}>Add Customer</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Customer list */}
       {loading && customers.length === 0 ? (
@@ -472,10 +632,10 @@ export default function CustomersScreen() {
                 {item.email && <Text style={styles.customerEmail}>{item.email}</Text>}
                 {item.phone && <Text style={styles.customerPhone}>{item.phone}</Text>}
               </View>
-              {item.activePacks > 0 && (
+              {item.activePackCount > 0 && (
                 <View style={styles.packBadge}>
                   <Text style={styles.packBadgeText}>
-                    {item.activePacks} pack{item.activePacks !== 1 ? 's' : ''}
+                    {item.activePackCount} pack{item.activePackCount !== 1 ? 's' : ''}
                   </Text>
                 </View>
               )}
@@ -566,6 +726,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButton: {
+    marginLeft: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+  },
+  addButtonText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.white,
   },
   listContent: {
     paddingBottom: 20,
@@ -827,5 +999,85 @@ const styles = StyleSheet.create({
   orderDate: {
     fontSize: typography.size.sm,
     color: colors.textMuted,
+  },
+
+  // Add Customer Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    width: 360,
+  },
+  modalTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+  },
+  modalField: {
+    marginBottom: spacing.md,
+  },
+  modalLabel: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  modalInput: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.size.base,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
+  },
+  modalFieldError: {
+    fontSize: typography.size.sm,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
+  modalError: {
+    fontSize: typography.size.sm,
+    color: colors.danger,
+    marginBottom: spacing.md,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  modalCancelButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.borderLight,
+  },
+  modalCancelText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+  },
+  modalSubmitButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+  },
+  modalSubmitDisabled: {
+    backgroundColor: colors.textDisabled,
+  },
+  modalSubmitText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.white,
   },
 });
