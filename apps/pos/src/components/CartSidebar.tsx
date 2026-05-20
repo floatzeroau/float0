@@ -199,12 +199,20 @@ function CartItemRow({
 
   // Normal draft item rendering
   if (__DEV__) {
+    const failingGate = !item.allowAsPack
+      ? 'allowAsPack=false'
+      : !hasCustomer
+        ? 'hasCustomer=false'
+        : isSubmittedOrder
+          ? 'isSubmittedOrder=true'
+          : 'NONE (showing)';
     console.log('[Pack pill check]', {
       productName: item.productName,
       allowAsPack: item.allowAsPack,
       hasCustomer,
       isSubmittedOrder,
       result: item.allowAsPack && hasCustomer && !isSubmittedOrder,
+      failingGate,
     });
   }
   const showPackAction = item.allowAsPack && hasCustomer && !isSubmittedOrder;
@@ -400,7 +408,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
   const [packModalVisible, setPackModalVisible] = useState(false);
   const [packTargetItem, setPackTargetItem] = useState<CartItemData | null>(null);
   const [cafePackSettings, setCafePackSettings] = useState<OrgCafePackSettings>({
-    enabled: false,
+    enabled: true, // default ON — user must explicitly disable
     expiryMode: 'none',
     expiryDays: null,
   });
@@ -413,19 +421,23 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         const res = await fetch(`${API_URL}/organization`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.ok) {
-          const org = await res.json();
-          const cp = org?.settings?.cafePack;
-          if (cp) {
-            setCafePackSettings({
-              enabled: cp.enabled === true,
-              expiryMode: cp.expiryMode ?? 'none',
-              expiryDays: cp.expiryDays ?? null,
-            });
-          }
+        if (!res.ok) {
+          if (__DEV__) console.log('[cafePack load] HTTP failed', res.status);
+          return;
         }
-      } catch {
-        // silently fail — use defaults
+        const org = await res.json();
+        const cp = org?.settings?.cafePack;
+        if (__DEV__)
+          console.log('[cafePack load]', { gotOrg: !!org, rawSettings: org?.settings, cp });
+        if (cp) {
+          setCafePackSettings({
+            enabled: cp.enabled !== false, // any non-false value = enabled
+            expiryMode: cp.expiryMode ?? 'none',
+            expiryDays: cp.expiryDays ?? null,
+          });
+        }
+      } catch (e) {
+        if (__DEV__) console.log('[cafePack load] error', e);
       }
     })();
   }, []);
@@ -724,23 +736,32 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
       {/* Item list */}
       {hasItems ? (
         <ScrollView style={styles.itemList} showsVerticalScrollIndicator={false}>
-          {items.map((item) => (
-            <CartItemRow
-              key={item.id}
-              item={item}
-              isSubmittedOrder={isManagingSubmittedOrder}
-              hasCustomer={!!currentOrder?.customerId && cafePackSettings.enabled}
-              onQuantityChange={handleQuantityChange}
-              onRemove={handleRemove}
-              onEdit={handleEdit}
-              onNoteChange={handleNoteChange}
-              onDiscount={handleOpenItemDiscount}
-              onVoid={handleOpenVoid}
-              onPriceOverride={handleOpenPriceOverride}
-              onConvertToPack={handleOpenConvertToPack}
-              onUndoPack={handleUndoPack}
-            />
-          ))}
+          {items.map((item) => {
+            if (__DEV__) {
+              console.log('[Cart hasCustomer source]', {
+                customerId: currentOrder?.customerId,
+                cafePackEnabled: cafePackSettings.enabled,
+                cafePackSettings,
+              });
+            }
+            return (
+              <CartItemRow
+                key={item.id}
+                item={item}
+                isSubmittedOrder={isManagingSubmittedOrder}
+                hasCustomer={!!currentOrder?.customerId && cafePackSettings.enabled}
+                onQuantityChange={handleQuantityChange}
+                onRemove={handleRemove}
+                onEdit={handleEdit}
+                onNoteChange={handleNoteChange}
+                onDiscount={handleOpenItemDiscount}
+                onVoid={handleOpenVoid}
+                onPriceOverride={handleOpenPriceOverride}
+                onConvertToPack={handleOpenConvertToPack}
+                onUndoPack={handleUndoPack}
+              />
+            );
+          })}
         </ScrollView>
       ) : (
         <View style={styles.emptyState}>

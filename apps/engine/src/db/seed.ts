@@ -30,6 +30,24 @@ async function seed() {
   if (existingOrg) {
     org = existingOrg;
     console.log(`Organization already exists: ${org.name} (${org.id})`);
+
+    // Ensure cafePack settings exist on existing orgs (idempotent)
+    if (!org.settings || !(org.settings as any).cafePack) {
+      const newSettings = {
+        ...(org.settings ?? {}),
+        cafePack: {
+          enabled: true,
+          expiryMode: 'none',
+          expiryDays: null,
+        },
+      };
+      await db
+        .update(organizations)
+        .set({ settings: newSettings })
+        .where(eq(organizations.id, org.id));
+      org = { ...org, settings: newSettings };
+      console.log(`Updated existing org with cafePack settings`);
+    }
   } else {
     const [created] = await db
       .insert(organizations)
