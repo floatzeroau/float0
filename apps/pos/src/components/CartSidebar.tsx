@@ -258,7 +258,7 @@ function CartItemRow({
               onPress={() => onConvertToPack(item)}
               activeOpacity={0.7}
             >
-              <Package size={14} color={colors.pack} />
+              <Package size={12} color={colors.pack} />
               <Text style={styles.packPillText}>Pack</Text>
             </TouchableOpacity>
           )}
@@ -1280,15 +1280,14 @@ const styles = StyleSheet.create({
   packPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: colors.packLight,
     borderWidth: 1,
     borderColor: colors.pack,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     marginTop: spacing.xs,
-    minHeight: 32,
   },
   packPillText: {
     fontSize: typography.size.sm,

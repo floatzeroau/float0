@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { database } from '../db/database';
-import type { Customer } from '../db/models';
+import type { Customer, Order } from '../db/models';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import type { CartItemData } from '../state/order-store';
 
@@ -30,6 +30,16 @@ export async function createPacksForOrder(
     return;
   }
 
+  // Resolve order local ID to server UUID
+  let serverOrderId: string | null = null;
+  try {
+    const orderRecord = await database.get<Order>('orders').find(orderId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    serverOrderId = (orderRecord._raw as any).server_id as string;
+  } catch {
+    console.warn('[PackCreation] Order not found in local DB:', orderId);
+  }
+
   const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
   const failures: string[] = [];
 
@@ -43,11 +53,15 @@ export async function createPacksForOrder(
         },
         totalQuantity: item.packTotalQuantity,
         pricePaid: item.packPrice,
-        sourceOrderId: orderId,
       };
+      if (serverOrderId) {
+        body.sourceOrderId = serverOrderId;
+      }
       if (item.packExpiryDate) {
         body.expiryDate = item.packExpiryDate;
       }
+
+      if (__DEV__) console.log('[PackCreation] POST body', body);
 
       const res = await fetch(`${API_URL}/customers/${serverCustomerId}/packs`, {
         method: 'POST',
@@ -60,6 +74,8 @@ export async function createPacksForOrder(
 
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
+        if (__DEV__)
+          console.warn('[PackCreation] Server rejected', { status: res.status, body: errBody });
         throw new Error(errBody?.error ?? `HTTP ${res.status}`);
       }
     } catch (err) {

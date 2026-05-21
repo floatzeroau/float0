@@ -820,6 +820,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           setRaw(oi, 'discount_reason', '');
           setRaw(oi, 'override_price', 0);
           setRaw(oi, 'override_reason', '');
+          setRaw(oi, 'modifiers_json', '');
           setRaw(oi, 'metadata_json', JSON.stringify(metadata));
         });
       });
@@ -878,35 +879,50 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   // -------------------------------------------------------------------------
   // setCustomer
   // -------------------------------------------------------------------------
-  const setCustomer = useCallback(async (customerId: string | null) => {
-    const orderId = orderRecordIdRef.current;
-    if (!orderId) return;
+  const setCustomer = useCallback(
+    async (customerId: string | null) => {
+      const orderId = orderRecordIdRef.current;
+      if (!orderId) return;
 
-    let customerName: string | null = null;
-    let customerEmail: string | null = null;
-    if (customerId) {
-      try {
-        const customer = await database.get<Customer>('customers').find(customerId);
-        const parts = [customer.firstName, customer.lastName].filter(Boolean);
-        customerName = parts.join(' ') || null;
-        customerEmail = customer.email || null;
-      } catch {
-        // Customer not found
+      // When removing customer, revert any pack lines first
+      if (!customerId) {
+        const packItems = items.filter((i) => i.isPackPurchase && !i.voidedAt);
+        for (const packItem of packItems) {
+          await undoPackConversion(packItem.id);
+        }
       }
-    }
 
-    await database.write(async () => {
-      const record = await database.get<Order>('orders').find(orderId);
-      await record.update((o) => {
-        setRaw(o, 'customer_id', customerId ?? '');
+      let customerName: string | null = null;
+      let customerEmail: string | null = null;
+      if (customerId) {
+        try {
+          const customer = await database.get<Customer>('customers').find(customerId);
+          const parts = [customer.firstName, customer.lastName].filter(Boolean);
+          customerName = parts.join(' ') || null;
+          customerEmail = customer.email || null;
+        } catch {
+          // Customer not found
+        }
+      }
+
+      await database.write(async () => {
+        const record = await database.get<Order>('orders').find(orderId);
+        await record.update((o) => {
+          setRaw(o, 'customer_id', customerId ?? '');
+        });
       });
-    });
 
-    setCurrentOrder((prev) => {
-      if (!prev) return prev;
-      return { ...prev, customerId, customerName, customerEmail };
-    });
-  }, []);
+      setCurrentOrder((prev) => {
+        if (!prev) return prev;
+        return { ...prev, customerId, customerName, customerEmail };
+      });
+
+      if (orderId) {
+        await refreshItems(orderId, orderDiscount);
+      }
+    },
+    [items, undoPackConversion, refreshItems, orderDiscount],
+  );
 
   // -------------------------------------------------------------------------
   // applyOrderDiscount
