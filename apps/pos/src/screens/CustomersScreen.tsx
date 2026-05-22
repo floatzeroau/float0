@@ -1194,7 +1194,7 @@ const styles = StyleSheet.create({
   },
   sidebarColumn: {
     width: 280,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#F5F5F5',
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
@@ -1645,7 +1645,7 @@ const serveStyles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: '#FFC700',
+    backgroundColor: '#5840BE',
     borderRadius: radii.lg,
   },
   serveBtnText: {
