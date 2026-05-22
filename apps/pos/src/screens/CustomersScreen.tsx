@@ -295,7 +295,7 @@ function timelineIcon(kind: TimelineEntry['kind']) {
 }
 
 function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
-  const [showHistory, setShowHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState<'packs' | 'history'>('packs');
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [packs, setPacks] = useState<CustomerPack[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
@@ -424,9 +424,6 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
   }
 
   const customerName = `${detail.firstName} ${detail.lastName}`;
-  const activePacks = packs.filter(
-    (p) => p.status === 'active' && !(p.expiryDate && new Date(p.expiryDate) < new Date()),
-  );
 
   return (
     <View style={styles.detailContainer}>
@@ -438,140 +435,219 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
         </TouchableOpacity>
         <View style={styles.detailHeaderInfo}>
           <Text style={styles.detailName}>{customerName}</Text>
-          {detail.email && <Text style={styles.detailSub}>{detail.email}</Text>}
-          {detail.phone && <Text style={styles.detailSub}>{detail.phone}</Text>}
         </View>
-        <TouchableOpacity
-          style={[styles.historyToggle, showHistory && styles.historyToggleActive]}
-          onPress={() => setShowHistory((v) => !v)}
-        >
-          <Text style={[styles.historyToggleText, showHistory && styles.historyToggleTextActive]}>
-            History
-          </Text>
-        </TouchableOpacity>
       </View>
 
-      {showHistory ? (
-        /* ── History timeline ── */
-        <FlatList
-          data={timeline}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyTab}>
-              <Text style={styles.emptyTabText}>No activity yet</Text>
-            </View>
-          }
-          renderItem={({ item: entry }) => (
-            <View style={styles.timelineRow}>
-              <View style={styles.timelineIcon}>{timelineIcon(entry.kind)}</View>
-              <View style={styles.timelineContent}>
-                <Text style={styles.timelineTitle}>{entry.title}</Text>
-                <Text style={styles.timelineSubtitle}>{entry.subtitle}</Text>
-              </View>
-              <Text style={styles.timelineDate}>
-                {new Date(entry.timestamp).toLocaleDateString()}{' '}
-                {new Date(entry.timestamp).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
-            </View>
-          )}
-        />
-      ) : (
-        /* ── Two-column: profile (left 40%) + packs (right 60%) ── */
-        <View style={styles.twoColumn}>
-          {/* LEFT — profile & stats */}
-          <ScrollView style={styles.columnLeft} contentContainerStyle={styles.columnLeftContent}>
-            <View style={styles.profileAvatar}>
-              <Text style={styles.profileAvatarText}>
-                {detail.firstName[0]}
-                {detail.lastName[0]}
-              </Text>
-            </View>
+      {/* Two-column: main content (left 60%) + overview sidebar (right 40%) */}
+      <View style={styles.twoColumn}>
+        {/* LEFT — Packs / History with tab bar */}
+        <View style={styles.mainColumn}>
+          <View style={styles.tabBar}>
+            {(['packs', 'history'] as const).map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tab, activeTab === tab && styles.tabActive]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                  {tab === 'packs' ? `Packs (${packs.length})` : 'History'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-            <View style={styles.overviewCard}>
-              <Text style={styles.overviewLabel}>Total Spent</Text>
-              <Text style={styles.overviewValue}>${(detail.totalSpent ?? 0).toFixed(2)}</Text>
-            </View>
-            <View style={styles.overviewCard}>
-              <Text style={styles.overviewLabel}>Visits</Text>
-              <Text style={styles.overviewValue}>{detail.visitCount ?? 0}</Text>
-            </View>
-            <View style={styles.overviewCard}>
-              <Text style={styles.overviewLabel}>Last Visit</Text>
-              <Text style={styles.overviewValue}>
-                {detail.lastVisit ? new Date(detail.lastVisit).toLocaleDateString() : '—'}
-              </Text>
-            </View>
-            {detail.phone && (
-              <View style={styles.overviewCard}>
-                <Text style={styles.overviewLabel}>Phone</Text>
-                <Text style={styles.overviewValue}>{detail.phone}</Text>
-              </View>
-            )}
-            {detail.email && (
-              <View style={styles.overviewCard}>
-                <Text style={styles.overviewLabel}>Email</Text>
-                <Text style={styles.overviewValue}>{detail.email}</Text>
-              </View>
-            )}
-            <View style={styles.overviewCard}>
-              <Text style={styles.overviewLabel}>Customer Since</Text>
-              <Text style={styles.overviewValue}>
-                {new Date(detail.createdAt).toLocaleDateString()}
-              </Text>
-            </View>
-          </ScrollView>
+          {activeTab === 'packs' ? (
+            <FlatList
+              data={packs}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.mainListContent}
+              ListEmptyComponent={
+                <View style={styles.emptyTab}>
+                  <Package size={32} color={colors.textMuted} />
+                  <Text style={styles.emptyTabText}>No packs yet</Text>
+                </View>
+              }
+              renderItem={({ item: pack }) => {
+                const isExpired = pack.expiryDate && new Date(pack.expiryDate) < new Date();
+                const isActive = pack.status === 'active' && !isExpired;
+                const pctRemaining =
+                  pack.totalQuantity > 0 ? (pack.remainingQuantity / pack.totalQuantity) * 100 : 0;
 
-          {/* RIGHT — active packs with serve buttons */}
-          <FlatList
-            style={styles.columnRight}
-            data={activePacks}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.columnRightContent}
-            ListHeaderComponent={
-              <Text style={styles.columnRightHeader}>Active Packs ({activePacks.length})</Text>
-            }
-            ListEmptyComponent={
-              <View style={styles.emptyTab}>
-                <Text style={styles.emptyTabText}>No active packs</Text>
-              </View>
-            }
-            renderItem={({ item: pack }) => (
-              <View style={styles.packCard}>
-                <View style={styles.packCardHeader}>
-                  <Text style={styles.packProductName}>{pack.productName}</Text>
-                  <View style={[styles.packStatusBadge, styles.packStatusActive]}>
-                    <Text style={styles.packStatusText}>ACTIVE</Text>
+                return (
+                  <View style={[styles.packCard, !isActive && styles.packCardInactive]}>
+                    <View style={styles.packCardHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.packProductName, !isActive && styles.packTextMuted]}>
+                          {pack.productName}
+                        </Text>
+                        <Text style={styles.packCreatedDate}>
+                          Purchased {new Date(pack.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.packStatusBadge,
+                          isExpired
+                            ? styles.packStatusExpired
+                            : isActive
+                              ? styles.packStatusActive
+                              : styles.packStatusInactive,
+                        ]}
+                      >
+                        <Text
+                          style={[styles.packStatusText, isExpired && styles.packStatusExpiredText]}
+                        >
+                          {isExpired ? 'EXPIRED' : pack.status.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Progress bar */}
+                    <View style={styles.packProgressTrack}>
+                      <View
+                        style={[
+                          styles.packProgressFill,
+                          {
+                            width: `${pctRemaining}%`,
+                            backgroundColor: isActive ? colors.pack : colors.textDisabled,
+                          },
+                        ]}
+                      />
+                    </View>
+
+                    <View style={styles.packCardBody}>
+                      <View style={styles.packStatRow}>
+                        <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
+                          Remaining
+                        </Text>
+                        <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
+                          {pack.remainingQuantity} / {pack.totalQuantity}
+                        </Text>
+                      </View>
+                      <View style={styles.packStatRow}>
+                        <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
+                          Paid
+                        </Text>
+                        <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
+                          ${pack.pricePaid.toFixed(2)}
+                        </Text>
+                      </View>
+                      {pack.expiryDate && (
+                        <View style={styles.packStatRow}>
+                          <Text
+                            style={[
+                              styles.packDetail,
+                              isExpired
+                                ? styles.packExpiredText
+                                : !isActive && styles.packTextMuted,
+                            ]}
+                          >
+                            {isExpired ? 'Expired' : 'Expires'}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.packStatValue,
+                              isExpired
+                                ? styles.packExpiredText
+                                : !isActive && styles.packTextMuted,
+                            ]}
+                          >
+                            {new Date(pack.expiryDate).toLocaleDateString()}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {isActive && pack.remainingQuantity > 0 && (
+                      <TouchableOpacity
+                        style={styles.packServeButton}
+                        onPress={() => setServeTargetPack(pack)}
+                        activeOpacity={0.85}
+                      >
+                        <Coffee size={14} color={colors.white} />
+                        <Text style={styles.packServeButtonText}>Serve</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
+                );
+              }}
+            />
+          ) : (
+            <FlatList
+              data={timeline}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.mainListContent}
+              ListEmptyComponent={
+                <View style={styles.emptyTab}>
+                  <ShoppingBag size={32} color={colors.textMuted} />
+                  <Text style={styles.emptyTabText}>No activity yet</Text>
                 </View>
-                <View style={styles.packCardBody}>
-                  <Text style={styles.packDetail}>
-                    Remaining: {pack.remainingQuantity}/{pack.totalQuantity}
+              }
+              renderItem={({ item: entry }) => (
+                <View style={styles.timelineRow}>
+                  <View style={styles.timelineIcon}>{timelineIcon(entry.kind)}</View>
+                  <View style={styles.timelineContent}>
+                    <Text style={styles.timelineTitle}>{entry.title}</Text>
+                    <Text style={styles.timelineSubtitle}>{entry.subtitle}</Text>
+                  </View>
+                  <Text style={styles.timelineDate}>
+                    {new Date(entry.timestamp).toLocaleDateString()}{' '}
+                    {new Date(entry.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </Text>
-                  <Text style={styles.packDetail}>Paid: ${pack.pricePaid.toFixed(2)}</Text>
-                  {pack.expiryDate && (
-                    <Text style={styles.packDetail}>
-                      Expires: {new Date(pack.expiryDate).toLocaleDateString()}
-                    </Text>
-                  )}
                 </View>
-                {pack.remainingQuantity > 0 && (
-                  <TouchableOpacity
-                    style={styles.packServeButton}
-                    onPress={() => setServeTargetPack(pack)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.packServeButtonText}>Serve</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          />
+              )}
+            />
+          )}
         </View>
-      )}
+
+        {/* RIGHT — Overview sidebar */}
+        <ScrollView style={styles.sidebarColumn} contentContainerStyle={styles.sidebarContent}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>
+              {detail.firstName[0]}
+              {detail.lastName[0]}
+            </Text>
+          </View>
+          <Text style={styles.sidebarName}>{customerName}</Text>
+          {detail.email && <Text style={styles.sidebarContact}>{detail.email}</Text>}
+          {detail.phone && <Text style={styles.sidebarContact}>{detail.phone}</Text>}
+
+          <View style={styles.statGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statCardValue}>${(detail.totalSpent ?? 0).toFixed(2)}</Text>
+              <Text style={styles.statCardLabel}>Total Spent</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statCardValue}>{detail.visitCount ?? 0}</Text>
+              <Text style={styles.statCardLabel}>Visits</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statCardValue}>
+                {packs.filter((p) => p.status === 'active').length}
+              </Text>
+              <Text style={styles.statCardLabel}>Active Packs</Text>
+            </View>
+          </View>
+
+          <View style={styles.sidebarDivider} />
+
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewLabel}>Last Visit</Text>
+            <Text style={styles.overviewValue}>
+              {detail.lastVisit ? new Date(detail.lastVisit).toLocaleDateString() : '—'}
+            </Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewLabel}>Customer Since</Text>
+            <Text style={styles.overviewValue}>
+              {new Date(detail.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
 
       <ServeConfirmationModal
         visible={serveTargetPack !== null}
@@ -1069,75 +1145,127 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
 
-  // History toggle
-  historyToggle: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  historyToggleActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  historyToggleText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
-    color: colors.textSecondary,
-  },
-  historyToggleTextActive: {
-    color: colors.white,
-  },
-
   // Two-column layout
   twoColumn: {
     flex: 1,
     flexDirection: 'row',
   },
-  columnLeft: {
-    width: '40%',
+  mainColumn: {
+    flex: 1,
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
-  columnLeftContent: {
+  sidebarColumn: {
+    width: 280,
+    backgroundColor: colors.surfaceAlt,
+  },
+  sidebarContent: {
     padding: spacing.lg,
+    alignItems: 'center',
   },
   profileAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    alignSelf: 'center',
+    marginBottom: spacing.md,
   },
   profileAvatarText: {
-    fontSize: typography.size.xl,
+    fontSize: typography.size.xxl,
     fontWeight: typography.weight.bold,
     color: colors.primary,
   },
-  columnRight: {
-    flex: 1,
-  },
-  columnRightContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxxl,
-  },
-  columnRightHeader: {
+  sidebarName: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  sidebarContact: {
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+
+  // Stat grid
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    width: '100%',
+  },
+  statCard: {
+    flex: 1,
+    minWidth: 70,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    ...({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 2,
+      elevation: 1,
+    } as object),
+  },
+  statCardValue: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  statCardLabel: {
+    fontSize: typography.size.xxs,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  sidebarDivider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.lg,
+  },
+
+  // Tabs
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingHorizontal: spacing.md,
+  },
+  tab: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: -1,
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.textMuted,
+  },
+  tabTextActive: {
+    color: colors.primary,
+  },
+
+  mainListContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xxxl,
   },
 
   // Timeline
   timelineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
@@ -1175,26 +1303,28 @@ const styles = StyleSheet.create({
   emptyTab: {
     padding: spacing.xxxl,
     alignItems: 'center',
+    gap: spacing.md,
   },
   emptyTabText: {
     fontSize: typography.size.base,
     color: colors.textMuted,
   },
 
-  // Overview stats
+  // Overview stats (sidebar)
   overviewCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: colors.border,
+    width: '100%',
   },
   overviewLabel: {
-    fontSize: typography.size.base,
+    fontSize: typography.size.sm,
     color: colors.textSecondary,
   },
   overviewValue: {
-    fontSize: typography.size.base,
+    fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
     color: colors.textPrimary,
   },
@@ -1202,45 +1332,92 @@ const styles = StyleSheet.create({
   // Packs
   packCard: {
     marginBottom: spacing.md,
-    padding: 14,
+    padding: spacing.lg,
     backgroundColor: colors.packLight,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: '#e9d5ff',
+  },
+  packCardInactive: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
   },
   packCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: spacing.sm,
   },
   packProductName: {
-    fontSize: typography.size.base,
+    fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
-    flex: 1,
+  },
+  packTextMuted: {
+    color: colors.textMuted,
+  },
+  packCreatedDate: {
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   packStatusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
+    marginLeft: spacing.sm,
   },
   packStatusActive: {
     backgroundColor: '#dcfce7',
+  },
+  packStatusInactive: {
+    backgroundColor: colors.borderLight,
+  },
+  packStatusExpired: {
+    backgroundColor: colors.dangerLight,
   },
   packStatusText: {
     fontSize: typography.size.xxs,
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
   },
+  packStatusExpiredText: {
+    color: colors.danger,
+  },
+  packProgressTrack: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  packProgressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
   packCardBody: {
     gap: spacing.xs,
+  },
+  packStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   packDetail: {
     fontSize: typography.size.sm,
     color: colors.textSecondary,
   },
+  packStatValue: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.textPrimary,
+  },
+  packExpiredText: {
+    color: colors.danger,
+  },
   packServeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.primary,
     borderRadius: radii.md,
     paddingVertical: spacing.sm,
