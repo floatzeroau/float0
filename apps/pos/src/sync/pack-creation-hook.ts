@@ -61,8 +61,6 @@ export async function createPacksForOrder(
         body.expiryDate = item.packExpiryDate;
       }
 
-      if (__DEV__) console.log('[PackCreation] POST body', body);
-
       const res = await fetch(`${API_URL}/customers/${serverCustomerId}/packs`, {
         method: 'POST',
         headers: {
@@ -74,8 +72,6 @@ export async function createPacksForOrder(
 
       if (!res.ok) {
         const errBody = await res.json().catch(() => null);
-        if (__DEV__)
-          console.warn('[PackCreation] Server rejected', { status: res.status, body: errBody });
         throw new Error(errBody?.error ?? `HTTP ${res.status}`);
       }
     } catch (err) {

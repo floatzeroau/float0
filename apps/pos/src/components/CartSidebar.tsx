@@ -198,23 +198,6 @@ function CartItemRow({
   }
 
   // Normal draft item rendering
-  if (__DEV__) {
-    const failingGate = !item.allowAsPack
-      ? 'allowAsPack=false'
-      : !hasCustomer
-        ? 'hasCustomer=false'
-        : isSubmittedOrder
-          ? 'isSubmittedOrder=true'
-          : 'NONE (showing)';
-    console.log('[Pack pill check]', {
-      productName: item.productName,
-      allowAsPack: item.allowAsPack,
-      hasCustomer,
-      isSubmittedOrder,
-      result: item.allowAsPack && hasCustomer && !isSubmittedOrder,
-      failingGate,
-    });
-  }
   const showPackAction = item.allowAsPack && hasCustomer && !isSubmittedOrder;
 
   return (
@@ -421,14 +404,9 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         const res = await fetch(`${API_URL}/organization`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) {
-          if (__DEV__) console.log('[cafePack load] HTTP failed', res.status);
-          return;
-        }
+        if (!res.ok) return;
         const org = await res.json();
         const cp = org?.settings?.cafePack;
-        if (__DEV__)
-          console.log('[cafePack load]', { gotOrg: !!org, rawSettings: org?.settings, cp });
         if (cp) {
           setCafePackSettings({
             enabled: cp.enabled !== false, // any non-false value = enabled
@@ -436,8 +414,8 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
             expiryDays: cp.expiryDays ?? null,
           });
         }
-      } catch (e) {
-        if (__DEV__) console.log('[cafePack load] error', e);
+      } catch {
+        // silently fail — default is enabled
       }
     })();
   }, []);
@@ -737,13 +715,6 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
       {hasItems ? (
         <ScrollView style={styles.itemList} showsVerticalScrollIndicator={false}>
           {items.map((item) => {
-            if (__DEV__) {
-              console.log('[Cart hasCustomer source]', {
-                customerId: currentOrder?.customerId,
-                cafePackEnabled: cafePackSettings.enabled,
-                cafePackSettings,
-              });
-            }
             return (
               <CartItemRow
                 key={item.id}
@@ -810,6 +781,9 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
           >
             <Text style={styles.doneButtonText}>Done</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionButton, styles.payButton]} onPress={onPay}>
+            <Text style={styles.payButtonText}>Pay ${cartTotals.total.toFixed(2)}</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.actions}>
@@ -821,15 +795,21 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
             <Text style={[styles.holdButtonText, !hasItems && styles.disabledText]}>Hold</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.submitButton, !hasItems && styles.disabledButton]}
-            onPress={submitOrder}
-            disabled={!hasItems}
-          >
-            <Text style={[styles.submitButtonText, !hasItems && styles.disabledSubmitText]}>
-              Submit
-            </Text>
-          </TouchableOpacity>
+          {currentOrder?.orderType === 'dine_in' && (
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.submitButtonSubtle,
+                !hasItems && styles.disabledButton,
+              ]}
+              onPress={submitOrder}
+              disabled={!hasItems}
+            >
+              <Text style={[styles.submitButtonSubtleText, !hasItems && styles.disabledText]}>
+                Submit
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.actionButton, styles.payButton, !hasItems && styles.disabledButton]}
@@ -1298,13 +1278,12 @@ const styles = StyleSheet.create({
   cafePackPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: colors.pack,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     marginTop: spacing.xs,
-    minHeight: 32,
   },
   cafePackPillText: {
     fontSize: typography.size.sm,
@@ -1411,16 +1390,18 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.semibold,
     color: colors.textSecondary,
   },
-  submitButton: {
-    backgroundColor: colors.textPrimary,
+  submitButtonSubtle: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   disabledButton: {
     backgroundColor: colors.textDisabled,
   },
-  submitButtonText: {
+  submitButtonSubtleText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
-    color: colors.white,
+    color: colors.textSecondary,
   },
   disabledSubmitText: {
     color: colors.white,
