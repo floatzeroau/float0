@@ -109,6 +109,22 @@ interface TimelineEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getModifierNames(snapshot: any): string[] {
+  const mods = snapshot?.modifiers;
+  if (!Array.isArray(mods)) return [];
+  return (
+    mods
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((m: any) => (typeof m === 'string' ? m : m?.name))
+      .filter((n): n is string => typeof n === 'string' && n.length > 0)
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Offline Placeholder
 // ---------------------------------------------------------------------------
 
@@ -447,6 +463,7 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
   }
 
   const customerName = `${detail.firstName} ${detail.lastName}`;
+  const activePackCount = packs.filter((p) => p.status === 'active').length;
 
   return (
     <View style={styles.detailContainer}>
@@ -459,15 +476,17 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
         <View style={styles.detailHeaderInfo}>
           <Text style={styles.detailName}>{customerName}</Text>
         </View>
-        <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-          <RefreshCw size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
       </View>
 
-      {/* Two-column: sidebar (left 240px) + main content (right flex) */}
+      {/* Two-column: sidebar (left 280px) + packs panel (right flex) */}
       <View style={styles.twoColumn}>
         {/* LEFT — Profile sidebar */}
         <ScrollView style={styles.sidebarColumn} contentContainerStyle={styles.sidebarContent}>
+          {/* Refresh button — top-right corner */}
+          <TouchableOpacity onPress={handleRefresh} style={styles.sidebarRefreshBtn}>
+            <RefreshCw size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+
           <View style={styles.profileAvatar}>
             <Text style={styles.profileAvatarText}>
               {detail.firstName[0]}
@@ -478,20 +497,23 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
           {detail.email && <Text style={styles.sidebarContact}>{detail.email}</Text>}
           {detail.phone && <Text style={styles.sidebarContact}>{detail.phone}</Text>}
 
-          <View style={styles.statGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statCardValue}>${(detail.totalSpent ?? 0).toFixed(2)}</Text>
-              <Text style={styles.statCardLabel}>Total Spent</Text>
+          <View style={styles.sidebarDivider} />
+
+          {/* Total Spent — full width */}
+          <View style={styles.statFullWidth}>
+            <Text style={styles.statBigValue}>${(detail.totalSpent ?? 0).toFixed(2)}</Text>
+            <Text style={styles.statLabel}>Total Spent</Text>
+          </View>
+
+          {/* Visits | Active Packs — side by side */}
+          <View style={styles.statRow}>
+            <View style={styles.statHalf}>
+              <Text style={styles.statBigValue}>{detail.visitCount ?? 0}</Text>
+              <Text style={styles.statLabel}>Visits</Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statCardValue}>{detail.visitCount ?? 0}</Text>
-              <Text style={styles.statCardLabel}>Visits</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statCardValue}>
-                {packs.filter((p) => p.status === 'active').length}
-              </Text>
-              <Text style={styles.statCardLabel}>Active Packs</Text>
+            <View style={styles.statHalf}>
+              <Text style={styles.statBigValue}>{activePackCount}</Text>
+              <Text style={styles.statLabel}>Active Packs</Text>
             </View>
           </View>
 
@@ -504,7 +526,7 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
             </Text>
           </View>
           <View style={styles.overviewCard}>
-            <Text style={styles.overviewLabel}>Customer Since</Text>
+            <Text style={styles.overviewLabel}>Member Since</Text>
             <Text style={styles.overviewValue}>
               {new Date(detail.createdAt).toLocaleDateString()}
             </Text>
@@ -531,7 +553,7 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
             <FlatList
               data={packs}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.mainListContent}
+              contentContainerStyle={styles.packListContent}
               ListEmptyComponent={
                 <View style={styles.emptyTab}>
                   <Package size={32} color={colors.textMuted} />
@@ -543,136 +565,95 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
                   pack.status === 'expired' ||
                   (pack.expiryDate && new Date(pack.expiryDate) < new Date());
                 const isActive = pack.status === 'active' && !isExpired;
-                const isConsumed = pack.status === 'consumed';
                 const pctRemaining =
                   pack.totalQuantity > 0 ? (pack.remainingQuantity / pack.totalQuantity) * 100 : 0;
                 const snapshot = pack.productSnapshot;
                 const productName = snapshot?.name ?? `Product ${pack.productId.slice(0, 8)}`;
-                const modifiers = snapshot?.modifiers;
+                const modNames = getModifierNames(snapshot);
+                const perServe =
+                  pack.pricePaid > 0 && pack.totalQuantity > 0
+                    ? pack.pricePaid / pack.totalQuantity
+                    : 0;
 
                 return (
                   <View style={[styles.packCard, !isActive && styles.packCardInactive]}>
-                    <View style={styles.packCardHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.packProductName, !isActive && styles.packTextMuted]}>
-                          {productName}
-                        </Text>
-                        {modifiers && modifiers.length > 0 && (
-                          <Text style={styles.packModifiers}>
-                            {modifiers.map((m) => m.name).join(', ')}
-                          </Text>
-                        )}
-                        <Text style={styles.packCreatedDate}>
-                          Purchased {new Date(pack.purchasedAt).toLocaleDateString()}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.packStatusBadge,
-                          isExpired
-                            ? styles.packStatusExpired
-                            : isConsumed
-                              ? styles.packStatusConsumed
-                              : isActive
-                                ? styles.packStatusActive
-                                : styles.packStatusInactive,
-                        ]}
-                      >
-                        <Text
+                    {/* Product name — 18px, weight 600 */}
+                    <Text style={styles.packProductName}>{productName}</Text>
+
+                    {/* Modifiers — 13px, purple, comma-joined */}
+                    {modNames.length > 0 && (
+                      <Text style={styles.packModifiers}>{modNames.join(', ')}</Text>
+                    )}
+
+                    {/* Purchased date — 12px, muted */}
+                    <Text style={styles.packCreatedDate}>
+                      Purchased {new Date(pack.purchasedAt).toLocaleDateString()}
+                    </Text>
+
+                    {/* Thin horizontal divider */}
+                    <View style={styles.packDivider} />
+
+                    {/* Progress row: label + bar + X/Y */}
+                    <View style={styles.packProgressRow}>
+                      <Text style={styles.packProgressLabel}>Progress</Text>
+                      <View style={styles.packProgressTrack}>
+                        <View
                           style={[
-                            styles.packStatusText,
-                            isExpired && styles.packStatusExpiredText,
-                            isConsumed && styles.packStatusConsumedText,
+                            styles.packProgressFill,
+                            {
+                              width: `${pctRemaining}%`,
+                              backgroundColor: isActive ? colors.pack : colors.textDisabled,
+                            },
                           ]}
-                        >
-                          {isExpired
-                            ? 'EXPIRED'
-                            : isConsumed
-                              ? 'USED UP'
-                              : pack.status.toUpperCase()}
-                        </Text>
+                        />
                       </View>
+                      <Text style={styles.packProgressCount}>
+                        {pack.remainingQuantity}/{pack.totalQuantity}
+                      </Text>
                     </View>
 
-                    {/* Progress bar */}
-                    <View style={styles.packProgressTrack}>
-                      <View
-                        style={[
-                          styles.packProgressFill,
-                          {
-                            width: `${pctRemaining}%`,
-                            backgroundColor: isActive ? colors.pack : colors.textDisabled,
-                          },
-                        ]}
-                      />
+                    {/* Total paid — 14px */}
+                    <View style={styles.packStatRow}>
+                      <Text style={styles.packDetailLabel}>Total paid</Text>
+                      <Text style={styles.packDetailValue}>
+                        ${(pack.pricePaid ?? 0).toFixed(2)}
+                      </Text>
                     </View>
 
-                    <View style={styles.packCardBody}>
-                      <View style={styles.packStatRow}>
-                        <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
-                          Remaining
-                        </Text>
-                        <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
-                          {pack.remainingQuantity} / {pack.totalQuantity}
-                        </Text>
-                      </View>
-                      <View style={styles.packStatRow}>
-                        <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
-                          Total paid
-                        </Text>
-                        <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
-                          ${(pack.pricePaid ?? 0).toFixed(2)}
-                        </Text>
-                      </View>
-                      <View style={styles.packStatRow}>
-                        <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
-                          Per serve
-                        </Text>
-                        <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
-                          ${(pack.unitValue ?? 0).toFixed(2)}
-                        </Text>
-                      </View>
-                      {pack.expiryDate && (
-                        <View style={styles.packStatRow}>
-                          <Text
-                            style={[
-                              styles.packDetail,
-                              isExpired
-                                ? styles.packExpiredText
-                                : !isActive && styles.packTextMuted,
-                            ]}
-                          >
-                            {isExpired ? 'Expired' : 'Expires'}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.packStatValue,
-                              isExpired
-                                ? styles.packExpiredText
-                                : !isActive && styles.packTextMuted,
-                            ]}
-                          >
-                            {new Date(pack.expiryDate).toLocaleDateString()}
-                          </Text>
-                        </View>
-                      )}
+                    {/* Per serve — 14px (pricePaid / totalQuantity if both > 0) */}
+                    <View style={styles.packStatRow}>
+                      <Text style={styles.packDetailLabel}>Per serve</Text>
+                      <Text style={styles.packDetailValue}>${perServe.toFixed(2)}</Text>
                     </View>
 
-                    {isActive && pack.remainingQuantity > 0 ? (
+                    {/* Expiry if set — 14px */}
+                    {pack.expiryDate && (
+                      <View style={styles.packStatRow}>
+                        <Text style={[styles.packDetailLabel, isExpired && styles.packExpiredText]}>
+                          {isExpired ? 'Expired' : 'Expires'}
+                        </Text>
+                        <Text style={[styles.packDetailValue, isExpired && styles.packExpiredText]}>
+                          {new Date(pack.expiryDate).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Serve button — ONLY if active && not expired */}
+                    {isActive && !isExpired ? (
                       <TouchableOpacity
                         style={styles.packServeButton}
                         onPress={() => setServeTargetPack(pack)}
                         activeOpacity={0.85}
                       >
-                        <Coffee size={16} color={colors.white} />
-                        <Text style={styles.packServeButtonText}>Serve from Pack</Text>
+                        <Coffee size={18} color={colors.white} />
+                        <Text style={styles.packServeButtonText}>Serve</Text>
                       </TouchableOpacity>
                     ) : (
-                      <View style={styles.packInactiveLabel}>
-                        <Text style={styles.packInactiveLabelText}>
+                      <View style={styles.packStatusPill}>
+                        <Text style={styles.packStatusPillText}>
                           {isExpired
                             ? 'Expired'
-                            : isConsumed
+                            : pack.status === 'consumed'
                               ? 'Fully redeemed'
                               : pack.status === 'refunded'
                                 ? 'Refunded'
@@ -1206,26 +1187,14 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
   },
-  detailSub: {
-    fontSize: typography.size.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xxs,
-  },
-
-  refreshButton: {
-    padding: spacing.sm,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceAlt,
-  },
-
   // Two-column layout
   twoColumn: {
     flex: 1,
     flexDirection: 'row',
   },
   sidebarColumn: {
-    width: 240,
-    backgroundColor: colors.surfaceAlt,
+    width: 280,
+    backgroundColor: '#fafafa',
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
@@ -1233,76 +1202,75 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sidebarContent: {
-    padding: spacing.lg,
+    padding: 20,
     alignItems: 'center',
+    position: 'relative',
+  },
+  sidebarRefreshBtn: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    padding: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceAlt,
+    zIndex: 1,
   },
   profileAvatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
   profileAvatarText: {
-    fontSize: typography.size.xxl,
+    fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
     color: colors.primary,
   },
   sidebarName: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
   sidebarContact: {
-    fontSize: typography.size.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-
-  // Stat grid
-  statGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    width: '100%',
-  },
-  statCard: {
-    flex: 1,
-    minWidth: 70,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    alignItems: 'center',
-    ...({
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.06,
-      shadowRadius: 2,
-      elevation: 1,
-    } as object),
-  },
-  statCardValue: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold,
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  statCardLabel: {
-    fontSize: typography.size.xxs,
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'center',
+    marginBottom: 2,
   },
   sidebarDivider: {
     width: '100%',
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.lg,
+  },
+  statFullWidth: {
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: spacing.md,
+  },
+  statRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: spacing.md,
+  },
+  statHalf: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statBigValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+    marginTop: 2,
   },
 
   // Tabs
@@ -1402,98 +1370,86 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 
-  // Packs
+  // Packs list
+  packListContent: {
+    padding: 20,
+    gap: 16,
+  },
   packCard: {
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.packLight,
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: '#e9d5ff',
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 18,
+    ...({
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 3,
+      elevation: 1,
+    } as object),
   },
   packCardInactive: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-  },
-  packCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    opacity: 0.6,
   },
   packProductName: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.textPrimary,
-  },
-  packTextMuted: {
-    color: colors.textMuted,
   },
   packModifiers: {
-    fontSize: typography.size.sm,
+    fontSize: 13,
     color: colors.pack,
-    marginTop: 2,
+    marginTop: 4,
   },
   packCreatedDate: {
-    fontSize: typography.size.xs,
+    fontSize: 12,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 4,
   },
-  packStatusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginLeft: spacing.sm,
+  packDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 12,
   },
-  packStatusActive: {
-    backgroundColor: '#dcfce7',
+  packProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
   },
-  packStatusInactive: {
-    backgroundColor: colors.borderLight,
-  },
-  packStatusConsumed: {
-    backgroundColor: colors.primaryLight,
-  },
-  packStatusExpired: {
-    backgroundColor: colors.dangerLight,
-  },
-  packStatusText: {
-    fontSize: typography.size.xxs,
-    fontWeight: typography.weight.bold,
-    color: colors.textPrimary,
-  },
-  packStatusExpiredText: {
-    color: colors.danger,
-  },
-  packStatusConsumedText: {
-    color: colors.primary,
+  packProgressLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   packProgressTrack: {
-    height: 4,
+    flex: 1,
+    height: 6,
     backgroundColor: colors.border,
-    borderRadius: 2,
-    marginBottom: spacing.md,
+    borderRadius: 3,
     overflow: 'hidden',
   },
   packProgressFill: {
-    height: 4,
-    borderRadius: 2,
+    height: 6,
+    borderRadius: 3,
   },
-  packCardBody: {
-    gap: spacing.xs,
+  packProgressCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    minWidth: 36,
+    textAlign: 'right',
   },
   packStatRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 4,
   },
-  packDetail: {
-    fontSize: typography.size.sm,
+  packDetailLabel: {
+    fontSize: 14,
     color: colors.textSecondary,
   },
-  packStatValue: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold,
+  packDetailValue: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
   packExpiredText: {
@@ -1506,22 +1462,23 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.primary,
     borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    marginTop: spacing.md,
+    height: 56,
+    marginTop: 12,
   },
   packServeButtonText: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.bold,
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.white,
   },
-  packInactiveLabel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    marginTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  packStatusPill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
   },
-  packInactiveLabelText: {
+  packStatusPillText: {
     fontSize: typography.size.sm,
     color: colors.textMuted,
     fontWeight: typography.weight.medium,
