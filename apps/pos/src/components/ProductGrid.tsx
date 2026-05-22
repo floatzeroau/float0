@@ -155,7 +155,7 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
 const styles = StyleSheet.create({
   gridContainer: {
     flex: 1,
-    backgroundColor: '#F1F2F5',
+    backgroundColor: '#EFF2F7',
   },
   grid: {
     padding: spacing.sm,

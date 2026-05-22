@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -63,7 +63,7 @@ function MainTabs() {
                   screenOptions={({ route }) => ({
                     headerShown: false,
                     tabBarIcon: ({ focused }) => {
-                      const color = focused ? colors.tabActive : colors.tabInactive;
+                      const color = focused ? '#2563EB' : colors.tabInactive;
                       switch (route.name) {
                         case 'POS':
                           return <ShoppingCart size={24} color={color} strokeWidth={2} />;
@@ -77,20 +77,34 @@ function MainTabs() {
                           return null;
                       }
                     },
-                    tabBarActiveTintColor: colors.tabActive,
+                    tabBarActiveTintColor: '#2563EB',
                     tabBarInactiveTintColor: colors.tabInactive,
-                    tabBarActiveBackgroundColor: '#E8E8EA',
+                    tabBarActiveBackgroundColor: 'transparent',
                     tabBarLabel: ({ focused, children }) => (
                       <Text
                         style={{
                           fontSize: typography.size.xs,
                           fontWeight: focused ? typography.weight.medium : '400',
-                          color: focused ? colors.tabActive : colors.tabInactive,
+                          color: focused ? '#2563EB' : colors.tabInactive,
                         }}
                       >
                         {children}
                       </Text>
                     ),
+                    tabBarButton: (props) => {
+                      const isFocused = props.accessibilityState?.selected;
+                      return (
+                        <View style={[tabStyles.tabButton, isFocused && tabStyles.tabButtonActive]}>
+                          <Pressable
+                            onPress={props.onPress}
+                            onLongPress={props.onLongPress}
+                            style={tabStyles.tabButtonInner}
+                          >
+                            {props.children}
+                          </Pressable>
+                        </View>
+                      );
+                    },
                     tabBarStyle: {
                       height: 64,
                       borderTopWidth: StyleSheet.hairlineWidth,
@@ -99,8 +113,6 @@ function MainTabs() {
                       paddingTop: spacing.xs,
                     },
                     tabBarItemStyle: {
-                      borderRadius: 12,
-                      marginHorizontal: 4,
                       paddingVertical: spacing.xs,
                     },
                   })}
@@ -124,6 +136,26 @@ function MainTabs() {
 // ---------------------------------------------------------------------------
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const tabStyles = StyleSheet.create({
+  tabButton: {
+    flex: 1,
+    borderRadius: 12,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  tabButtonActive: {
+    backgroundColor: '#F0F4FF',
+    borderColor: '#2563EB',
+  },
+  tabButtonInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

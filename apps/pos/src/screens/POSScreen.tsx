@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { useOrder } from '../state/order-store';
 import type { OrderType, CartItemData, CompletePaymentParams } from '../state/order-store';
@@ -23,6 +23,9 @@ import { calculateLineTotal } from '@float0/shared';
 import { generateUUID } from '../utils/uuid';
 import { colors, spacing, radii, typography } from '../theme/tokens';
 import { useToast } from '../components/Toast';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const brandMarkDark = require('../../assets/brand-mark-dark.png');
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setRaw(record: any, field: string, value: string | number) {
@@ -68,6 +71,7 @@ function TopBar({
   return (
     <View style={styles.topBar}>
       <View style={styles.topBarLeft}>
+        <Image source={brandMarkDark} style={styles.brandMark} />
         <Text style={styles.orderNumber}>{currentOrder?.orderNumber ?? 'No Order'}</Text>
         {currentOrder && (
           <View style={styles.statusBadge}>
@@ -542,6 +546,13 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
 
+  brandMark: {
+    width: 24,
+    height: 28,
+    marginRight: spacing.sm,
+    opacity: 0.5,
+    tintColor: '#1F1F1F',
+  },
   // Order number
   orderNumber: {
     fontSize: typography.size.xxl,
@@ -612,9 +623,9 @@ const styles = StyleSheet.create({
 
   // Cash movement buttons
   cashMovementButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4FF',
     borderWidth: 1,
-    borderColor: '#D4D4D4',
+    borderColor: '#B0C4F5',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
@@ -628,9 +639,9 @@ const styles = StyleSheet.create({
 
   // Open Drawer button
   openDrawerButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4FF',
     borderWidth: 1,
-    borderColor: '#D4D4D4',
+    borderColor: '#B0C4F5',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
