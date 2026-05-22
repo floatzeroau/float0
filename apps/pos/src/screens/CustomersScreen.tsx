@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebarColumn: {
-    width: 180,
+    width: 280,
     backgroundColor: '#fafafa',
     borderRightWidth: 1,
     borderRightColor: colors.border,
@@ -1376,6 +1376,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   packCard: {
+    width: '100%',
     backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 18,
