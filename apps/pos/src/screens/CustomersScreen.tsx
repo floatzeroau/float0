@@ -43,15 +43,25 @@ interface CustomerListItem {
   activePackCount: number;
 }
 
+interface PackProductSnapshot {
+  name?: string;
+  basePrice?: number;
+  modifiers?: Array<{ name: string; price?: number }>;
+  [key: string]: unknown;
+}
+
 interface CustomerPack {
   id: string;
-  productName: string;
+  productId: string;
+  productSnapshot: PackProductSnapshot;
   totalQuantity: number;
   remainingQuantity: number;
   pricePaid: number;
+  unitValue: number;
   expiryDate: string | null;
   status: string;
-  createdAt: string;
+  sourceOrderId: string | null;
+  purchasedAt: string;
 }
 
 interface CustomerOrder {
@@ -77,16 +87,18 @@ interface CustomerDetail {
 
 interface PackTransaction {
   id: string;
-  type: 'pack_purchase' | 'pack_serve' | 'pack_refund' | 'pack_adjust';
-  description: string;
+  packId: string;
+  type: 'purchase' | 'serve' | 'refund' | 'admin_adjust';
   quantity: number;
+  amount: number | null;
+  notes: string | null;
   createdAt: string;
-  packProductName?: string;
+  productSnapshot: PackProductSnapshot;
 }
 
 interface TimelineEntry {
   id: string;
-  kind: 'order' | 'pack_purchase' | 'pack_serve' | 'pack_refund' | 'pack_adjust';
+  kind: 'order' | 'purchase' | 'serve' | 'refund' | 'admin_adjust';
   title: string;
   subtitle: string;
   timestamp: string;
@@ -181,7 +193,7 @@ function ServeConfirmationModal({
         useNativeDriver: true,
       }).start(() => {
         setTimeout(() => {
-          toast.success(`Served ${quantity} × ${pack.productName}`);
+          toast.success(`Served ${quantity} × ${pack.productSnapshot?.name ?? 'pack'}`);
           onComplete();
         }, 200);
       });
@@ -209,7 +221,7 @@ function ServeConfirmationModal({
           </TouchableOpacity>
 
           <View style={serveStyles.packSummary}>
-            <Text style={serveStyles.packName}>{pack.productName}</Text>
+            <Text style={serveStyles.packName}>{pack.productSnapshot?.name ?? 'Pack'}</Text>
             <Text style={serveStyles.packRemaining}>
               {pack.remainingQuantity} / {pack.totalQuantity} remaining
             </Text>
@@ -283,13 +295,13 @@ function timelineIcon(kind: TimelineEntry['kind']) {
   switch (kind) {
     case 'order':
       return <ShoppingBag size={size} color={colors.primary} />;
-    case 'pack_purchase':
+    case 'purchase':
       return <Package size={size} color={colors.pack} />;
-    case 'pack_serve':
+    case 'serve':
       return <Coffee size={size} color={colors.success} />;
-    case 'pack_refund':
+    case 'refund':
       return <RotateCcw size={size} color={colors.warning} />;
-    case 'pack_adjust':
+    case 'admin_adjust':
       return <Settings size={size} color={colors.textSecondary} />;
   }
 }
@@ -311,9 +323,18 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
         const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [detailRes, packsRes, ordersRes, historyRes] = await Promise.all([
+        const [
+          detailRes,
+          activePacksRes,
+          expiredPacksRes,
+          consumedPacksRes,
+          ordersRes,
+          historyRes,
+        ] = await Promise.all([
           fetch(`${API_URL}/customers/${customerId}`, { headers }),
           fetch(`${API_URL}/customers/${customerId}/packs`, { headers }),
+          fetch(`${API_URL}/customers/${customerId}/packs?status=expired`, { headers }),
+          fetch(`${API_URL}/customers/${customerId}/packs?status=consumed`, { headers }),
           fetch(`${API_URL}/customers/${customerId}/orders?limit=20`, { headers }),
           fetch(`${API_URL}/customers/${customerId}/packs/history?limit=50`, { headers }),
         ]);
@@ -323,9 +344,16 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
         if (detailRes.ok) {
           setDetail(await detailRes.json());
         }
-        if (packsRes.ok) {
-          const data = await packsRes.json();
-          setPacks(Array.isArray(data) ? data : (data.packs ?? []));
+        {
+          const allPacks: CustomerPack[] = [];
+          for (const res of [activePacksRes, expiredPacksRes, consumedPacksRes]) {
+            if (res.ok) {
+              const data = await res.json();
+              const arr: CustomerPack[] = Array.isArray(data) ? data : (data.packs ?? []);
+              allPacks.push(...arr);
+            }
+          }
+          setPacks(allPacks);
         }
         if (ordersRes.ok) {
           const data = await ordersRes.json();
@@ -384,18 +412,24 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
 
     for (const t of packTransactions) {
       const label =
-        t.type === 'pack_purchase'
+        t.type === 'purchase'
           ? 'Pack purchased'
-          : t.type === 'pack_serve'
+          : t.type === 'serve'
             ? 'Served from pack'
-            : t.type === 'pack_refund'
+            : t.type === 'refund'
               ? 'Pack refunded'
               : 'Pack adjusted';
+      const productName = t.productSnapshot?.name;
+      const subtitle = t.notes
+        ? t.notes
+        : t.amount != null
+          ? `Qty: ${Math.abs(t.quantity)} · $${Math.abs(t.amount).toFixed(2)}`
+          : `Qty: ${Math.abs(t.quantity)}`;
       entries.push({
         id: `pt-${t.id}`,
         kind: t.type,
-        title: `${label}${t.packProductName ? ` — ${t.packProductName}` : ''}`,
-        subtitle: t.description || `Qty: ${t.quantity}`,
+        title: `${label}${productName ? ` — ${productName}` : ''}`,
+        subtitle,
         timestamp: t.createdAt,
       });
     }
@@ -468,20 +502,31 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
                 </View>
               }
               renderItem={({ item: pack }) => {
-                const isExpired = pack.expiryDate && new Date(pack.expiryDate) < new Date();
+                const isExpired =
+                  pack.status === 'expired' ||
+                  (pack.expiryDate && new Date(pack.expiryDate) < new Date());
                 const isActive = pack.status === 'active' && !isExpired;
+                const isConsumed = pack.status === 'consumed';
                 const pctRemaining =
                   pack.totalQuantity > 0 ? (pack.remainingQuantity / pack.totalQuantity) * 100 : 0;
+                const snapshot = pack.productSnapshot;
+                const productName = snapshot?.name ?? `Product ${pack.productId.slice(0, 8)}`;
+                const modifiers = snapshot?.modifiers;
 
                 return (
                   <View style={[styles.packCard, !isActive && styles.packCardInactive]}>
                     <View style={styles.packCardHeader}>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.packProductName, !isActive && styles.packTextMuted]}>
-                          {pack.productName}
+                          {productName}
                         </Text>
+                        {modifiers && modifiers.length > 0 && (
+                          <Text style={styles.packModifiers}>
+                            {modifiers.map((m) => m.name).join(', ')}
+                          </Text>
+                        )}
                         <Text style={styles.packCreatedDate}>
-                          Purchased {new Date(pack.createdAt).toLocaleDateString()}
+                          Purchased {new Date(pack.purchasedAt).toLocaleDateString()}
                         </Text>
                       </View>
                       <View
@@ -489,15 +534,25 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
                           styles.packStatusBadge,
                           isExpired
                             ? styles.packStatusExpired
-                            : isActive
-                              ? styles.packStatusActive
-                              : styles.packStatusInactive,
+                            : isConsumed
+                              ? styles.packStatusConsumed
+                              : isActive
+                                ? styles.packStatusActive
+                                : styles.packStatusInactive,
                         ]}
                       >
                         <Text
-                          style={[styles.packStatusText, isExpired && styles.packStatusExpiredText]}
+                          style={[
+                            styles.packStatusText,
+                            isExpired && styles.packStatusExpiredText,
+                            isConsumed && styles.packStatusConsumedText,
+                          ]}
                         >
-                          {isExpired ? 'EXPIRED' : pack.status.toUpperCase()}
+                          {isExpired
+                            ? 'EXPIRED'
+                            : isConsumed
+                              ? 'USED UP'
+                              : pack.status.toUpperCase()}
                         </Text>
                       </View>
                     </View>
@@ -529,9 +584,19 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
                           Paid
                         </Text>
                         <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
-                          ${pack.pricePaid.toFixed(2)}
+                          ${(pack.pricePaid ?? 0).toFixed(2)}
                         </Text>
                       </View>
+                      {snapshot?.basePrice != null && (
+                        <View style={styles.packStatRow}>
+                          <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
+                            Unit value
+                          </Text>
+                          <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
+                            ${(pack.unitValue ?? 0).toFixed(2)} / serve
+                          </Text>
+                        </View>
+                      )}
                       {pack.expiryDate && (
                         <View style={styles.packStatRow}>
                           <Text
@@ -1156,7 +1221,7 @@ const styles = StyleSheet.create({
     borderRightColor: colors.border,
   },
   sidebarColumn: {
-    width: 280,
+    width: 220,
     backgroundColor: colors.surfaceAlt,
   },
   sidebarContent: {
@@ -1356,6 +1421,11 @@ const styles = StyleSheet.create({
   packTextMuted: {
     color: colors.textMuted,
   },
+  packModifiers: {
+    fontSize: typography.size.sm,
+    color: colors.pack,
+    marginTop: 2,
+  },
   packCreatedDate: {
     fontSize: typography.size.xs,
     color: colors.textMuted,
@@ -1373,6 +1443,9 @@ const styles = StyleSheet.create({
   packStatusInactive: {
     backgroundColor: colors.borderLight,
   },
+  packStatusConsumed: {
+    backgroundColor: colors.primaryLight,
+  },
   packStatusExpired: {
     backgroundColor: colors.dangerLight,
   },
@@ -1383,6 +1456,9 @@ const styles = StyleSheet.create({
   },
   packStatusExpiredText: {
     color: colors.danger,
+  },
+  packStatusConsumedText: {
+    color: colors.primary,
   },
   packProgressTrack: {
     height: 4,
