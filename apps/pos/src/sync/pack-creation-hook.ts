@@ -50,6 +50,7 @@ export async function createPacksForOrder(
         productSnapshot: item.packProductSnapshot ?? {
           name: item.productName,
           basePrice: item.unitPrice,
+          modifiers: [],
         },
         totalQuantity: item.packTotalQuantity,
         pricePaid: item.packPrice,

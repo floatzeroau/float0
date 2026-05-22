@@ -793,7 +793,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const packProductSnapshot = {
         name: item.productName,
         basePrice: item.unitPrice,
-        modifiers: item.modifiers.map((m) => m.name),
+        modifiers: item.modifiers.map((m) => ({
+          name: m.name,
+          priceAdjustment: m.priceAdjustment,
+        })),
       };
 
       const metadata = {

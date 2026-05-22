@@ -25,9 +25,11 @@ import {
   Coffee,
   RotateCcw,
   Settings,
+  RefreshCw,
 } from 'lucide-react-native';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import { useToast } from '../components/Toast';
+import { useSync } from '../sync/SyncProvider';
 import { colors, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
@@ -64,11 +66,12 @@ interface CustomerPack {
   purchasedAt: string;
 }
 
-interface CustomerOrder {
+interface RecentOrder {
   id: string;
   orderNumber: string;
-  total: number;
+  orderType: string;
   status: string;
+  total: number;
   createdAt: string;
   itemCount: number;
 }
@@ -83,6 +86,7 @@ interface CustomerDetail {
   visitCount: number;
   lastVisit: string | null;
   createdAt: string;
+  recentOrders: RecentOrder[];
 }
 
 interface PackTransaction {
@@ -307,85 +311,49 @@ function timelineIcon(kind: TimelineEntry['kind']) {
 }
 
 function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
+  const { syncNow } = useSync();
   const [activeTab, setActiveTab] = useState<'packs' | 'history'>('packs');
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [packs, setPacks] = useState<CustomerPack[]>([]);
-  const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [packTransactions, setPackTransactions] = useState<PackTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [serveTargetPack, setServeTargetPack] = useState<CustomerPack | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadData = useCallback(async () => {
+    try {
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const headers = { Authorization: `Bearer ${token}` };
 
-    (async () => {
-      try {
-        const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-        const headers = { Authorization: `Bearer ${token}` };
-
-        const [
-          detailRes,
-          activePacksRes,
-          expiredPacksRes,
-          consumedPacksRes,
-          ordersRes,
-          historyRes,
-        ] = await Promise.all([
+      const [detailRes, activePacksRes, expiredPacksRes, consumedPacksRes, historyRes] =
+        await Promise.all([
           fetch(`${API_URL}/customers/${customerId}`, { headers }),
           fetch(`${API_URL}/customers/${customerId}/packs`, { headers }),
           fetch(`${API_URL}/customers/${customerId}/packs?status=expired`, { headers }),
           fetch(`${API_URL}/customers/${customerId}/packs?status=consumed`, { headers }),
-          fetch(`${API_URL}/customers/${customerId}/orders?limit=20`, { headers }),
           fetch(`${API_URL}/customers/${customerId}/packs/history?limit=50`, { headers }),
         ]);
 
-        if (cancelled) return;
-
-        if (detailRes.ok) {
-          setDetail(await detailRes.json());
-        }
-        {
-          const allPacks: CustomerPack[] = [];
-          for (const res of [activePacksRes, expiredPacksRes, consumedPacksRes]) {
-            if (res.ok) {
-              const data = await res.json();
-              const arr: CustomerPack[] = Array.isArray(data) ? data : (data.packs ?? []);
-              allPacks.push(...arr);
-            }
-          }
-          setPacks(allPacks);
-        }
-        if (ordersRes.ok) {
-          const data = await ordersRes.json();
-          setOrders(Array.isArray(data) ? data : (data.orders ?? []));
-        }
-        if (historyRes.ok) {
-          const data = await historyRes.json();
-          setPackTransactions(Array.isArray(data) ? data : (data.data ?? []));
-        }
-      } catch {
-        // silently fail
-      } finally {
-        if (!cancelled) setLoading(false);
+      if (detailRes.ok) {
+        const d = await detailRes.json();
+        if (__DEV__)
+          console.log('[CustomerDetail]', {
+            totalSpent: d.totalSpent,
+            visitCount: d.visitCount,
+            lastVisit: d.lastVisit,
+            recentOrders: d.recentOrders?.length,
+          });
+        setDetail(d);
       }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [customerId]);
-
-  const refreshPacks = useCallback(async () => {
-    try {
-      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-      const headers = { Authorization: `Bearer ${token}` };
-      const [packsRes, historyRes] = await Promise.all([
-        fetch(`${API_URL}/customers/${customerId}/packs`, { headers }),
-        fetch(`${API_URL}/customers/${customerId}/packs/history?limit=50`, { headers }),
-      ]);
-      if (packsRes.ok) {
-        const data = await packsRes.json();
-        setPacks(Array.isArray(data) ? data : (data.packs ?? []));
+      {
+        const allPacks: CustomerPack[] = [];
+        for (const res of [activePacksRes, expiredPacksRes, consumedPacksRes]) {
+          if (res.ok) {
+            const data = await res.json();
+            const arr: CustomerPack[] = Array.isArray(data) ? data : (data.packs ?? []);
+            allPacks.push(...arr);
+          }
+        }
+        setPacks(allPacks);
       }
       if (historyRes.ok) {
         const data = await historyRes.json();
@@ -396,11 +364,32 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
     }
   }, [customerId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    // Push pending local changes so engine stats are fresh
+    syncNow();
+    (async () => {
+      await loadData();
+      if (!cancelled) setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId, syncNow, loadData]);
+
+  const handleRefresh = useCallback(async () => {
+    syncNow();
+    // Small delay to let sync push complete
+    await new Promise((r) => setTimeout(r, 1500));
+    await loadData();
+  }, [syncNow, loadData]);
+
   // Build unified timeline
   const timeline: TimelineEntry[] = React.useMemo(() => {
     const entries: TimelineEntry[] = [];
 
-    for (const o of orders) {
+    const recentOrders = detail?.recentOrders ?? [];
+    for (const o of recentOrders) {
       entries.push({
         id: `order-${o.id}`,
         kind: 'order',
@@ -436,7 +425,7 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
 
     entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     return entries;
-  }, [orders, packTransactions]);
+  }, [detail, packTransactions]);
 
   if (loading) {
     return (
@@ -470,11 +459,59 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
         <View style={styles.detailHeaderInfo}>
           <Text style={styles.detailName}>{customerName}</Text>
         </View>
+        <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+          <RefreshCw size={16} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
-      {/* Two-column: main content (left 60%) + overview sidebar (right 40%) */}
+      {/* Two-column: sidebar (left 240px) + main content (right flex) */}
       <View style={styles.twoColumn}>
-        {/* LEFT — Packs / History with tab bar */}
+        {/* LEFT — Profile sidebar */}
+        <ScrollView style={styles.sidebarColumn} contentContainerStyle={styles.sidebarContent}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>
+              {detail.firstName[0]}
+              {detail.lastName[0]}
+            </Text>
+          </View>
+          <Text style={styles.sidebarName}>{customerName}</Text>
+          {detail.email && <Text style={styles.sidebarContact}>{detail.email}</Text>}
+          {detail.phone && <Text style={styles.sidebarContact}>{detail.phone}</Text>}
+
+          <View style={styles.statGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statCardValue}>${(detail.totalSpent ?? 0).toFixed(2)}</Text>
+              <Text style={styles.statCardLabel}>Total Spent</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statCardValue}>{detail.visitCount ?? 0}</Text>
+              <Text style={styles.statCardLabel}>Visits</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statCardValue}>
+                {packs.filter((p) => p.status === 'active').length}
+              </Text>
+              <Text style={styles.statCardLabel}>Active Packs</Text>
+            </View>
+          </View>
+
+          <View style={styles.sidebarDivider} />
+
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewLabel}>Last Visit</Text>
+            <Text style={styles.overviewValue}>
+              {detail.lastVisit ? new Date(detail.lastVisit).toLocaleDateString() : '—'}
+            </Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewLabel}>Customer Since</Text>
+            <Text style={styles.overviewValue}>
+              {new Date(detail.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* RIGHT — Packs / History with tab bar */}
         <View style={styles.mainColumn}>
           <View style={styles.tabBar}>
             {(['packs', 'history'] as const).map((tab) => (
@@ -581,22 +618,20 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
                       </View>
                       <View style={styles.packStatRow}>
                         <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
-                          Paid
+                          Total paid
                         </Text>
                         <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
                           ${(pack.pricePaid ?? 0).toFixed(2)}
                         </Text>
                       </View>
-                      {snapshot?.basePrice != null && (
-                        <View style={styles.packStatRow}>
-                          <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
-                            Unit value
-                          </Text>
-                          <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
-                            ${(pack.unitValue ?? 0).toFixed(2)} / serve
-                          </Text>
-                        </View>
-                      )}
+                      <View style={styles.packStatRow}>
+                        <Text style={[styles.packDetail, !isActive && styles.packTextMuted]}>
+                          Per serve
+                        </Text>
+                        <Text style={[styles.packStatValue, !isActive && styles.packTextMuted]}>
+                          ${(pack.unitValue ?? 0).toFixed(2)}
+                        </Text>
+                      </View>
                       {pack.expiryDate && (
                         <View style={styles.packStatRow}>
                           <Text
@@ -623,15 +658,27 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
                       )}
                     </View>
 
-                    {isActive && pack.remainingQuantity > 0 && (
+                    {isActive && pack.remainingQuantity > 0 ? (
                       <TouchableOpacity
                         style={styles.packServeButton}
                         onPress={() => setServeTargetPack(pack)}
                         activeOpacity={0.85}
                       >
-                        <Coffee size={14} color={colors.white} />
-                        <Text style={styles.packServeButtonText}>Serve</Text>
+                        <Coffee size={16} color={colors.white} />
+                        <Text style={styles.packServeButtonText}>Serve from Pack</Text>
                       </TouchableOpacity>
+                    ) : (
+                      <View style={styles.packInactiveLabel}>
+                        <Text style={styles.packInactiveLabelText}>
+                          {isExpired
+                            ? 'Expired'
+                            : isConsumed
+                              ? 'Fully redeemed'
+                              : pack.status === 'refunded'
+                                ? 'Refunded'
+                                : 'Inactive'}
+                        </Text>
+                      </View>
                     )}
                   </View>
                 );
@@ -667,51 +714,6 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
             />
           )}
         </View>
-
-        {/* RIGHT — Overview sidebar */}
-        <ScrollView style={styles.sidebarColumn} contentContainerStyle={styles.sidebarContent}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>
-              {detail.firstName[0]}
-              {detail.lastName[0]}
-            </Text>
-          </View>
-          <Text style={styles.sidebarName}>{customerName}</Text>
-          {detail.email && <Text style={styles.sidebarContact}>{detail.email}</Text>}
-          {detail.phone && <Text style={styles.sidebarContact}>{detail.phone}</Text>}
-
-          <View style={styles.statGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statCardValue}>${(detail.totalSpent ?? 0).toFixed(2)}</Text>
-              <Text style={styles.statCardLabel}>Total Spent</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statCardValue}>{detail.visitCount ?? 0}</Text>
-              <Text style={styles.statCardLabel}>Visits</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statCardValue}>
-                {packs.filter((p) => p.status === 'active').length}
-              </Text>
-              <Text style={styles.statCardLabel}>Active Packs</Text>
-            </View>
-          </View>
-
-          <View style={styles.sidebarDivider} />
-
-          <View style={styles.overviewCard}>
-            <Text style={styles.overviewLabel}>Last Visit</Text>
-            <Text style={styles.overviewValue}>
-              {detail.lastVisit ? new Date(detail.lastVisit).toLocaleDateString() : '—'}
-            </Text>
-          </View>
-          <View style={styles.overviewCard}>
-            <Text style={styles.overviewLabel}>Customer Since</Text>
-            <Text style={styles.overviewValue}>
-              {new Date(detail.createdAt).toLocaleDateString()}
-            </Text>
-          </View>
-        </ScrollView>
       </View>
 
       <ServeConfirmationModal
@@ -720,7 +722,7 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
         customerId={customerId}
         onComplete={() => {
           setServeTargetPack(null);
-          refreshPacks();
+          loadData();
         }}
         onCancel={() => setServeTargetPack(null)}
       />
@@ -1210,19 +1212,25 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
 
+  refreshButton: {
+    padding: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceAlt,
+  },
+
   // Two-column layout
   twoColumn: {
     flex: 1,
     flexDirection: 'row',
   },
-  mainColumn: {
-    flex: 1,
+  sidebarColumn: {
+    width: 240,
+    backgroundColor: colors.surfaceAlt,
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
-  sidebarColumn: {
-    width: 220,
-    backgroundColor: colors.surfaceAlt,
+  mainColumn: {
+    flex: 1,
   },
   sidebarContent: {
     padding: spacing.lg,
@@ -1398,6 +1406,7 @@ const styles = StyleSheet.create({
   packCard: {
     marginBottom: spacing.md,
     padding: spacing.lg,
+    paddingBottom: spacing.md,
     backgroundColor: colors.packLight,
     borderRadius: radii.xl,
     borderWidth: 1,
@@ -1414,7 +1423,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   packProductName: {
-    fontSize: typography.size.lg,
+    fontSize: typography.size.xl,
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
   },
@@ -1493,18 +1502,29 @@ const styles = StyleSheet.create({
   packServeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    justifyContent: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.primary,
     borderRadius: radii.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    alignSelf: 'flex-start',
+    paddingVertical: spacing.md,
     marginTop: spacing.md,
   },
   packServeButtonText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
     color: colors.white,
+  },
+  packInactiveLabel: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  packInactiveLabelText: {
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    fontWeight: typography.weight.medium,
   },
 
   // Add Customer Modal
