@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebarColumn: {
-    width: 280,
+    width: 220,
     backgroundColor: '#fafafa',
     borderRightWidth: 1,
     borderRightColor: colors.border,
