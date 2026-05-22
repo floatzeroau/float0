@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -64,52 +64,22 @@ function MainTabs() {
                     headerShown: false,
                     tabBarIcon: ({ focused }) => {
                       const color = focused ? colors.tabActive : colors.tabInactive;
-                      const iconSize = focused ? 24 : 22;
-                      const strokeWidth = focused ? 2.5 : 1.5;
                       switch (route.name) {
                         case 'POS':
-                          return (
-                            <ShoppingCart
-                              size={iconSize}
-                              color={color}
-                              strokeWidth={strokeWidth}
-                              fill={focused ? colors.tabActive : 'none'}
-                            />
-                          );
+                          return <ShoppingCart size={24} color={color} strokeWidth={2} />;
                         case 'Orders':
-                          return (
-                            <ClipboardList
-                              size={iconSize}
-                              color={color}
-                              strokeWidth={strokeWidth}
-                              fill={focused ? colors.tabActive : 'none'}
-                            />
-                          );
+                          return <ClipboardList size={24} color={color} strokeWidth={2} />;
                         case 'Customers':
-                          return (
-                            <Users
-                              size={iconSize}
-                              color={color}
-                              strokeWidth={strokeWidth}
-                              fill={focused ? colors.tabActive : 'none'}
-                            />
-                          );
+                          return <Users size={24} color={color} strokeWidth={2} />;
                         case 'Settings':
-                          return (
-                            <SettingsIcon
-                              size={iconSize}
-                              color={color}
-                              strokeWidth={strokeWidth}
-                              fill={focused ? colors.tabActive : 'none'}
-                            />
-                          );
+                          return <SettingsIcon size={24} color={color} strokeWidth={2} />;
                         default:
                           return null;
                       }
                     },
                     tabBarActiveTintColor: colors.tabActive,
                     tabBarInactiveTintColor: colors.tabInactive,
-                    tabBarActiveBackgroundColor: 'transparent',
+                    tabBarActiveBackgroundColor: '#E8E8EA',
                     tabBarLabel: ({ focused, children }) => (
                       <Text
                         style={{
@@ -129,6 +99,8 @@ function MainTabs() {
                       paddingTop: spacing.xs,
                     },
                     tabBarItemStyle: {
+                      borderRadius: 12,
+                      marginHorizontal: 4,
                       paddingVertical: spacing.xs,
                     },
                   })}

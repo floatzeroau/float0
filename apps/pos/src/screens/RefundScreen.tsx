@@ -843,13 +843,15 @@ const styles = StyleSheet.create({
   backButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D4D4D4',
     borderRadius: 8,
   },
   backButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: '#1F1F1F',
   },
   headerTitle: {
     flex: 1,
@@ -1369,11 +1371,16 @@ const styles = StyleSheet.create({
   },
   cancelFailButton: {
     paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D4D4D4',
+    borderRadius: 8,
   },
   cancelFailText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: '#1F1F1F',
   },
 
   // Done

@@ -788,11 +788,15 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
       ) : (
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.holdButtonStyle]}
+            style={[
+              styles.actionButton,
+              styles.holdButtonStyle,
+              !hasItems && styles.disabledSecondary,
+            ]}
             onPress={holdOrder}
             disabled={!hasItems}
           >
-            <Text style={[styles.holdButtonText, !hasItems && styles.disabledText]}>Hold</Text>
+            <Text style={styles.holdButtonText}>Hold</Text>
           </TouchableOpacity>
 
           {currentOrder?.orderType === 'dine_in' && (
@@ -800,14 +804,12 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
               style={[
                 styles.actionButton,
                 styles.submitButtonSubtle,
-                !hasItems && styles.disabledButton,
+                !hasItems && styles.disabledSecondary,
               ]}
               onPress={submitOrder}
               disabled={!hasItems}
             >
-              <Text style={[styles.submitButtonSubtleText, !hasItems && styles.disabledText]}>
-                Submit
-              </Text>
+              <Text style={styles.submitButtonSubtleText}>Submit</Text>
             </TouchableOpacity>
           )}
 
@@ -1383,25 +1385,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   holdButtonStyle: {
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D4D4D4',
   },
   holdButtonText: {
     fontSize: typography.size.base,
-    fontWeight: typography.weight.semibold,
-    color: colors.textSecondary,
+    fontWeight: '500',
+    color: '#1F1F1F',
   },
   submitButtonSubtle: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#D4D4D4',
   },
   disabledButton: {
     backgroundColor: 'rgba(22, 163, 74, 0.4)',
   },
+  disabledSecondary: {
+    opacity: 0.5,
+  },
   submitButtonSubtleText: {
     fontSize: typography.size.base,
-    fontWeight: typography.weight.semibold,
-    color: colors.textSecondary,
+    fontWeight: '500',
+    color: '#1F1F1F',
   },
   disabledSubmitText: {
     color: colors.white,

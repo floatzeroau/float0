@@ -136,6 +136,7 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       numColumns={NUM_COLUMNS}
+      style={styles.gridContainer}
       contentContainerStyle={styles.grid}
       columnWrapperStyle={styles.row}
       showsVerticalScrollIndicator={false}
@@ -152,6 +153,10 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
 }
 
 const styles = StyleSheet.create({
+  gridContainer: {
+    flex: 1,
+    backgroundColor: '#F1F2F5',
+  },
   grid: {
     padding: spacing.sm,
   },
@@ -162,7 +167,7 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: colors.tileBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: radii.lg,
     minHeight: 80,
     overflow: 'hidden',

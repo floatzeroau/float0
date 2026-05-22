@@ -612,21 +612,25 @@ const styles = StyleSheet.create({
 
   // Cash movement buttons
   cashMovementButton: {
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D4D4D4',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
     marginRight: spacing.xs,
   },
   cashMovementText: {
-    color: colors.textPrimary,
+    color: '#1F1F1F',
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold,
   },
 
   // Open Drawer button
   openDrawerButton: {
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D4D4D4',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
