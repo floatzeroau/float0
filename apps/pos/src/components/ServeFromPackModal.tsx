@@ -220,7 +220,7 @@ export function ServeFromPackModal({
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.pack} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : packs.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -442,11 +442,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   selectedPackCard: {
-    backgroundColor: colors.packLight,
+    backgroundColor: colors.primaryLight,
     padding: spacing.lg,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e9d5ff',
+    borderColor: colors.primary,
     marginBottom: spacing.xl,
   },
   selectedPackName: {
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   selectedPackRemaining: {
     fontSize: typography.size.md,
-    color: colors.pack,
+    color: colors.primary,
     marginTop: spacing.xs,
   },
   qtyLabel: {
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   serveConfirmButton: {
-    backgroundColor: colors.pack,
+    backgroundColor: colors.success,
     paddingVertical: spacing.lg,
     borderRadius: 10,
     alignItems: 'center',

@@ -18,6 +18,7 @@ import type { OrderItem, Product } from '../db/models';
 import { useOrder } from '../state/order-store';
 import { getTerminalService } from '../services';
 import { API_URL } from '../config';
+import { colors } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -965,9 +966,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   itemRowSelected: {
-    backgroundColor: '#ede9fe',
+    backgroundColor: colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#8b5cf6',
+    borderColor: colors.primary,
   },
   checkbox: {
     width: 24,
@@ -1194,8 +1195,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   methodButtonActive: {
-    backgroundColor: '#ede9fe',
-    borderColor: '#8b5cf6',
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
   },
   methodButtonLabel: {
     fontSize: 24,

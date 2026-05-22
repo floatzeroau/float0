@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   // Order type toggle
   toggleGroup: {
     flexDirection: 'row',
-    backgroundColor: colors.background,
+    backgroundColor: colors.pillInactive,
     borderRadius: radii.md,
     overflow: 'hidden',
   },
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   toggleActive: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.pillActive,
   },
   toggleText: {
     fontSize: typography.size.base,

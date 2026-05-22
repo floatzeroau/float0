@@ -382,7 +382,7 @@ export function PaymentScreen({
                   style={{
                     fontSize: typography.size.sm,
                     fontWeight: typography.weight.semibold,
-                    color: colors.pack,
+                    color: colors.primary,
                     marginTop: spacing.xxs,
                   }}
                 >
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
   splitMethodButton: {
     width: 200,
     height: 200,
-    backgroundColor: colors.pack,
+    backgroundColor: colors.primary,
     borderRadius: radii.xl,
     justifyContent: 'center',
     alignItems: 'center',

@@ -316,7 +316,7 @@ function timelineIcon(kind: TimelineEntry['kind']) {
     case 'order':
       return <ShoppingBag size={size} color={colors.primary} />;
     case 'purchase':
-      return <Package size={size} color={colors.pack} />;
+      return <Package size={size} color={colors.primary} />;
     case 'serve':
       return <Coffee size={size} color={colors.success} />;
     case 'refund':
@@ -602,7 +602,7 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
                             styles.packProgressFill,
                             {
                               width: `${pctRemaining}%`,
-                              backgroundColor: isActive ? colors.pack : colors.textDisabled,
+                              backgroundColor: isActive ? colors.primary : colors.textDisabled,
                             },
                           ]}
                         />
@@ -1398,7 +1398,7 @@ const styles = StyleSheet.create({
   },
   packModifiers: {
     fontSize: 13,
-    color: colors.pack,
+    color: colors.primary,
     marginTop: 4,
   },
   packCreatedDate: {
@@ -1461,7 +1461,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.success,
     borderRadius: radii.md,
     height: 56,
     marginTop: 12,
@@ -1603,7 +1603,7 @@ const serveStyles = StyleSheet.create({
   },
   packRemaining: {
     fontSize: typography.size.base,
-    color: colors.pack,
+    color: colors.success,
     fontWeight: typography.weight.semibold,
   },
   stepperRow: {
@@ -1632,7 +1632,7 @@ const serveStyles = StyleSheet.create({
     textAlign: 'center',
   },
   serveBtn: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.success,
     borderRadius: radii.lg,
     minHeight: 64,
     alignItems: 'center',
@@ -1645,7 +1645,7 @@ const serveStyles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: '#5840BE',
+    backgroundColor: colors.success,
     borderRadius: radii.lg,
   },
   serveBtnText: {

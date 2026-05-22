@@ -867,7 +867,7 @@ const styles = StyleSheet.create({
   modeButton: {
     width: 200,
     height: 200,
-    backgroundColor: colors.pack,
+    backgroundColor: colors.primary,
     borderRadius: radii.xl,
     justifyContent: 'center',
     alignItems: 'center',
@@ -925,9 +925,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   portionRowActive: {
-    backgroundColor: '#ede9fe',
+    backgroundColor: colors.primaryLight,
     borderWidth: 2,
-    borderColor: colors.pack,
+    borderColor: colors.primary,
   },
   portionLabel: {
     flex: 1,
@@ -971,10 +971,10 @@ const styles = StyleSheet.create({
   addSplitText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
-    color: colors.pack,
+    color: colors.primary,
   },
   setAmountButton: {
-    backgroundColor: colors.pack,
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: radii.lg,
     alignItems: 'center',
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
   fillRemainingButton: {
     paddingVertical: 10,
     paddingHorizontal: spacing.lg,
-    backgroundColor: '#ede9fe',
+    backgroundColor: colors.primaryLight,
     borderRadius: radii.md,
     alignSelf: 'flex-start',
     marginBottom: spacing.lg,
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
   fillRemainingText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
-    color: colors.pack,
+    color: colors.primary,
   },
   setupActions: {
     flexDirection: 'row',
@@ -1038,7 +1038,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   evenButtonActive: {
-    backgroundColor: colors.pack,
+    backgroundColor: colors.primary,
   },
   evenButtonText: {
     fontSize: typography.size['3xl'],

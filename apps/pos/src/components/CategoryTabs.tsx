@@ -85,10 +85,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.xl,
-    backgroundColor: colors.background,
+    backgroundColor: colors.pillInactive,
   },
   tabActive: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.pillActive,
   },
   tabText: {
     fontSize: typography.size.md,

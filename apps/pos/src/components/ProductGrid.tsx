@@ -114,7 +114,7 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
           </View>
           {item.isPackEligible && (
             <View style={styles.packIcon}>
-              <Package size={12} color={colors.pack} />
+              <Package size={12} color={colors.primary} />
             </View>
           )}
           {!item.isAvailable && (
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.tileBg,
     borderRadius: radii.lg,
     minHeight: 80,
     overflow: 'hidden',
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   colourStripe: {
-    width: 4,
+    width: 8,
   },
   cardContent: {
     flex: 1,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: colors.primary,
+    color: colors.info,
   },
   textUnavailable: {
     color: colors.textDisabled,
