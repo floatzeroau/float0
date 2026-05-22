@@ -1396,7 +1396,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   disabledButton: {
-    backgroundColor: colors.textDisabled,
+    backgroundColor: 'rgba(255, 199, 0, 0.4)',
   },
   submitButtonSubtleText: {
     fontSize: typography.size.base,
@@ -1419,12 +1419,12 @@ const styles = StyleSheet.create({
   },
   payButton: {
     flex: 2,
-    backgroundColor: colors.success,
+    backgroundColor: colors.yellow,
     paddingVertical: 14,
   },
   payButtonText: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
-    color: colors.white,
+    color: '#0A0A0A',
   },
 });

@@ -5,51 +5,51 @@
 @layer base {
   :root {
     /* ------------------------------------------------------------------ */
-    /* Portal palette: warm, café-friendly. Cream surfaces + espresso accent.
+    /* Portal palette: warm Bone/Cream surfaces + Accent purple.
        Designed for the customer-facing mobile portal — feels like a coffee
        shop, not an admin dashboard. */
     /* ------------------------------------------------------------------ */
 
-    /* Surfaces — warm cream */
-    --background: 36 38% 97%; /* #FAF6EF page bg */
+    /* Surfaces — Bone */
+    --background: 60 23% 97%; /* #FAFAF7 page bg */
     --card: 0 0% 100%; /* #FFFFFF card surface */
-    --card-foreground: 24 28% 14%;
+    --card-foreground: 0 0% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 24 28% 14%;
+    --popover-foreground: 0 0% 4%;
 
-    /* Text — softer near-black with warm undertone */
-    --foreground: 24 28% 14%; /* #2D211A primary text */
-    --muted: 36 28% 94%; /* #F4EEE3 subtle row tint */
-    --muted-foreground: 24 12% 42%; /* #756B62 secondary copy */
+    /* Text — Ink #0A0A0A */
+    --foreground: 0 0% 4%;
+    --muted: 41 35% 91%; /* Cream #F0EBE0 */
+    --muted-foreground: 0 0% 42%; /* Muted #6B6B6B */
 
-    /* Primary — espresso brown */
-    --primary: 24 36% 28%; /* #5E3F2E */
-    --primary-foreground: 36 38% 98%;
+    /* Primary — Accent purple #3B1F7E */
+    --primary: 258 61% 31%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary / accent — warm caramel highlight */
-    --secondary: 32 56% 90%; /* #F1E2CC */
-    --secondary-foreground: 24 36% 28%;
-    --accent: 32 70% 80%; /* #EFCDA0 caramel */
-    --accent-foreground: 24 36% 28%;
+    /* Secondary / accent — Cream */
+    --secondary: 41 35% 91%; /* Cream #F0EBE0 */
+    --secondary-foreground: 0 0% 4%;
+    --accent: 41 35% 91%; /* Cream */
+    --accent-foreground: 0 0% 4%;
 
     /* Status */
     --destructive: 3 70% 50%; /* #D9362C */
-    --destructive-foreground: 36 38% 98%;
+    --destructive-foreground: 0 0% 100%;
     --success: 142 45% 35%; /* #336B47 */
     --warning: 32 80% 45%; /* #C77A1F */
 
-    /* Borders + inputs */
-    --border: 32 22% 88%; /* #E5DCCF */
-    --input: 32 22% 88%;
-    --ring: 24 36% 28%;
+    /* Borders + inputs — Stone #E8E2D3 */
+    --border: 43 31% 87%;
+    --input: 43 31% 87%;
+    --ring: 258 61% 31%;
 
     /* Radii — softer, café-feel */
     --radius: 1rem; /* 16px lg */
 
     /* Tab bar */
     --tab-bar-background: 0 0% 100%;
-    --tab-bar-foreground: 24 12% 42%;
-    --tab-bar-active: 24 36% 28%;
+    --tab-bar-foreground: 0 0% 42%;
+    --tab-bar-active: 258 61% 31%;
   }
 }
 

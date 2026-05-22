@@ -55,8 +55,8 @@ const config: Config = {
         },
         float0: {
           navy: '#0A2540',
-          indigo: '#635BFF',
-          'light-bg': '#F6F9FC',
+          indigo: '#3B1F7E',
+          'light-bg': '#FAFAF7',
           success: '#30D158',
           warning: '#FFD60A',
           error: '#FF453A',

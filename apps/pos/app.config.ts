@@ -12,7 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#635BFF',
+    backgroundColor: '#1C1612',
   },
   ios: {
     bundleIdentifier: 'com.float0.pos',
@@ -40,7 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.float0.pos',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#635BFF',
+      backgroundColor: '#1C1612',
     },
   },
   plugins: ['expo-dev-client', 'expo-screen-orientation'],

@@ -4,38 +4,42 @@
 
 @layer base {
   :root {
-    /* Float0 brand → shadcn semantic tokens */
-    /* Background: #F6F9FC → hsl(210 40% 98%) */
-    --background: 210 40% 98%;
-    /* Foreground: #0A2540 → hsl(210 65% 15%) */
-    --foreground: 210 65% 15%;
+    /* Brand refresh — Accent purple #3B1F7E + Bone/Cream warm palette */
+    /* Background: Bone #FAFAF7 */
+    --background: 60 23% 97%;
+    /* Foreground: Ink #0A0A0A */
+    --foreground: 0 0% 4%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 65% 15%;
+    --card-foreground: 0 0% 4%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 65% 15%;
+    --popover-foreground: 0 0% 4%;
 
-    /* Primary: #635BFF → hsl(243 100% 68%) */
-    --primary: 243 100% 68%;
+    /* Primary: Accent #3B1F7E */
+    --primary: 258 61% 31%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 210 65% 15%;
+    /* Secondary: Cream #F0EBE0 */
+    --secondary: 41 35% 91%;
+    --secondary-foreground: 0 0% 4%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted: Cream #F0EBE0 */
+    --muted: 41 35% 91%;
+    --muted-foreground: 0 0% 42%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 210 65% 15%;
+    /* Accent: Cream */
+    --accent: 41 35% 91%;
+    --accent-foreground: 0 0% 4%;
 
     /* Destructive: #FF453A */
     --destructive: 3 100% 61%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 243 100% 68%;
+    /* Borders: Stone #E8E2D3 */
+    --border: 43 31% 87%;
+    --input: 43 31% 87%;
+    --ring: 258 61% 31%;
 
     --radius: 0.5rem;
 

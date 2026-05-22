@@ -1645,7 +1645,7 @@ const serveStyles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#FFC700',
     borderRadius: radii.lg,
   },
   serveBtnText: {

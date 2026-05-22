@@ -109,7 +109,7 @@ function MainTabs() {
                     },
                     tabBarActiveTintColor: colors.tabActive,
                     tabBarInactiveTintColor: colors.tabInactive,
-                    tabBarActiveBackgroundColor: 'rgba(37, 99, 235, 0.06)',
+                    tabBarActiveBackgroundColor: 'rgba(59, 31, 126, 0.06)',
                     tabBarLabel: ({ focused, children }) => (
                       <Text
                         style={{
