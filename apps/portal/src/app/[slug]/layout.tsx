@@ -22,6 +22,12 @@ function PortalShell({ children, slug }: { children: React.ReactNode; slug: stri
 
   return (
     <div className="mx-auto min-h-screen max-w-[480px] bg-background">
+      {showNav && (
+        <header className="sticky top-0 z-40 flex h-12 items-center justify-center border-b border-border bg-background pt-[env(safe-area-inset-top)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand-mark-dark.png" alt="Float0" className="h-5 w-auto opacity-50" />
+        </header>
+      )}
       <main
         className={
           showNav

@@ -40,7 +40,11 @@ export function Sidebar() {
       )}
     >
       <div className="flex h-14 items-center justify-between px-4">
-        {!collapsed && <span className="text-lg font-bold tracking-tight">Float0</span>}
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand-mark.png" alt="Float0" className="h-7 w-6" />
+          {!collapsed && <span className="text-lg font-bold tracking-tight">Float0</span>}
+        </div>
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="rounded-md p-1.5 hover:bg-sidebar-accent"

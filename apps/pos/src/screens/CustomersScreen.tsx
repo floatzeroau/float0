@@ -190,7 +190,6 @@ function ServeConfirmationModal({
     try {
       const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
       const serveBody = { quantityServed: quantity };
-      if (__DEV__) console.log('[Serve] POST body', serveBody);
 
       const [res] = await Promise.all([
         fetch(`${API_URL}/customers/${customerId}/packs/${pack.id}/serve`, {
@@ -351,13 +350,6 @@ function CustomerDetailView({ customerId, onBack }: CustomerDetailViewProps) {
 
       if (detailRes.ok) {
         const d = await detailRes.json();
-        if (__DEV__)
-          console.log('[CustomerDetail]', {
-            totalSpent: d.totalSpent,
-            visitCount: d.visitCount,
-            lastVisit: d.lastVisit,
-            recentOrders: d.recentOrders?.length,
-          });
         setDetail(d);
       }
       {
