@@ -39,15 +39,13 @@ export function Sidebar() {
         collapsed ? 'w-16' : 'w-64',
       )}
     >
-      <div className="flex h-14 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand-mark.png" alt="Float0" className="h-7 w-6" />
-          {!collapsed && <span className="text-lg font-bold tracking-tight">Float0</span>}
-        </div>
+      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand-mark.png" alt="Float0" className="h-6 w-auto flex-shrink-0" />
+        {!collapsed && <span className="flex-1 text-lg font-bold tracking-tight">Float0</span>}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-md p-1.5 hover:bg-sidebar-accent"
+          className="flex-shrink-0 rounded-md p-1.5 hover:bg-sidebar-accent"
         >
           {collapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
         </button>
