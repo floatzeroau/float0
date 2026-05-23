@@ -843,9 +843,9 @@ const styles = StyleSheet.create({
   backButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4FF',
     borderWidth: 1,
-    borderColor: '#D4D4D4',
+    borderColor: '#B0C4F5',
     borderRadius: 8,
   },
   backButtonText: {
@@ -1372,9 +1372,9 @@ const styles = StyleSheet.create({
   cancelFailButton: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4FF',
     borderWidth: 1,
-    borderColor: '#D4D4D4',
+    borderColor: '#B0C4F5',
     borderRadius: 8,
   },
   cancelFailText: {

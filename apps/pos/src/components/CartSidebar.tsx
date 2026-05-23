@@ -1385,9 +1385,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   holdButtonStyle: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4FF',
     borderWidth: 1,
-    borderColor: '#D4D4D4',
+    borderColor: '#B0C4F5',
   },
   holdButtonText: {
     fontSize: typography.size.base,
@@ -1395,9 +1395,9 @@ const styles = StyleSheet.create({
     color: '#1F1F1F',
   },
   submitButtonSubtle: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4FF',
     borderWidth: 1,
-    borderColor: '#D4D4D4',
+    borderColor: '#B0C4F5',
   },
   disabledButton: {
     backgroundColor: 'rgba(22, 163, 74, 0.4)',
