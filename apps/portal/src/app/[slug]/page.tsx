@@ -9,6 +9,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useOrg } from '@/lib/org-context';
 import { useAuth } from '@/lib/auth-context';
 
+interface DayHours {
+  isOpen: boolean;
+  open: string;
+  close: string;
+}
+
+const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+function formatDayHours(h: DayHours): string {
+  if (!h?.isOpen) return 'Closed';
+  return `${h.open} – ${h.close}`;
+}
+
 export default function LandingPage() {
   const org = useOrg();
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,7 +41,13 @@ export default function LandingPage() {
     );
   }
 
-  const hours = org.operatingHours as Record<string, string> | null;
+  const hours = org.operatingHours as Record<string, DayHours> | null;
+  const orderedDays = hours
+    ? [
+        ...DAY_ORDER.filter((d) => hours[d]),
+        ...Object.keys(hours).filter((d) => !DAY_ORDER.includes(d)),
+      ]
+    : [];
 
   return (
     <div className="fade-in flex min-h-screen flex-col items-center px-6 pb-12 pt-16">
@@ -47,17 +66,17 @@ export default function LandingPage() {
         Order, track packs, and skip the queue.
       </p>
 
-      {hours && Object.keys(hours).length > 0 && (
+      {hours && orderedDays.length > 0 && (
         <Card className="mt-8 w-full">
           <CardContent className="p-5">
             <h3 className="text-micro font-semibold uppercase tracking-wide text-muted-foreground">
               Hours
             </h3>
             <div className="mt-3 space-y-2">
-              {Object.entries(hours).map(([day, time]) => (
+              {orderedDays.map((day) => (
                 <div key={day} className="flex justify-between text-small">
                   <span className="capitalize text-muted-foreground">{day}</span>
-                  <span className="font-medium">{time}</span>
+                  <span className="font-medium">{formatDayHours(hours[day])}</span>
                 </div>
               ))}
             </div>
