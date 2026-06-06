@@ -1,5 +1,5 @@
 [build]
-buildCommand = "pnpm --filter @float0/shared build && pnpm --filter @float0/engine build"
+buildCommand = "pnpm --filter @float0/events build && pnpm --filter @float0/shared build && pnpm --filter @float0/engine build"
 
 [deploy]
 startCommand = "pnpm --filter @float0/engine start"
