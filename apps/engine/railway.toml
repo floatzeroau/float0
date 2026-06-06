@@ -1,8 +1,14 @@
 [build]
-builder = "NIXPACKS"
-buildCommand = "pnpm install && pnpm turbo run build --filter=engine"
+buildCommand = "pnpm --filter @float0/shared build && pnpm --filter @float0/engine build"
 
 [deploy]
-startCommand = "node apps/engine/dist/index.js"
+startCommand = "pnpm --filter @float0/engine start"
 healthcheckPath = "/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+
+[[deploy.watchPatterns]]
+pattern = "apps/engine/**"
+
+[[deploy.watchPatterns]]
+pattern = "packages/**"
