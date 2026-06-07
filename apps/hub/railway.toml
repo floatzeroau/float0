@@ -1,0 +1,14 @@
+[build]
+buildCommand = "pnpm --filter @float0/events build && pnpm --filter @float0/shared build && pnpm --filter @float0/ui build && pnpm --filter @float0/hub build"
+
+[deploy]
+startCommand = "pnpm --filter @float0/hub start"
+healthcheckPath = "/"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+
+[[deploy.watchPatterns]]
+pattern = "apps/hub/**"
+
+[[deploy.watchPatterns]]
+pattern = "packages/**"
