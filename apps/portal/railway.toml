@@ -3,7 +3,7 @@ buildCommand = "pnpm --filter @float0/events build && pnpm --filter @float0/shar
 
 [deploy]
 startCommand = "pnpm --filter @float0/portal start"
-healthcheckPath = "/"
+healthcheckPath = "/brand-mark-dark.png"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 
