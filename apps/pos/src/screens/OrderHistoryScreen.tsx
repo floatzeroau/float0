@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Alert,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import * as SecureStore from 'expo-secure-store';
@@ -338,7 +340,10 @@ function OrderDetailModal({
       transparent
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.detailOverlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.detailOverlay}
+      >
         <View style={styles.detailSheet}>
           {/* Header */}
           <View style={styles.detailHeader}>
@@ -522,7 +527,7 @@ function OrderDetailModal({
             <Text style={styles.detailCloseText}>Close</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

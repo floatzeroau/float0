@@ -8,6 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { VOID_THRESHOLD_AMOUNT } from '../state/order-store';
@@ -167,7 +169,10 @@ export function VoidItemModal({ visible, item, onConfirm, onCancel }: VoidItemMo
       transparent
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={styles.container}>
           {/* Header */}
           <Text style={styles.title}>Void Item</Text>
@@ -275,7 +280,7 @@ export function VoidItemModal({ visible, item, onConfirm, onCancel }: VoidItemMo
             </View>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

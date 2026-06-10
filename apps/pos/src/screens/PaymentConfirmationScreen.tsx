@@ -8,6 +8,8 @@ import {
   ScrollView,
   Alert,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import type { ReceiptData } from '@float0/shared';
@@ -158,136 +160,142 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
   }, [emailAddress, data.orderId]);
 
   return (
-    <ScrollView
-      style={styles.scrollContainer}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.flex1}
     >
-      {/* Checkmark animation */}
-      <Animated.View
-        style={[
-          styles.checkCircle,
-          {
-            opacity: checkOpacity,
-            transform: [{ scale: checkScale }],
-          },
-        ]}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.checkMark}>{'\u2713'}</Text>
-      </Animated.View>
+        {/* Checkmark animation */}
+        <Animated.View
+          style={[
+            styles.checkCircle,
+            {
+              opacity: checkOpacity,
+              transform: [{ scale: checkScale }],
+            },
+          ]}
+        >
+          <Text style={styles.checkMark}>{'\u2713'}</Text>
+        </Animated.View>
 
-      <Animated.View style={{ opacity: checkOpacity }}>
-        <Text style={styles.successTitle}>Payment Successful</Text>
-      </Animated.View>
+        <Animated.View style={{ opacity: checkOpacity }}>
+          <Text style={styles.successTitle}>Payment Successful</Text>
+        </Animated.View>
 
-      {/* Summary + buttons fade in after checkmark */}
-      <Animated.View style={[styles.contentContainer, { opacity: contentOpacity }]}>
-        {/* Payment summary */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Paid</Text>
-            <Text style={styles.summaryValue}>{formatCurrency(data.totalPaid)}</Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Payment Method</Text>
-            <Text style={styles.summaryValue}>{getMethodLabel()}</Text>
-          </View>
-
-          {data.tipAmount > 0 && (
+        {/* Summary + buttons fade in after checkmark */}
+        <Animated.View style={[styles.contentContainer, { opacity: contentOpacity }]}>
+          {/* Payment summary */}
+          <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Tip</Text>
-              <Text style={styles.summaryValueTip}>{formatCurrency(data.tipAmount)}</Text>
+              <Text style={styles.summaryLabel}>Total Paid</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(data.totalPaid)}</Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Payment Method</Text>
+              <Text style={styles.summaryValue}>{getMethodLabel()}</Text>
+            </View>
+
+            {data.tipAmount > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Tip</Text>
+                <Text style={styles.summaryValueTip}>{formatCurrency(data.tipAmount)}</Text>
+              </View>
+            )}
+
+            {data.paymentMethod === 'cash' && data.changeGiven != null && data.changeGiven > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Change</Text>
+                <Text style={styles.summaryValue}>{formatCurrency(data.changeGiven)}</Text>
+              </View>
+            )}
+
+            {data.paymentMethod === 'card' && data.approvalCode ? (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Approval Code</Text>
+                <Text style={styles.summaryValueMono}>{data.approvalCode}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Receipt preview */}
+          {showReceipt && data.receiptData && (
+            <View style={styles.receiptPreviewContainer}>
+              <ReceiptPreview data={data.receiptData} />
             </View>
           )}
 
-          {data.paymentMethod === 'cash' && data.changeGiven != null && data.changeGiven > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Change</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(data.changeGiven)}</Text>
+          {/* Email input */}
+          {showEmailInput && (
+            <View style={styles.emailInputContainer}>
+              <TextInput
+                style={styles.emailInput}
+                placeholder="customer@email.com"
+                placeholderTextColor="#999"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={emailAddress}
+                onChangeText={setEmailAddress}
+                editable={!emailSending}
+              />
+              <View style={styles.emailButtonRow}>
+                <TouchableOpacity
+                  style={[styles.emailSendButton, emailSending && styles.buttonDisabled]}
+                  onPress={handleSendEmail}
+                  disabled={emailSending}
+                >
+                  <Text style={styles.emailSendButtonText}>
+                    {emailSending ? 'Sending...' : 'Send'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.emailCancelButton}
+                  onPress={() => setShowEmailInput(false)}
+                  disabled={emailSending}
+                >
+                  <Text style={styles.emailCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
-          {data.paymentMethod === 'card' && data.approvalCode ? (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Approval Code</Text>
-              <Text style={styles.summaryValueMono}>{data.approvalCode}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Receipt preview */}
-        {showReceipt && data.receiptData && (
-          <View style={styles.receiptPreviewContainer}>
-            <ReceiptPreview data={data.receiptData} />
+          {/* Action buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.receiptButton, !data.receiptData && styles.buttonDisabled]}
+              onPress={handlePrintReceipt}
+              disabled={!data.receiptData}
+            >
+              <Text style={styles.receiptButtonText}>
+                {showReceipt ? 'Printed' : 'Print Receipt'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.receiptButton, emailSent && styles.buttonDisabled]}
+              onPress={handleEmailReceipt}
+              disabled={emailSent}
+            >
+              <Text style={styles.receiptButtonText}>
+                {emailSent ? 'Email Sent' : 'Email Receipt'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.noReceiptButton} onPress={handleDone}>
+              <Text style={styles.noReceiptButtonText}>No Receipt</Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Email input */}
-        {showEmailInput && (
-          <View style={styles.emailInputContainer}>
-            <TextInput
-              style={styles.emailInput}
-              placeholder="customer@email.com"
-              placeholderTextColor="#999"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={emailAddress}
-              onChangeText={setEmailAddress}
-              editable={!emailSending}
-            />
-            <View style={styles.emailButtonRow}>
-              <TouchableOpacity
-                style={[styles.emailSendButton, emailSending && styles.buttonDisabled]}
-                onPress={handleSendEmail}
-                disabled={emailSending}
-              >
-                <Text style={styles.emailSendButtonText}>
-                  {emailSending ? 'Sending...' : 'Send'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.emailCancelButton}
-                onPress={() => setShowEmailInput(false)}
-                disabled={emailSending}
-              >
-                <Text style={styles.emailCancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Action buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.receiptButton, !data.receiptData && styles.buttonDisabled]}
-            onPress={handlePrintReceipt}
-            disabled={!data.receiptData}
-          >
-            <Text style={styles.receiptButtonText}>
-              {showReceipt ? 'Printed' : 'Print Receipt'}
-            </Text>
+          <TouchableOpacity style={styles.newOrderButton} onPress={handleDone}>
+            <Text style={styles.newOrderButtonText}>New Order</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.receiptButton, emailSent && styles.buttonDisabled]}
-            onPress={handleEmailReceipt}
-            disabled={emailSent}
-          >
-            <Text style={styles.receiptButtonText}>
-              {emailSent ? 'Email Sent' : 'Email Receipt'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.noReceiptButton} onPress={handleDone}>
-            <Text style={styles.noReceiptButtonText}>No Receipt</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.newOrderButton} onPress={handleDone}>
-          <Text style={styles.newOrderButtonText}>New Order</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </ScrollView>
+        </Animated.View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -296,6 +304,9 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
+  flex1: {
+    flex: 1,
+  },
   scrollContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',

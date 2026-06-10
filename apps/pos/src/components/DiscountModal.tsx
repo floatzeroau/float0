@@ -8,6 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import {
@@ -215,7 +217,10 @@ export function DiscountModal({
       transparent
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={styles.container}>
           {/* Header */}
           <Text style={styles.title}>{title}</Text>
@@ -393,7 +398,7 @@ export function DiscountModal({
             </View>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

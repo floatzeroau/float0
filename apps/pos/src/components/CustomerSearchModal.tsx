@@ -8,6 +8,8 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
@@ -264,7 +266,10 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
       transparent
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={styles.sheet}>
           {showQuickAdd ? (
             <QuickAddForm onCreated={handleCreated} onBack={() => setShowQuickAdd(false)} />
@@ -291,7 +296,11 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
               </View>
 
               {/* Results */}
-              <ScrollView style={styles.resultsList} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={styles.resultsList}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
                 {fetchError !== '' && (
                   <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{fetchError}</Text>
@@ -349,7 +358,7 @@ export function CustomerSearchModal({ visible, onSelect, onCancel }: CustomerSea
             </>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

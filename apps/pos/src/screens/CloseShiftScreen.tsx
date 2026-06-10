@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -392,53 +394,62 @@ export default function CloseShiftScreen({ navigation }: Props) {
   // ── Review phase ───────────────────────────────────────
   if (phase === 'review') {
     return (
-      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scroll}>
-        <Text style={styles.title}>Shift Reconciliation</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex1}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          style={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Shift Reconciliation</Text>
 
-        <View style={styles.summaryCard}>
-          <SummaryRow label="Opening Float" value={`$${shift!.openingFloat.toFixed(2)}`} />
-          <SummaryRow label="Expected Cash" value={`$${expectedCashDollars.toFixed(2)}`} />
-          <SummaryRow label="Counted Cash" value={displayAmount} />
-          <View style={styles.summaryDivider} />
-          <SummaryRow
-            label="Variance"
-            value={`${variance >= 0 ? '+' : ''}$${variance.toFixed(2)}`}
-            valueColor={varianceColor}
-          />
-        </View>
-
-        {absVariance >= 1 && (
-          <View style={styles.notesSection}>
-            <Text style={styles.notesLabel}>Variance Notes</Text>
-            <TextInput
-              style={styles.notesInput}
-              placeholder="Explain the variance..."
-              placeholderTextColor="#999"
-              value={varianceNotes}
-              onChangeText={setVarianceNotes}
-              multiline
+          <View style={styles.summaryCard}>
+            <SummaryRow label="Opening Float" value={`$${shift!.openingFloat.toFixed(2)}`} />
+            <SummaryRow label="Expected Cash" value={`$${expectedCashDollars.toFixed(2)}`} />
+            <SummaryRow label="Counted Cash" value={displayAmount} />
+            <View style={styles.summaryDivider} />
+            <SummaryRow
+              label="Variance"
+              value={`${variance >= 0 ? '+' : ''}$${variance.toFixed(2)}`}
+              valueColor={varianceColor}
             />
           </View>
-        )}
 
-        <TouchableOpacity
-          style={[styles.closeButton, submitting && styles.closeButtonDisabled]}
-          onPress={handleConfirmClose}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.closeButtonText}>
-              {needsManagerApproval ? 'Get Manager Approval' : 'Close Shift'}
-            </Text>
+          {absVariance >= 1 && (
+            <View style={styles.notesSection}>
+              <Text style={styles.notesLabel}>Variance Notes</Text>
+              <TextInput
+                style={styles.notesInput}
+                placeholder="Explain the variance..."
+                placeholderTextColor="#999"
+                value={varianceNotes}
+                onChangeText={setVarianceNotes}
+                multiline
+              />
+            </View>
           )}
-        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.cancelButton} onPress={() => setPhase('counting')}>
-          <Text style={styles.cancelButtonText}>Re-count</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <TouchableOpacity
+            style={[styles.closeButton, submitting && styles.closeButtonDisabled]}
+            onPress={handleConfirmClose}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.closeButtonText}>
+                {needsManagerApproval ? 'Get Manager Approval' : 'Close Shift'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setPhase('counting')}>
+            <Text style={styles.cancelButtonText}>Re-count</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -550,6 +561,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
+  },
+  flex1: {
+    flex: 1,
   },
   title: {
     fontSize: 28,

@@ -1,5 +1,14 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import type { CartItemData } from '../state/order-store';
 import { colors, spacing, radii, typography } from '../theme/tokens';
 
@@ -127,7 +136,10 @@ export function ConvertToPackModal({
       transparent
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -207,7 +219,7 @@ export function ConvertToPackModal({
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

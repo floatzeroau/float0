@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Q } from '@nozbe/watermelondb';
@@ -435,7 +437,10 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
       presentationStyle="fullScreen"
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
         {/* Header */}
         {phase !== 'done' && (
           <View style={styles.header}>
@@ -815,7 +820,7 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

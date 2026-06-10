@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Modal,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import {
@@ -871,7 +873,10 @@ export default function CustomersScreen() {
         transparent
         supportedOrientations={['landscape-left', 'landscape-right']}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>New Customer</Text>
 
@@ -948,7 +953,7 @@ export default function CustomersScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Customer list */}

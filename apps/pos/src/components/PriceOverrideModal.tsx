@@ -8,6 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../config';
@@ -194,7 +196,10 @@ export function PriceOverrideModal({
       transparent
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={styles.container}>
           {/* Header */}
           <Text style={styles.title}>Price Override</Text>
@@ -345,7 +350,7 @@ export function PriceOverrideModal({
             </View>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

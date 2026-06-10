@@ -8,6 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../config';
@@ -153,7 +155,10 @@ export function OpenDrawerModal({ visible, onConfirm, onCancel }: OpenDrawerModa
       transparent
       supportedOrientations={['landscape-left', 'landscape-right']}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={styles.container}>
           <Text style={styles.title}>Open Drawer</Text>
 
@@ -256,7 +261,7 @@ export function OpenDrawerModal({ visible, onConfirm, onCancel }: OpenDrawerModa
             </View>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

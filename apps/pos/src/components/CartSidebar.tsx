@@ -7,6 +7,8 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Lock, Package } from 'lucide-react-native';
@@ -641,7 +643,10 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
     : '';
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -867,7 +872,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
         onConfirm={handlePackConfirm}
         onCancel={handlePackCancel}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
