@@ -50,7 +50,10 @@ interface SalesChartResponse {
 // ---------------------------------------------------------------------------
 
 function dayRange(date: string, timezone: string) {
-  const start = sql`(${date}::date AT TIME ZONE ${timezone})`;
+  // Cast to plain timestamp before AT TIME ZONE: a bare `date` is implicitly
+  // cast to timestamptz, which makes AT TIME ZONE convert in the wrong
+  // direction (producing a naive timestamp re-read in the session timezone).
+  const start = sql`(${date}::date::timestamp AT TIME ZONE ${timezone})`;
   const end = sql`((${date}::date + interval '1 day') AT TIME ZONE ${timezone})`;
   return { start, end };
 }
@@ -69,7 +72,7 @@ export async function getDashboardSummary(
   // Yesterday range
   const yesterday = sql`(${date}::date - interval '1 day')::date`;
   const yesterdayRange = {
-    start: sql`(${yesterday} AT TIME ZONE ${timezone})`,
+    start: sql`(${yesterday}::timestamp AT TIME ZONE ${timezone})`,
     end: sql`((${yesterday} + interval '1 day') AT TIME ZONE ${timezone})`,
   };
 
@@ -273,9 +276,9 @@ async function getDailySales(
   date: string,
   timezone: string,
 ): Promise<SalesPeriodEntry[]> {
-  // Monday of the week
-  const weekStart = sql`date_trunc('week', ${date}::date)`;
-  const weekEnd = sql`(date_trunc('week', ${date}::date) + interval '7 days')`;
+  // Monday of the week (plain timestamp, so AT TIME ZONE converts correctly)
+  const weekStart = sql`date_trunc('week', ${date}::date::timestamp)`;
+  const weekEnd = sql`(date_trunc('week', ${date}::date::timestamp) + interval '7 days')`;
 
   const rows = await db
     .select({
@@ -317,8 +320,8 @@ async function getWeeklySales(
   date: string,
   timezone: string,
 ): Promise<SalesPeriodEntry[]> {
-  const monthStart = sql`date_trunc('month', ${date}::date)`;
-  const monthEnd = sql`(date_trunc('month', ${date}::date) + interval '1 month')`;
+  const monthStart = sql`date_trunc('month', ${date}::date::timestamp)`;
+  const monthEnd = sql`(date_trunc('month', ${date}::date::timestamp) + interval '1 month')`;
 
   const rows = await db
     .select({

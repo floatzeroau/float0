@@ -47,7 +47,10 @@ export interface SalesReport {
 // ---------------------------------------------------------------------------
 
 function dateRange(from: string, to: string, timezone: string) {
-  const start = sql`(${from}::date AT TIME ZONE ${timezone})`;
+  // Cast to plain timestamp before AT TIME ZONE: a bare `date` is implicitly
+  // cast to timestamptz, which makes AT TIME ZONE convert in the wrong
+  // direction (producing a naive timestamp re-read in the session timezone).
+  const start = sql`(${from}::date::timestamp AT TIME ZONE ${timezone})`;
   const end = sql`((${to}::date + interval '1 day') AT TIME ZONE ${timezone})`;
   return { start, end };
 }
