@@ -641,7 +641,6 @@ async function seed() {
         basePrice: 4.0,
         sku: 'SW-001',
         isAvailable: true,
-        isGstFree: true,
         sortOrder: 3,
       },
       {
