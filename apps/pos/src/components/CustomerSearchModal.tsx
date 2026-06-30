@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   loyaltyBadge: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.butter,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: 10,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   loyaltyText: {
     fontSize: typography.size.xs,
     fontWeight: typography.weight.semibold,
-    color: '#92400e',
+    color: colors.warningDark,
   },
 
   // Footer

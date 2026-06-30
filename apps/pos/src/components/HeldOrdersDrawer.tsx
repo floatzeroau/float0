@@ -194,7 +194,7 @@ export function HeldOrdersDrawer({ visible, onClose }: HeldOrdersDrawerProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.surfaceAlt,
   },
   header: {
     flexDirection: 'row',
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
-    color: '#333',
+    color: colors.textPrimary,
   },
 
   // Empty state
@@ -264,11 +264,11 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: colors.border,
   },
   orderRowStale: {
     borderColor: colors.warning,
-    backgroundColor: '#fffbeb',
+    backgroundColor: colors.butter,
   },
   orderRowLeft: {
     flex: 1,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   staleBadge: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.butter,
     paddingHorizontal: 6,
     paddingVertical: spacing.xxs,
     borderRadius: radii.xs,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
-    color: '#1a6ed8',
+    color: colors.primary,
     marginTop: spacing.xs,
   },
   orderMeta: {
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radii.lg,
-    backgroundColor: '#fee2e2',
+    backgroundColor: colors.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
   },

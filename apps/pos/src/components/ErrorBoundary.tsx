@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
     padding: spacing.xxl,
   },
   title: {
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: typography.size.base,
-    color: '#6b7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
     maxWidth: 400,

@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
 import { Q } from '@nozbe/watermelondb';
 import { Package } from 'lucide-react-native';
 import { database } from '../db/database';
 import type { Product } from '../db/models';
-import { colors, spacing, radii, typography, shadows } from '../theme/tokens';
+import { useOrder } from '../state/order-store';
+import { colors, spacing, radii, typography, shadows, fonts } from '../theme/tokens';
 
 interface ProductGridProps {
   categoryId: string | null;
@@ -26,6 +27,16 @@ const NUM_COLUMNS = 4;
 
 export function ProductGrid({ categoryId, searchQuery, onProductSelect }: ProductGridProps) {
   const [products, setProducts] = useState<ProductItem[]>([]);
+  const { items: cartItems } = useOrder();
+
+  const cartQtyByProduct = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of cartItems) {
+      if (item.voidedAt) continue;
+      map.set(item.productId, (map.get(item.productId) ?? 0) + item.quantity);
+    }
+    return map;
+  }, [cartItems]);
 
   const loadProducts = useCallback(async () => {
     const clauses = [];
@@ -90,42 +101,50 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: ProductItem }) => (
-      <TouchableOpacity
-        style={[styles.card, !item.isAvailable && styles.cardUnavailable]}
-        onPress={() => handlePress(item)}
-        activeOpacity={item.isAvailable ? 0.85 : 1}
-        disabled={!item.isAvailable}
-      >
-        {item.categoryColour && (
-          <View style={[styles.colourStripe, { backgroundColor: item.categoryColour }]} />
-        )}
-        <View style={styles.cardContent}>
-          <Text
-            style={[styles.productName, !item.isAvailable && styles.textUnavailable]}
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
-          <View style={styles.priceContainer}>
-            <Text style={[styles.productPrice, !item.isAvailable && styles.textUnavailable]}>
-              ${item.basePrice.toFixed(2)}
+    ({ item }: { item: ProductItem }) => {
+      const cartQty = cartQtyByProduct.get(item.id) ?? 0;
+      return (
+        <TouchableOpacity
+          style={[styles.card, !item.isAvailable && styles.cardUnavailable]}
+          onPress={() => handlePress(item)}
+          activeOpacity={item.isAvailable ? 0.85 : 1}
+          disabled={!item.isAvailable}
+        >
+          {item.categoryColour && (
+            <View style={[styles.colourStripe, { backgroundColor: item.categoryColour }]} />
+          )}
+          <View style={styles.cardContent}>
+            <Text
+              style={[styles.productName, !item.isAvailable && styles.textUnavailable]}
+              numberOfLines={2}
+            >
+              {item.name}
             </Text>
+            <View style={styles.priceContainer}>
+              <Text style={[styles.productPrice, !item.isAvailable && styles.textUnavailable]}>
+                ${item.basePrice.toFixed(2)}
+              </Text>
+            </View>
+            {item.isPackEligible && (
+              <View style={styles.packIcon}>
+                <Package size={12} color={colors.teal} />
+              </View>
+            )}
+            {cartQty > 0 && (
+              <View style={styles.qtyBadge}>
+                <Text style={styles.qtyBadgeText}>×{cartQty}</Text>
+              </View>
+            )}
+            {!item.isAvailable && (
+              <View style={styles.unavailableBadge}>
+                <Text style={styles.unavailableText}>86&apos;d</Text>
+              </View>
+            )}
           </View>
-          {item.isPackEligible && (
-            <View style={styles.packIcon}>
-              <Package size={12} color={colors.primary} />
-            </View>
-          )}
-          {!item.isAvailable && (
-            <View style={styles.unavailableBadge}>
-              <Text style={styles.unavailableText}>86&apos;d</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    ),
-    [handlePress],
+        </TouchableOpacity>
+      );
+    },
+    [handlePress, cartQtyByProduct],
   );
 
   const keyExtractor = useCallback((item: ProductItem) => item.id, []);
@@ -155,6 +174,7 @@ export function ProductGrid({ categoryId, searchQuery, onProductSelect }: Produc
 const styles = StyleSheet.create({
   gridContainer: {
     flex: 1,
+    // Product section background is a locked decision — do not change.
     backgroundColor: '#EFF2F7',
   },
   grid: {
@@ -167,7 +187,7 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     minHeight: 80,
     overflow: 'hidden',
@@ -193,7 +213,8 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: colors.info,
+    color: colors.teal,
+    fontFamily: fonts.monoMedium,
   },
   textUnavailable: {
     color: colors.textDisabled,
@@ -227,5 +248,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.xs,
     right: spacing.xs,
+  },
+  qtyBadge: {
+    position: 'absolute',
+    top: spacing.xs,
+    left: spacing.xs,
+    backgroundColor: colors.ink,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.sm,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  qtyBadgeText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: colors.paper,
+    fontFamily: fonts.monoMedium,
   },
 });

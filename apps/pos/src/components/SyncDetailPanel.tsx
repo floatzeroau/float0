@@ -47,7 +47,7 @@ export function SyncDetailPanel({ visible, onClose }: SyncDetailPanelProps) {
       <Row
         label="Connection"
         value={isOnline ? 'Connected' : 'Disconnected'}
-        dot={isOnline ? '#22c55e' : '#ef4444'}
+        dot={isOnline ? colors.online : colors.danger}
       />
       <Row label="Pending changes" value={String(pendingCount)} />
       <Row label="Priority queue" value={String(priorityQueueCount)} />
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.size.md,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   value: {
     fontSize: typography.size.md,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.borderLight,
     borderRadius: radii.sm,
     paddingVertical: spacing.sm,
     alignItems: 'center',

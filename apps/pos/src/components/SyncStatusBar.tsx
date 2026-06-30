@@ -62,8 +62,10 @@ export function SyncStatusBar() {
       >
         {/* Left: connection status */}
         <View style={styles.section}>
-          <View style={[styles.dot, { backgroundColor: isOnline ? '#22c55e' : '#ef4444' }]} />
-          <Text style={[styles.text, isWarning && styles.textWarning]}>
+          <View style={[styles.dot, { backgroundColor: isOnline ? colors.online : colors.mist }]} />
+          <Text
+            style={[styles.text, !isOnline && styles.textOffline, isWarning && styles.textWarning]}
+          >
             {isOnline ? 'Online' : 'Offline'}
           </Text>
         </View>
@@ -82,7 +84,7 @@ export function SyncStatusBar() {
           )}
           {pendingCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{pendingCount}</Text>
+              <Text style={styles.badgeText}>{pendingCount} pending</Text>
             </View>
           )}
         </View>
@@ -100,12 +102,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.paper,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   barWarning: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.butter,
   },
   section: {
     flexDirection: 'row',
@@ -122,8 +124,11 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md,
     color: colors.textPrimary,
   },
+  textOffline: {
+    color: colors.textSecondary,
+  },
   textWarning: {
-    color: '#92400e',
+    color: colors.warningDark,
   },
   centerText: {
     flex: 1,
@@ -135,9 +140,9 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   badge: {
-    backgroundColor: colors.warning,
+    backgroundColor: colors.yellow,
     borderRadius: radii.lg,
-    paddingHorizontal: 6,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     minWidth: 20,
     alignItems: 'center',
@@ -145,6 +150,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: typography.size.xs,
     fontWeight: typography.weight.bold,
-    color: colors.white,
+    color: colors.ink,
   },
 });

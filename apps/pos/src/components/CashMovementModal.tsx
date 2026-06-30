@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../config';
-import { colors, spacing, radii, typography } from '../theme/tokens';
+import { colors, fonts, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.size.lg,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   amount: {
@@ -410,6 +410,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
     marginBottom: spacing.lg,
+    fontFamily: fonts.monoMedium,
   },
 
   // Keypad
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
   // Reason
   reasonTitle: {
     fontSize: typography.size.base,
-    color: '#4b5563',
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   reasonButton: {

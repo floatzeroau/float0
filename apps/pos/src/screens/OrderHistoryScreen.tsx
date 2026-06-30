@@ -73,7 +73,7 @@ const MANAGEABLE_STATUSES: OrderStatusDB[] = ['submitted', 'in_progress'];
 // ---------------------------------------------------------------------------
 
 function StatusBadge({ status }: { status: OrderStatusDB }) {
-  const bg = STATUS_COLOURS[status] ?? '#9ca3af';
+  const bg = STATUS_COLOURS[status] ?? colors.textMuted;
   const label = STATUS_LABELS[status] ?? status;
 
   return (
@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
   },
   detailNotesText: {
     fontSize: typography.size.md,
-    color: '#991b1b',
+    color: colors.textPrimary,
   },
   detailTotalRow: {
     flexDirection: 'row',
@@ -1098,7 +1098,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     paddingVertical: 14,
     borderRadius: radii.lg,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.teal,
     alignItems: 'center',
   },
   refundButtonText: {
@@ -1112,7 +1112,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     paddingVertical: 14,
     borderRadius: radii.lg,
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     alignItems: 'center',
   },
   reprintButtonText: {
@@ -1151,7 +1151,7 @@ const styles = StyleSheet.create({
   reprintEmailButton: {
     flex: 1,
     paddingVertical: spacing.md,
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     borderRadius: radii.lg,
     alignItems: 'center',
   },

@@ -21,7 +21,7 @@ import { useShift } from '../state/ShiftProvider';
 import { getPrinterService } from '../services';
 import { calculateLineTotal } from '@float0/shared';
 import { generateUUID } from '../utils/uuid';
-import { colors, spacing, radii, typography } from '../theme/tokens';
+import { colors, spacing, radii, typography, fonts } from '../theme/tokens';
 import { useToast } from '../components/Toast';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -551,13 +551,14 @@ const styles = StyleSheet.create({
     height: 28,
     marginRight: spacing.sm,
     opacity: 0.5,
-    tintColor: '#1F1F1F',
+    tintColor: colors.ink,
   },
   // Order number
   orderNumber: {
     fontSize: typography.size.xxl,
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
+    fontFamily: fonts.monoMedium,
   },
   statusBadge: {
     marginLeft: spacing.sm,
@@ -592,7 +593,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   toggleTextActive: {
-    color: colors.white,
+    color: colors.paper,
   },
 
   // Table number
@@ -621,47 +622,47 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  // Cash movement buttons
+  // Cash movement buttons — outlined teal
   cashMovementButton: {
-    backgroundColor: '#F0F4FF',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#B0C4F5',
+    borderColor: colors.teal,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
     marginRight: spacing.xs,
   },
   cashMovementText: {
-    color: '#1F1F1F',
+    color: colors.teal,
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold,
   },
 
-  // Open Drawer button
+  // Open Drawer button — outlined teal
   openDrawerButton: {
-    backgroundColor: '#F0F4FF',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#B0C4F5',
+    borderColor: colors.teal,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
     marginRight: spacing.sm,
   },
   openDrawerText: {
-    color: colors.textPrimary,
+    color: colors.teal,
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
   },
 
-  // New Order button
+  // New Order button — solid deep teal
   newOrderButton: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.tealDeep,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
   },
   newOrderText: {
-    color: colors.white,
+    color: colors.paper,
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
   },

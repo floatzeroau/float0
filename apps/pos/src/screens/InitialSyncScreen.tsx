@@ -10,6 +10,7 @@ import {
   type InitialSyncProgress,
 } from '../sync/initial-sync';
 import { STAFF_ID_KEY } from '../config';
+import { colors } from '../theme/tokens';
 
 const ENTITY_LABELS: Record<string, string> = {
   categories: 'categories',
@@ -130,7 +131,7 @@ export default function InitialSyncScreen({ navigation }: Props) {
 
           {eta && <Text style={styles.etaText}>{eta}</Text>}
 
-          <ActivityIndicator style={styles.spinner} color="#1a1a1a" />
+          <ActivityIndicator style={styles.spinner} color={colors.textPrimary} />
         </>
       )}
 
@@ -146,7 +147,7 @@ export default function InitialSyncScreen({ navigation }: Props) {
 
           <TouchableOpacity style={styles.resetButton} onPress={handleReset} disabled={resetting}>
             {resetting ? (
-              <ActivityIndicator color="#dc2626" />
+              <ActivityIndicator color={colors.danger} />
             ) : (
               <Text style={styles.resetButtonText}>Reset and Retry</Text>
             )}
@@ -162,37 +163,37 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
     paddingHorizontal: 40,
   },
   title: {
     fontSize: 28,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 40,
   },
   progressTrack: {
     width: '80%',
     maxWidth: 400,
     height: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 16,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
     borderRadius: 4,
   },
   entityText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   etaText: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textMuted,
     marginBottom: 16,
   },
   spinner: {
@@ -201,11 +202,11 @@ const styles = StyleSheet.create({
   completeText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#22c55e',
+    color: colors.success,
   },
   errorText: {
     fontSize: 16,
-    color: '#dc2626',
+    color: colors.danger,
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -213,11 +214,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
     marginBottom: 12,
   },
   retryButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -226,10 +227,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#dc2626',
+    borderColor: colors.danger,
   },
   resetButtonText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontSize: 16,
     fontWeight: '600',
   },

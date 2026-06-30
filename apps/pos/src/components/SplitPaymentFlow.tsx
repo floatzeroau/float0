@@ -825,7 +825,7 @@ const styles = StyleSheet.create({
 
   // Progress header
   progressHeader: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.textPrimary,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   },
   progressDetail: {
     fontSize: typography.size.base,
-    color: '#94a3b8',
+    color: colors.textMuted,
     marginTop: spacing.xxs,
   },
 
@@ -945,7 +945,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.danger,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1176,7 +1176,7 @@ const styles = StyleSheet.create({
   },
   amountInsufficient: {
     fontSize: typography.size['3xl'],
-    color: '#ef4444',
+    color: colors.danger,
   },
   tipLine: {
     fontSize: typography.size.base,

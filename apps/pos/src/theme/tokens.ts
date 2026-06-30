@@ -1,37 +1,83 @@
+import { Platform } from 'react-native';
+
 export const colors = {
-  primary: '#2563EB',
-  primaryLight: 'rgba(37, 99, 235, 0.12)',
-  primaryDark: '#1D4ED8',
-  success: '#16A34A',
-  successDark: '#15803D',
-  successLight: '#ecfdf5',
-  danger: '#dc2626',
-  dangerLight: '#fef2f2',
-  warning: '#f59e0b',
-  warningDark: '#d97706',
-  info: '#2563EB',
+  // Brand palette (Float0 v10.0 — locked)
+  paper: '#FBFBF9',
+  ink: '#0F1115',
+  teal: '#0F6C5C',
+  tealDeep: '#004050',
+  spring: '#5ADC82',
+  yellow: '#FFDA59',
+  butter: '#FFF3D9',
+  mist: '#E8E8E5',
+
+  // Action colour — legacy "primary" repointed to teal so existing
+  // components pick up the brand colour automatically
+  primary: '#0F6C5C',
+  primaryLight: 'rgba(15, 108, 92, 0.12)',
+  primaryDark: '#004050',
+
+  // Pay / positive actions — teal is the action colour; keep a dedicated
+  // success only for genuine status, not buttons
+  success: '#0F6C5C',
+  successDark: '#004050',
+  successLight: 'rgba(15, 108, 92, 0.10)',
+
+  // Status
+  online: '#5ADC82',
+  attention: '#FFDA59',
+
+  // Pack — purple is the locked pack identity (pack pill + converted-pack
+  // badge ONLY)
   pack: '#5840BE',
   packLight: 'rgba(88, 64, 190, 0.12)',
   packDark: '#3F2B96',
-  textPrimary: '#0A0A0A',
-  textSecondary: '#6B6B6B',
-  textMuted: '#999',
-  textDisabled: '#bbb',
+
+  danger: '#C2554A',
+  dangerLight: 'rgba(194, 85, 74, 0.10)',
+  warning: '#FFDA59',
+  warningDark: '#E0B83F',
+  info: '#0F6C5C',
+
+  // Text
+  textPrimary: '#0F1115',
+  textSecondary: '#5B5F66',
+  textMuted: '#8A8F98',
+  textDisabled: '#BBBFC6',
+
+  // Surfaces — product grid background (tileBg/tileBgEnd) kept at the
+  // pre-FLO-155 values; product section background is a locked decision.
   surface: '#FFFFFF',
-  surfaceAlt: '#F5F5F5',
+  surfaceAlt: '#F5F5F4',
   background: '#FFFFFF',
   tileBg: '#F7F8FA',
   tileBgEnd: '#EEF0F4',
-  border: '#E5E5E5',
-  borderLight: '#F0F0F0',
-  overlay: 'rgba(0,0,0,0.5)',
+
+  // Borders
+  border: '#E8E8E5',
+  borderLight: '#F0F0EE',
+
+  overlay: 'rgba(15,17,21,0.5)',
   white: '#fff',
   black: '#000',
-  pillInactive: '#EEEEEE',
-  pillActive: '#1F1F1F',
-  pillActiveText: '#FFFFFF',
-  tabActive: '#1F1F1F',
-  tabInactive: '#6B6B6B',
+
+  // Pills / tabs
+  pillInactive: '#E8E8E5',
+  pillActive: '#0F1115',
+  pillActiveText: '#FBFBF9',
+  tabActive: '#0F6C5C',
+  tabInactive: '#8A8F98',
+};
+
+// TODO(FLO-155): swap to JetBrains Mono once font assets are bundled
+// (expo-font + assets/fonts/JetBrainsMono-{Regular,Medium}.ttf + native
+// rebuild). For now we use the platform monospace so prices read mono-ish.
+const platformMono = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
+const platformMonoMedium = Platform.OS === 'ios' ? 'Menlo-Bold' : 'monospace';
+
+export const fonts = {
+  mono: platformMono,
+  monoMedium: platformMonoMedium,
 };
 
 export const spacing = {

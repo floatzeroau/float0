@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   // Preview
   preview: {
     width: '100%',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radii.md,
     padding: spacing.md,
     marginBottom: spacing.md,

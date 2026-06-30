@@ -17,6 +17,7 @@ import { useShift } from '../state/ShiftProvider';
 import { API_URL } from '../config';
 import { database } from '../db/database';
 import { resetInitialSync } from '../sync/initial-sync';
+import { colors } from '../theme/tokens';
 
 const PIN_LENGTH = 4;
 const ORG_ID_KEY = 'float0_org_id';
@@ -215,7 +216,9 @@ export default function SettingsScreen() {
             </Animated.View>
 
             {pinError ? <Text style={styles.pinErrorText}>{pinError}</Text> : null}
-            {pinLoading && <ActivityIndicator style={styles.pinLoader} color="#1a1a1a" />}
+            {pinLoading && (
+              <ActivityIndicator style={styles.pinLoader} color={colors.textPrimary} />
+            )}
 
             <View style={styles.keypad}>
               {pinDigits.map((d, i) => {
@@ -256,12 +259,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingTop: 40,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
   },
   heading: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 32,
   },
 
@@ -269,7 +272,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6b7280',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     alignSelf: 'center',
@@ -279,7 +282,7 @@ const styles = StyleSheet.create({
   // Report buttons
   reportButton: {
     width: 300,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
@@ -287,23 +290,23 @@ const styles = StyleSheet.create({
   reportButtonTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   reportButtonSubtitle: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
 
   // Reset button
   resetButton: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
   },
   resetButtonTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#dc2626',
+    color: colors.danger,
   },
 
   // Close shift
@@ -312,10 +315,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 8,
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.danger,
   },
   closeShiftText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -323,14 +326,14 @@ const styles = StyleSheet.create({
   // Modal
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
     width: 360,
     maxHeight: '90%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -338,12 +341,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 16,
   },
 
@@ -358,19 +361,19 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: '#999',
+    borderColor: colors.textMuted,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
   },
   dotError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#dc2626',
+    borderColor: colors.danger,
+    backgroundColor: colors.danger,
   },
   pinErrorText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontSize: 13,
     marginBottom: 8,
   },
@@ -389,7 +392,7 @@ const styles = StyleSheet.create({
     height: 52,
     margin: 4,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -399,19 +402,19 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 22,
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   cancelButton: {
     width: '100%',
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     alignItems: 'center',
     marginTop: 4,
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
 });

@@ -25,6 +25,7 @@ import {
 } from '../db/queries';
 import { onShiftClosed } from '../sync/payment-sync-hook';
 import { API_URL, STAFF_ID_KEY, STAFF_NAME_KEY, AUTH_TOKEN_KEY } from '../config';
+import { colors } from '../theme/tokens';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setRaw(record: any, field: string, value: string | number) {
@@ -126,7 +127,11 @@ export default function CloseShiftScreen({ navigation }: Props) {
   const variance = actualDollars - expectedCashDollars;
   const absVariance = Math.abs(variance);
   const varianceColor =
-    absVariance < 1 ? '#22c55e' : absVariance <= VARIANCE_THRESHOLD_DOLLARS ? '#f59e0b' : '#dc2626';
+    absVariance < 1
+      ? colors.online
+      : absVariance <= VARIANCE_THRESHOLD_DOLLARS
+        ? colors.warning
+        : colors.danger;
   const needsManagerApproval = absVariance > VARIANCE_THRESHOLD_DOLLARS && !managerApproverId;
 
   // Keypad
@@ -287,7 +292,7 @@ export default function CloseShiftScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1a1a1a" />
+        <ActivityIndicator size="large" color={colors.textPrimary} />
       </View>
     );
   }
@@ -347,7 +352,9 @@ export default function CloseShiftScreen({ navigation }: Props) {
         </Animated.View>
 
         {managerPinError ? <Text style={styles.pinErrorText}>{managerPinError}</Text> : null}
-        {managerPinLoading && <ActivityIndicator style={styles.pinLoader} color="#1a1a1a" />}
+        {managerPinLoading && (
+          <ActivityIndicator style={styles.pinLoader} color={colors.textPrimary} />
+        )}
 
         <View style={styles.grid}>
           {managerPinDigits.map((d, i) => {
@@ -423,7 +430,7 @@ export default function CloseShiftScreen({ navigation }: Props) {
               <TextInput
                 style={styles.notesInput}
                 placeholder="Explain the variance..."
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 value={varianceNotes}
                 onChangeText={setVarianceNotes}
                 multiline
@@ -437,7 +444,7 @@ export default function CloseShiftScreen({ navigation }: Props) {
             disabled={submitting}
           >
             {submitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.closeButtonText}>
                 {needsManagerApproval ? 'Get Manager Approval' : 'Close Shift'}
@@ -549,7 +556,7 @@ function SummaryRow({
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
   },
   scrollContent: {
     alignItems: 'center',
@@ -560,7 +567,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
   },
   flex1: {
     flex: 1,
@@ -568,28 +575,28 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   welcome: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 24,
   },
   expectedHint: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   amount: {
     fontSize: 48,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 24,
   },
   grid: {
@@ -603,7 +610,7 @@ const styles = StyleSheet.create({
     height: 80,
     margin: 5,
     borderRadius: 40,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -613,7 +620,7 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 28,
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomToggle: {
     marginTop: 24,
@@ -622,13 +629,13 @@ const styles = StyleSheet.create({
   },
   denomToggleText: {
     fontSize: 16,
-    color: '#4b5563',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   denomSection: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
@@ -642,13 +649,13 @@ const styles = StyleSheet.create({
     width: 60,
     fontSize: 16,
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 8,
@@ -656,51 +663,51 @@ const styles = StyleSheet.create({
   denomBtnText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomCount: {
     width: 40,
     textAlign: 'center',
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomLineTotal: {
     flex: 1,
     textAlign: 'right',
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   denomTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border,
     marginTop: 8,
     paddingTop: 12,
   },
   denomTotalLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomTotalValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   closeButton: {
     marginTop: 32,
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   closeButtonDisabled: {
     opacity: 0.3,
   },
   closeButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -711,7 +718,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
 
@@ -719,7 +726,7 @@ const styles = StyleSheet.create({
   summaryCard: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     marginTop: 24,
@@ -732,16 +739,16 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     marginVertical: 8,
   },
 
@@ -754,15 +761,15 @@ const styles = StyleSheet.create({
   notesLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4b5563',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   notesInput: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     minHeight: 80,
     textAlignVertical: 'top',
   },
@@ -773,10 +780,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   doneButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -793,19 +800,19 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#999',
+    borderColor: colors.textMuted,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
   },
   dotError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#dc2626',
+    borderColor: colors.danger,
+    backgroundColor: colors.danger,
   },
   pinErrorText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontSize: 14,
     marginBottom: 8,
   },

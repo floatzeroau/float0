@@ -1,5 +1,6 @@
 import { database } from '../db/database';
 import type { Order } from '../db/models';
+import { colors } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Order Status (matches @float0/shared OrderStatus enum values, lowercased for DB)
@@ -72,11 +73,11 @@ export const STATUS_LABELS: Record<OrderStatusDB, string> = {
 };
 
 export const STATUS_COLOURS: Record<OrderStatusDB, string> = {
-  draft: '#9ca3af',
-  submitted: '#3b82f6',
-  in_progress: '#f59e0b',
-  ready: '#10b981',
-  completed: '#6b7280',
-  cancelled: '#ef4444',
-  refunded: '#8b5cf6',
+  draft: colors.textMuted,
+  submitted: colors.primary,
+  in_progress: colors.warning,
+  ready: colors.success,
+  completed: colors.textSecondary,
+  cancelled: colors.danger,
+  refunded: colors.teal,
 };

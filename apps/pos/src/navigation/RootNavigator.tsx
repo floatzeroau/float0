@@ -63,7 +63,7 @@ function MainTabs() {
                   screenOptions={({ route }) => ({
                     headerShown: false,
                     tabBarIcon: ({ focused }) => {
-                      const color = focused ? '#2563EB' : colors.tabInactive;
+                      const color = focused ? colors.teal : colors.tabInactive;
                       switch (route.name) {
                         case 'POS':
                           return <ShoppingCart size={24} color={color} strokeWidth={2} />;
@@ -77,7 +77,7 @@ function MainTabs() {
                           return null;
                       }
                     },
-                    tabBarActiveTintColor: '#2563EB',
+                    tabBarActiveTintColor: colors.teal,
                     tabBarInactiveTintColor: colors.tabInactive,
                     tabBarActiveBackgroundColor: 'transparent',
                     tabBarLabel: ({ focused, children }) => (
@@ -85,7 +85,7 @@ function MainTabs() {
                         style={{
                           fontSize: typography.size.xs,
                           fontWeight: focused ? typography.weight.medium : '400',
-                          color: focused ? '#2563EB' : colors.tabInactive,
+                          color: focused ? colors.teal : colors.tabInactive,
                         }}
                       >
                         {children}
@@ -147,8 +147,8 @@ const tabStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   tabButtonActive: {
-    backgroundColor: '#F0F4FF',
-    borderColor: '#2563EB',
+    backgroundColor: 'rgba(15, 108, 92, 0.10)',
+    borderColor: colors.teal,
   },
   tabButtonInner: {
     flex: 1,

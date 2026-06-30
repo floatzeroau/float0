@@ -24,7 +24,7 @@ import { ConvertToPackModal } from './ConvertToPackModal';
 import type { OrgCafePackSettings } from './ConvertToPackModal';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
 import type { DiscountType } from '@float0/shared';
-import { colors, spacing, radii, typography } from '../theme/tokens';
+import { colors, spacing, radii, typography, fonts } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // CartItem Row
@@ -768,7 +768,7 @@ export function CartSidebar({ onEditItem, onPay }: CartSidebarProps) {
           </TouchableOpacity>
         )}
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>GST (10%)</Text>
+          <Text style={styles.totalLabel}>Includes GST</Text>
           <Text style={styles.totalValue}>${cartTotals.gstAmount.toFixed(2)}</Text>
         </View>
         <View style={[styles.totalRow, styles.grandTotalRow]}>
@@ -929,7 +929,7 @@ const styles = StyleSheet.create({
   heldBadgeText: {
     fontSize: typography.size.xxs,
     fontWeight: typography.weight.bold,
-    color: colors.white,
+    color: colors.ink,
   },
   submittedBadge: {
     backgroundColor: colors.primaryLight,
@@ -1005,12 +1005,12 @@ const styles = StyleSheet.create({
   addCustomerText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
-    color: '#888',
+    color: colors.textMuted,
   },
   customerAssigned: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f7ff',
+    backgroundColor: colors.butter,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radii.sm,
@@ -1019,7 +1019,7 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
-    color: '#1a6ed8',
+    color: colors.ink,
     maxWidth: 160,
   },
   customerRemove: {
@@ -1027,14 +1027,14 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: 'rgba(15,17,21,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   customerRemoveText: {
     fontSize: typography.size.xxs,
     fontWeight: typography.weight.bold,
-    color: '#1a6ed8',
+    color: colors.ink,
   },
 
   // Item list
@@ -1084,7 +1084,7 @@ const styles = StyleSheet.create({
   },
   itemModifiers: {
     fontSize: typography.size.sm,
-    color: '#888',
+    color: colors.textMuted,
     marginTop: 2,
   },
   itemDiscountReason: {
@@ -1096,7 +1096,7 @@ const styles = StyleSheet.create({
   itemNotes: {
     fontSize: typography.size.sm,
     fontStyle: 'italic',
-    color: '#888',
+    color: colors.textMuted,
     marginTop: 2,
   },
   itemPriceCol: {
@@ -1106,6 +1106,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
     color: colors.textPrimary,
+    fontFamily: fonts.monoMedium,
   },
   itemTotalVoided: {
     textDecorationLine: 'line-through',
@@ -1115,11 +1116,13 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     color: colors.textMuted,
     textDecorationLine: 'line-through',
+    fontFamily: fonts.mono,
   },
   itemTotalDiscounted: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
     color: colors.successDark,
+    fontFamily: fonts.monoMedium,
   },
 
   // Void styles
@@ -1166,6 +1169,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
     color: colors.primary,
+    fontFamily: fonts.monoMedium,
   },
   submittedActions: {
     flexDirection: 'row',
@@ -1175,7 +1179,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: radii.sm,
-    backgroundColor: '#eff6ff',
+    backgroundColor: colors.primaryLight,
   },
   priceOverrideButtonText: {
     fontSize: typography.size.sm,
@@ -1226,6 +1230,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     minWidth: 20,
     textAlign: 'center',
+    fontFamily: fonts.monoMedium,
   },
   actionGroup: {
     flexDirection: 'row',
@@ -1234,7 +1239,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: typography.size.sm,
-    color: '#888',
+    color: colors.textMuted,
   },
   actionTextGreen: {
     color: colors.successDark,
@@ -1244,7 +1249,7 @@ const styles = StyleSheet.create({
   },
   actionDivider: {
     fontSize: typography.size.sm,
-    color: '#ddd',
+    color: colors.border,
   },
   actionRemove: {
     color: colors.danger,
@@ -1309,7 +1314,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 32,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: radii.sm,
     paddingHorizontal: 8,
     fontSize: typography.size.sm,
@@ -1318,13 +1323,13 @@ const styles = StyleSheet.create({
   noteSaveButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.ink,
     borderRadius: radii.sm,
   },
   noteSaveText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold,
-    color: colors.white,
+    color: colors.paper,
   },
 
   // Totals
@@ -1346,6 +1351,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: typography.size.md,
     color: colors.textSecondary,
+    fontFamily: fonts.mono,
   },
   totalLabelGreen: {
     fontSize: typography.size.md,
@@ -1355,6 +1361,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold,
     color: colors.successDark,
+    fontFamily: fonts.monoMedium,
   },
   grandTotalRow: {
     marginTop: 4,
@@ -1372,6 +1379,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
+    fontFamily: fonts.monoMedium,
   },
 
   // Actions
@@ -1390,22 +1398,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   holdButtonStyle: {
-    backgroundColor: '#F0F4FF',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#B0C4F5',
+    borderColor: colors.mist,
   },
   holdButtonText: {
     fontSize: typography.size.base,
     fontWeight: '500',
-    color: '#1F1F1F',
+    color: colors.textSecondary,
   },
   submitButtonSubtle: {
-    backgroundColor: '#F0F4FF',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#B0C4F5',
+    borderColor: colors.mist,
   },
   disabledButton: {
-    backgroundColor: 'rgba(22, 163, 74, 0.4)',
+    backgroundColor: 'rgba(15, 108, 92, 0.4)',
   },
   disabledSecondary: {
     opacity: 0.5,
@@ -1413,7 +1421,7 @@ const styles = StyleSheet.create({
   submitButtonSubtleText: {
     fontSize: typography.size.base,
     fontWeight: '500',
-    color: '#1F1F1F',
+    color: colors.textSecondary,
   },
   disabledSubmitText: {
     color: colors.white,
@@ -1422,21 +1430,22 @@ const styles = StyleSheet.create({
     color: colors.textDisabled,
   },
   doneButton: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.tealDeep,
   },
   doneButtonText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
-    color: colors.white,
+    color: colors.paper,
   },
   payButton: {
     flex: 2,
-    backgroundColor: colors.success,
+    backgroundColor: colors.teal,
     paddingVertical: 14,
   },
   payButtonText: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
-    color: '#FFFFFF',
+    color: colors.white,
+    fontFamily: fonts.monoMedium,
   },
 });

@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   card: {
-    backgroundColor: '#fefce8',
+    backgroundColor: colors.butter,
     borderRadius: radii.lg,
     padding: 14,
     minWidth: 240,
@@ -98,12 +98,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: colors.butter,
   },
   title: {
     fontSize: typography.size.sm,
     fontWeight: '800',
-    color: '#92400e',
+    color: colors.warningDark,
     textAlign: 'center',
     letterSpacing: 1,
   },
@@ -116,19 +116,19 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: typography.size.sm,
-    color: '#78716c',
+    color: colors.textPrimary,
     textAlign: 'center',
     marginTop: spacing.xxs,
   },
   divider: {
     height: 1,
-    backgroundColor: '#d6d3d1',
+    backgroundColor: colors.border,
     marginVertical: spacing.sm,
   },
   modificationLabel: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.bold,
-    color: '#b45309',
+    color: colors.warningDark,
     textAlign: 'center',
     marginBottom: 6,
   },
@@ -142,11 +142,11 @@ const styles = StyleSheet.create({
   },
   modifierText: {
     fontSize: typography.size.sm,
-    color: '#57534e',
+    color: colors.textPrimary,
   },
   notesText: {
     fontSize: typography.size.sm,
-    color: '#b45309',
+    color: colors.warningDark,
     fontStyle: 'italic',
   },
 });

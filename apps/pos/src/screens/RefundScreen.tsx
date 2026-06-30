@@ -533,7 +533,7 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
                     style={styles.customAmountInput}
                     keyboardType="decimal-pad"
                     placeholder="0.00"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textMuted}
                     value={customAmount}
                     onChangeText={setCustomAmount}
                   />
@@ -575,7 +575,7 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
             <TextInput
               style={styles.reasonInput}
               placeholder="Enter reason for refund (required)"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               value={reason}
               onChangeText={setReason}
               multiline
@@ -626,7 +626,9 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
             </Animated.View>
 
             {pinError ? <Text style={styles.pinErrorText}>{pinError}</Text> : null}
-            {pinLoading && <ActivityIndicator style={styles.pinLoader} color="#1a1a1a" />}
+            {pinLoading && (
+              <ActivityIndicator style={styles.pinLoader} color={colors.textPrimary} />
+            )}
 
             <View style={styles.keypad}>
               {pinDigits.map((d, i) => {
@@ -798,7 +800,7 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
         {/* Processing (record creation) */}
         {phase === 'processing' && (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#8b5cf6" />
+            <ActivityIndicator size="large" color={colors.teal} />
             <Text style={styles.processingText}>Processing Refund...</Text>
           </View>
         )}
@@ -832,37 +834,37 @@ export function RefundScreen({ visible, order, onClose }: RefundScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.surfaceAlt,
   },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   backButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#F0F4FF',
+    backgroundColor: colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#B0C4F5',
+    borderColor: colors.teal,
     borderRadius: 8,
   },
   backButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F1F1F',
+    color: colors.textPrimary,
   },
   headerTitle: {
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginLeft: 16,
   },
   headerRight: {
@@ -871,7 +873,7 @@ const styles = StyleSheet.create({
   headerTotal: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
 
   // Center layout
@@ -884,12 +886,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   refundSummaryText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 16,
   },
 
@@ -901,7 +903,7 @@ const styles = StyleSheet.create({
   modeButtonFull: {
     width: 200,
     height: 200,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.teal,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -910,7 +912,7 @@ const styles = StyleSheet.create({
   modeButtonPartial: {
     width: 200,
     height: 200,
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.teal,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -919,12 +921,12 @@ const styles = StyleSheet.create({
   modeButtonIcon: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   modeButtonLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
     marginTop: 8,
   },
   modeButtonSub: {
@@ -952,13 +954,13 @@ const styles = StyleSheet.create({
   selectAllButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     borderRadius: 6,
   },
   selectAllText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
   itemsList: {
     flex: 1,
@@ -967,7 +969,7 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     padding: 14,
     borderRadius: 10,
     marginBottom: 6,
@@ -982,19 +984,19 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   checkboxSelected: {
-    backgroundColor: '#8b5cf6',
-    borderColor: '#8b5cf6',
+    backgroundColor: colors.teal,
+    borderColor: colors.teal,
   },
   checkboxMark: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   itemInfo: {
     flex: 1,
@@ -1002,12 +1004,12 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   itemTotal: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
 
   // Custom amount
@@ -1022,7 +1024,7 @@ const styles = StyleSheet.create({
   customAmountLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     marginLeft: 8,
   },
   customAmountInputRow: {
@@ -1033,24 +1035,24 @@ const styles = StyleSheet.create({
   dollarSign: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginRight: 4,
   },
   customAmountInput: {
     flex: 1,
     height: 44,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     maxWidth: 200,
   },
   customAmountCap: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textMuted,
     marginLeft: 8,
   },
 
@@ -1060,18 +1062,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
     marginBottom: 12,
   },
   refundTotalLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   refundTotalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#8b5cf6',
+    color: colors.teal,
   },
 
   // Reason input
@@ -1080,14 +1082,14 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     minHeight: 80,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 10,
     padding: 14,
     fontSize: 15,
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     textAlignVertical: 'top',
     marginBottom: 24,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
 
   // Footer
@@ -1100,25 +1102,25 @@ const styles = StyleSheet.create({
   cancelFooterButton: {
     paddingHorizontal: 24,
     paddingVertical: 14,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     borderRadius: 10,
   },
   cancelFooterText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
   proceedButton: {
     flex: 1,
     paddingVertical: 14,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.teal,
     borderRadius: 10,
     alignItems: 'center',
   },
   proceedButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   buttonDisabled: {
     opacity: 0.3,
@@ -1135,19 +1137,19 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: '#999',
+    borderColor: colors.textMuted,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
   },
   dotError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#dc2626',
+    borderColor: colors.danger,
+    backgroundColor: colors.danger,
   },
   pinErrorText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontSize: 13,
     marginBottom: 8,
   },
@@ -1166,7 +1168,7 @@ const styles = StyleSheet.create({
     height: 52,
     margin: 4,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1176,14 +1178,14 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 22,
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
 
   // Method selection
   approvedText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#16a34a',
+    color: colors.success,
     marginBottom: 20,
   },
   methodButtons: {
@@ -1194,7 +1196,7 @@ const styles = StyleSheet.create({
   methodButton: {
     width: 160,
     height: 120,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1208,29 +1210,29 @@ const styles = StyleSheet.create({
   methodButtonLabel: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#666',
+    color: colors.textSecondary,
   },
   methodButtonLabelActive: {
-    color: '#8b5cf6',
+    color: colors.teal,
   },
   methodButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   methodButtonTextActive: {
-    color: '#8b5cf6',
+    color: colors.teal,
   },
   methodButtonSub: {
     fontSize: 11,
-    color: '#999',
+    color: colors.textMuted,
     marginTop: 2,
   },
 
   // Confirmation box
   confirmBox: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 10,
     padding: 16,
     marginBottom: 24,
@@ -1241,12 +1243,12 @@ const styles = StyleSheet.create({
   confirmText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   confirmDetail: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 
@@ -1254,27 +1256,27 @@ const styles = StyleSheet.create({
   refundButton: {
     flex: 1,
     paddingVertical: 14,
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.danger,
     borderRadius: 10,
     alignItems: 'center',
   },
   refundButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
 
   // Processing
   processingText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginTop: 16,
   },
   processingAmount: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#8b5cf6',
+    color: colors.teal,
     marginTop: 8,
   },
 
@@ -1283,7 +1285,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.teal,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -1291,7 +1293,7 @@ const styles = StyleSheet.create({
   terminalIcon: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   terminalDots: {
     flexDirection: 'row',
@@ -1303,11 +1305,11 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.teal,
   },
   terminalHint: {
     fontSize: 13,
-    color: '#999',
+    color: colors.textMuted,
   },
 
   // Terminal failure
@@ -1315,7 +1317,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.danger,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -1323,17 +1325,17 @@ const styles = StyleSheet.create({
   failIcon: {
     fontSize: 40,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   failTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   failMessage: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
     textAlign: 'center',
     maxWidth: 320,
@@ -1341,7 +1343,7 @@ const styles = StyleSheet.create({
   failPrompt: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 20,
   },
   failButtons: {
@@ -1353,39 +1355,39 @@ const styles = StyleSheet.create({
   cashFallbackButton: {
     width: '100%',
     paddingVertical: 14,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.success,
     borderRadius: 10,
     alignItems: 'center',
   },
   cashFallbackText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   retryTerminalButton: {
     width: '100%',
     paddingVertical: 14,
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.teal,
     borderRadius: 10,
     alignItems: 'center',
   },
   retryTerminalText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
   cancelFailButton: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: '#F0F4FF',
+    backgroundColor: colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#B0C4F5',
+    borderColor: colors.teal,
     borderRadius: 8,
   },
   cancelFailText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F1F1F',
+    color: colors.textPrimary,
   },
 
   // Done
@@ -1393,41 +1395,41 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: colors.teal,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   doneCheck: {
     fontSize: 40,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
   },
   doneTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   doneSummary: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   doneOrder: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textMuted,
     marginBottom: 24,
   },
   doneButton: {
     paddingHorizontal: 32,
     paddingVertical: 14,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
     borderRadius: 10,
   },
   doneButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
   },
 });

@@ -9,7 +9,7 @@ import { SplitPaymentFlow } from './SplitPaymentFlow';
 import { PaymentConfirmationScreen } from '../screens/PaymentConfirmationScreen';
 import type { PaymentConfirmationData } from '../screens/PaymentConfirmationScreen';
 import { PaymentFailureScreen } from './PaymentFailureScreen';
-import { colors, spacing, radii, typography } from '../theme/tokens';
+import { colors, fonts, spacing, radii, typography } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -663,6 +663,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
     color: colors.textSecondary,
+    fontFamily: fonts.monoMedium,
   },
   headerTipLabel: {
     fontSize: typography.size.sm,
@@ -673,6 +674,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size['3xl'],
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
+    fontFamily: fonts.monoMedium,
   },
 
   // Method selection
@@ -781,11 +783,13 @@ const styles = StyleSheet.create({
     fontSize: typography.size['5xl'],
     fontWeight: typography.weight.bold,
     color: colors.textPrimary,
+    fontFamily: fonts.monoMedium,
   },
   amountTendered: {
     fontSize: typography.size['5xl'],
     fontWeight: typography.weight.bold,
     color: colors.primary,
+    fontFamily: fonts.monoMedium,
   },
   changeSection: {
     backgroundColor: colors.surface,
@@ -796,10 +800,11 @@ const styles = StyleSheet.create({
     fontSize: typography.size['5xl'],
     fontWeight: typography.weight.bold,
     color: colors.success,
+    fontFamily: fonts.monoMedium,
   },
   amountInsufficient: {
     fontSize: typography.size['3xl'],
-    color: '#ef4444',
+    color: colors.danger,
   },
 
   // Tip line in cash phase
@@ -916,6 +921,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.bold,
     color: colors.primary,
     marginTop: spacing.md,
+    fontFamily: fonts.monoMedium,
   },
   cardProcessingTip: {
     fontSize: typography.size.base,

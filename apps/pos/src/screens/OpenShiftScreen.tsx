@@ -7,6 +7,7 @@ import { database } from '../db/database';
 import type { Shift } from '../db/models';
 import { STAFF_ID_KEY, STAFF_NAME_KEY } from '../config';
 import { generateUUID } from '../utils/uuid';
+import { colors } from '../theme/tokens';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setRaw(record: any, field: string, value: string | number) {
@@ -180,7 +181,7 @@ export default function OpenShiftScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
   },
   scrollContent: {
     alignItems: 'center',
@@ -190,18 +191,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   welcome: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 24,
   },
   amount: {
     fontSize: 48,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 24,
   },
   grid: {
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     height: 80,
     margin: 5,
     borderRadius: 40,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 28,
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomToggle: {
     marginTop: 24,
@@ -234,13 +235,13 @@ const styles = StyleSheet.create({
   },
   denomToggleText: {
     fontSize: 16,
-    color: '#4b5563',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   denomSection: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
@@ -254,13 +255,13 @@ const styles = StyleSheet.create({
     width: 60,
     fontSize: 16,
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 8,
@@ -268,51 +269,51 @@ const styles = StyleSheet.create({
   denomBtnText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomCount: {
     width: 40,
     textAlign: 'center',
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomLineTotal: {
     flex: 1,
     textAlign: 'right',
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   denomTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border,
     marginTop: 8,
     paddingTop: 12,
   },
   denomTotalLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   denomTotalValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   openButton: {
     marginTop: 32,
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   openButtonDisabled: {
     opacity: 0.3,
   },
   openButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },

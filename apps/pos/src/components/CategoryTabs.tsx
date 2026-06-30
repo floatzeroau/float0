@@ -93,10 +93,10 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold,
-    color: colors.textSecondary,
+    color: colors.ink,
   },
   tabTextActive: {
-    color: colors.white,
+    color: colors.paper,
   },
   colourDot: {
     width: 8,

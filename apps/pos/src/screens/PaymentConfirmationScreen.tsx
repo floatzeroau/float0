@@ -16,6 +16,7 @@ import type { ReceiptData } from '@float0/shared';
 import { getAudioService, getPrinterService } from '../services';
 import { ReceiptPreview } from '../components/ReceiptPreview';
 import { API_URL, AUTH_TOKEN_KEY } from '../config';
+import { colors } from '../theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -236,7 +237,7 @@ export function PaymentConfirmationScreen({ data, onDone }: PaymentConfirmationS
               <TextInput
                 style={styles.emailInput}
                 placeholder="customer@email.com"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -309,7 +310,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.surfaceAlt,
   },
   scrollContent: {
     flexGrow: 1,
@@ -323,21 +324,21 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
   },
   checkMark: {
     fontSize: 60,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
   },
 
   successTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 32,
   },
 
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
 
   // Summary card
   summaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     width: '100%',
@@ -362,26 +363,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   summaryLabel: {
     fontSize: 15,
-    color: '#666',
+    color: colors.textSecondary,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   summaryValueTip: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#10b981',
+    color: colors.success,
   },
   summaryValueMono: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     fontFamily: 'monospace',
   },
 
@@ -403,45 +404,45 @@ const styles = StyleSheet.create({
   receiptButton: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   receiptButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   noReceiptButton: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     borderRadius: 10,
   },
   noReceiptButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
   // Email input
   emailInputContainer: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 10,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   emailInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   emailButtonRow: {
@@ -451,37 +452,37 @@ const styles = StyleSheet.create({
   emailSendButton: {
     flex: 1,
     paddingVertical: 10,
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     borderRadius: 8,
     alignItems: 'center',
   },
   emailSendButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
   },
   emailCancelButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.borderLight,
     borderRadius: 8,
     alignItems: 'center',
   },
   emailCancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
 
   newOrderButton: {
     paddingHorizontal: 32,
     paddingVertical: 16,
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
     borderRadius: 12,
   },
   newOrderButtonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
   },
 });

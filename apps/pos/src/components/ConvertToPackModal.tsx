@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
-    color: '#333',
+    color: colors.textPrimary,
     flex: 1,
   },
   fieldInput: {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   summaryBox: {
-    backgroundColor: '#f0f7ff',
+    backgroundColor: colors.primaryLight,
     borderRadius: radii.md,
     padding: spacing.md,
     marginBottom: spacing.lg,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   summaryText: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold,
-    color: '#1a6ed8',
+    color: colors.primary,
     textAlign: 'center',
   },
   confirmButton: {

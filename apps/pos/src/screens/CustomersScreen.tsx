@@ -1191,7 +1191,7 @@ const styles = StyleSheet.create({
   },
   sidebarColumn: {
     width: 280,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.surfaceAlt,
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },

@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     borderRadius: radii.xl,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.lg,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   noTipButtonText: {
     fontSize: 22,
     fontWeight: typography.weight.bold,
-    color: '#374151',
+    color: colors.textPrimary,
   },
   tipColumn: {
     gap: 10,

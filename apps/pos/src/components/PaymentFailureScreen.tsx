@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   errorIcon: {
     fontSize: 40,
     fontWeight: typography.weight.bold,
-    color: '#ef4444',
+    color: colors.danger,
   },
 
   title: {
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     fontSize: 17,
-    color: '#ef4444',
+    color: colors.danger,
     textAlign: 'center',
     marginBottom: spacing.sm,
     maxWidth: 400,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.semibold,
-    color: '#ef4444',
+    color: colors.danger,
   },
 
   // Terminal check
@@ -276,10 +276,10 @@ const styles = StyleSheet.create({
   checkTerminalButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#eff6ff',
+    backgroundColor: colors.primaryLight,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: colors.primaryLight,
     minWidth: 140,
     alignItems: 'center',
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     color: colors.success,
   },
   statusDisconnected: {
-    color: '#ef4444',
+    color: colors.danger,
   },
   terminalStatusValueMono: {
     fontSize: typography.size.base,

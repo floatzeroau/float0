@@ -15,6 +15,7 @@ import { buildShiftReport } from '../services/report-builder';
 import type { ShiftReportData } from '../services/report-builder';
 import type { ReportPrintData } from '../services/printer-service';
 import { getPrinterService } from '../services';
+import { colors } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ShiftReport'>;
 
@@ -138,7 +139,7 @@ export default function ShiftReportScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1a1a1a" />
+        <ActivityIndicator size="large" color={colors.textPrimary} />
       </View>
     );
   }
@@ -157,7 +158,8 @@ export default function ShiftReportScreen({ route, navigation }: Props) {
   const isXReport = reportType === 'X';
   const cr = report.cashReconciliation;
   const absVariance = cr.variance != null ? Math.abs(cr.variance) : 0;
-  const varianceColor = absVariance < 1 ? '#22c55e' : absVariance <= 5 ? '#f59e0b' : '#dc2626';
+  const varianceColor =
+    absVariance < 1 ? colors.online : absVariance <= 5 ? colors.warning : colors.danger;
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scroll}>
@@ -218,12 +220,12 @@ export default function ShiftReportScreen({ route, navigation }: Props) {
         <SummaryRow
           label="Voids"
           value={`$${report.totalVoids.toFixed(2)}`}
-          valueColor={report.totalVoids > 0 ? '#dc2626' : undefined}
+          valueColor={report.totalVoids > 0 ? colors.danger : undefined}
         />
         <SummaryRow
           label="Refunds"
           value={`$${report.totalRefunds.toFixed(2)}`}
-          valueColor={report.totalRefunds > 0 ? '#dc2626' : undefined}
+          valueColor={report.totalRefunds > 0 ? colors.danger : undefined}
         />
         <SummaryRow label="Tips" value={`$${report.totalTips.toFixed(2)}`} />
         <SummaryRow label="GST Collected" value={`$${report.totalGst.toFixed(2)}`} />
@@ -270,7 +272,7 @@ export default function ShiftReportScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
   },
   scrollContent: {
     alignItems: 'center',
@@ -281,21 +283,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
   },
   errorText: {
     fontSize: 16,
-    color: '#dc2626',
+    color: colors.danger,
     marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   banner: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.butter,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -305,14 +307,14 @@ const styles = StyleSheet.create({
   bannerText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#92400e',
+    color: colors.warningDark,
   },
 
   // Cards
   card: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     marginTop: 16,
@@ -320,7 +322,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6b7280',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 12,
@@ -334,16 +336,16 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     marginVertical: 8,
   },
 
@@ -351,13 +353,13 @@ const styles = StyleSheet.create({
   bigAmount: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
     textAlign: 'center',
     marginTop: 4,
   },
   bigLabel: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -366,7 +368,7 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: colors.border,
     paddingBottom: 6,
     marginBottom: 4,
   },
@@ -376,7 +378,7 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     fontSize: 14,
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   tableCellName: {
     flex: 1,
@@ -397,10 +399,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   printButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -411,7 +413,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
 });

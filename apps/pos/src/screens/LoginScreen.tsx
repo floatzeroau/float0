@@ -11,6 +11,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { API_URL, STAFF_ID_KEY, STAFF_NAME_KEY } from '../config';
+import { colors } from '../theme/tokens';
 
 const PIN_LENGTH = 4;
 const ORG_ID_KEY = 'float0_org_id';
@@ -188,7 +189,7 @@ export default function LoginScreen({ navigation }: Props) {
         disabled={pin.length < PIN_LENGTH || loading || locked}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.white} />
         ) : (
           <Text style={styles.confirmText}>Confirm</Text>
         )}
@@ -202,13 +203,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.surfaceAlt,
   },
   title: {
     fontSize: 28,
     fontWeight: '600',
     marginBottom: 32,
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -220,24 +221,24 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#999',
+    borderColor: colors.textMuted,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
   },
   dotError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#dc2626',
+    borderColor: colors.danger,
+    backgroundColor: colors.danger,
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontSize: 14,
     marginBottom: 8,
   },
   lockoutText: {
-    color: '#dc2626',
+    color: colors.danger,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 16,
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     height: 80,
     margin: 5,
     borderRadius: 40,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -264,20 +265,20 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 28,
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: colors.textPrimary,
   },
   confirm: {
     marginTop: 32,
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderRadius: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.textPrimary,
   },
   confirmDisabled: {
     opacity: 0.3,
   },
   confirmText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },
