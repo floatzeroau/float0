@@ -12,7 +12,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { organizations } from './core.js';
+import { organizations } from './core';
 
 // ── Enums ──────────────────────────────────────────────
 
